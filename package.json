@@ -1,0 +1,32 @@
+{
+  "name": "sopra-fs25-template-client",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "deno lint",
+    "fmt": "deno fmt"
+  },
+  "dependencies": {
+    "@ant-design/nextjs-registry": "^1.0.2",
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "antd": "^5.24.2",
+    "dayjs": "^1.11.13",
+    "moment": "^2.30.1",
+    "next": "15.1.7",
+    "node-localstorage": "^3.0.5",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@types/node": "^22.13.4",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.1.7",
+    "typescript": "^5"
+  }
+}
