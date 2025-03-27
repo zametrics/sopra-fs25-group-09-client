@@ -1,4 +1,4 @@
-import { getApiDomain } from "@/utils/domain";
+//import { getApiDomain } from "@/utils/domain";
 import { ApplicationError } from "@/types/error";
 
 export class ApiService {
