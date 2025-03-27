@@ -6,7 +6,7 @@ export class ApiService {
   private defaultHeaders: HeadersInit;
 
   constructor() {
-    this.baseURL = "http://sopra-fs25-group-09-server.oa.r.appspot.com";  /*getApiDomain();*/
+    this.baseURL = "http://sopra-fs25-group-09-server.oa.r.appspot.com/";  /*getApiDomain();*/
     this.defaultHeaders = {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
