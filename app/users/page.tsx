@@ -12,9 +12,9 @@ import { useRouter } from "next/navigation"; // Next.js navigation hook for clie
 import { useApi } from "@/hooks/useApi"; // Custom API hook for making backend requests
 import useLocalStorage from "@/hooks/useLocalStorage"; // Hook to manage local storage values
 import { User } from "@/types/user"; // Importing the User type for TypeScript
-import { Button, Card, Table, Avatar, Typography, Space } from "antd"; // UI components from Ant Design
+import { Button, Card, Table, Avatar, Typography, Space, message } from "antd"; // UI components from Ant Design
 import type { TableProps } from "antd"; // Importing the type for table properties
-import { LogoutOutlined, UserOutlined } from "@ant-design/icons"; // Icons from Ant Design
+import { LogoutOutlined, UserOutlined, PlusOutlined } from "@ant-design/icons"; // Icons from Ant Design
 
 import withAuth from "@/hooks/withAuth"; // Import the authentication wrapper
 
@@ -72,10 +72,11 @@ const Dashboard: React.FC = () => {
   const router = useRouter(); // Next.js hook for navigation
   const apiService = useApi(); // Custom hook for making API requests
   const [users, setUsers] = useState<User[] | null>(null); // State to store user data
+  const [isCreatingLobby, setIsCreatingLobby] = useState(false); // State to track lobby creation status
 
   const {
-    // value: token, // is commented out because we don’t need to know the token value for logout
-    // set: setToken, // is commented out because we don’t need to set or update the token value    
+    // value: token, // is commented out because we don't need to know the token value for logout
+    // set: setToken, // is commented out because we don't need to set or update the token value    
 
     //clear: clearToken, // all we need in this scenario is a method to clear the token
 
@@ -106,6 +107,47 @@ const Dashboard: React.FC = () => {
     router.push("/login");
   };
   
+  // New function to create a lobby with default values
+  const handleCreateLobby = async () => {
+    setIsCreatingLobby(true);
+    
+    try {
+      // Get the current user's ID
+      const userIdStr = localStorage.getItem("userId");
+      const userId = userIdStr ? JSON.parse(userIdStr) : null;
+      
+      if (!userId) {
+        message.error("User ID not found. Please log in again.");
+        setIsCreatingLobby(false);
+        return;
+      }
+      
+      // Default values as specified
+      const defaultLobbyData = {
+        numOfMaxPlayers: 8,
+        playerIds: [userId], // Add the creator as the first player
+        wordset: "english",
+        numOfRounds: 3,
+        drawTime: 80,
+        lobbyOwner: userId // Set the lobby owner
+      };
+      
+      // Make the API call to create the lobby
+      const response = await apiService.post("/lobbies", defaultLobbyData);
+      
+      // Show success message and redirect to the lobby
+      message.success(`Lobby created successfully! ID: ${response.id}`);
+      
+      // Redirect to the lobby page
+      router.push(`/lobbies/${response.id}`);
+      
+    } catch (error) {
+      console.error("Error creating lobby:", error);
+      message.error("Failed to create lobby. Please try again.");
+    } finally {
+      setIsCreatingLobby(false);
+    }
+  };
   
   // Fetching the list of users when the component loads
   useEffect(() => {
@@ -161,10 +203,18 @@ const Dashboard: React.FC = () => {
               })}
             />
             
-            {/* Logout Button */}
+            {/* Buttons for Logout and Create Lobby */}
             <Space style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
               <Button onClick={handleLogout} type="primary" icon={<LogoutOutlined />} danger>
                 Logout
+              </Button>
+              <Button 
+                onClick={handleCreateLobby} 
+                type="primary" 
+                icon={<PlusOutlined />}
+                loading={isCreatingLobby}
+              >
+                Create Lobby
               </Button>
             </Space>
           </>
@@ -174,5 +224,4 @@ const Dashboard: React.FC = () => {
   );
 };
 
-export default withAuth(Dashboard); 
-
+export default withAuth(Dashboard);
