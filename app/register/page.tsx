@@ -3,9 +3,9 @@
 import React from "react";
 import { useRouter } from "next/navigation"; // For navigating after signup
 import { useApi } from "@/hooks/useApi"; // API service for making requests
-import { Form, Input, Button, Card, Typography } from "antd";// UI components
+import { Form, Input, Button } from "antd"; // UI components
 import { UserOutlined, LockOutlined, IdcardOutlined } from "@ant-design/icons";
-
+import "@/styles/globals.css";
 
 interface UserGetDTO {
   id: number;
@@ -53,31 +53,11 @@ const Register = () => {
     }
   };
 
-  const { Title } = Typography;
-
   return (
-    <div
-    style={{
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    height: "100vh", // Makes the background cover the full viewport
-    padding: "2rem",
-    background: `url(/images/abstract.jpg) no-repeat center center/cover`, // This uses the image as the background
-  }}
-    >
-      <Card
-        style={{
-          width: 400,
-          padding: "20px",
-          borderRadius: "10px",
-          boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
-          textAlign: "center",
-        }}
-      >
-        <Title level={2} style={{ marginBottom: "20px" }}>
-          Register
-        </Title>
+    <div className="page-background">
+      <div className="login-register-box">
+        <h1 className="drawzone-logo-4rem">DRAWZONE</h1>
+        <p className="drawzone-subtitle-1-3rem">ART BATTLE ROYALE</p>
 
         <Form
           form={form}
@@ -85,72 +65,49 @@ const Register = () => {
           layout="vertical"
           size="large"
         >
-          {/* Name Input */}
           <Form.Item
             name="name"
-            label="Name"
             rules={[{ required: true, message: "Please enter your name" }]}
+            label={<label className="login-label">Name:</label>}
           >
-            <Input
-              prefix={<IdcardOutlined />}
-              placeholder="Enter your name"
-            />
+            <Input prefix={<IdcardOutlined />} className="login-input" placeholder="Your name" />
           </Form.Item>
 
-          {/* Username Input */}
           <Form.Item
             name="username"
-            label="Username"
             rules={[{ required: true, message: "Please enter a username" }]}
+            label={<label className="login-label">Username:</label>}
           >
-            <Input
-              prefix={<UserOutlined />}
-              placeholder="Enter username"
-            />
+            <Input prefix={<UserOutlined />} className="login-input" placeholder="Your username" />
           </Form.Item>
 
-          {/* Password Input */}
           <Form.Item
             name="password"
-            label="Password"
             rules={[{ required: true, message: "Please enter a password" }]}
+            label={<label className="login-label">Password:</label>}
           >
-            <Input.Password
-              prefix={<LockOutlined />}
-              placeholder="Enter password"
-            />
+            <Input.Password prefix={<LockOutlined />} className="login-input" placeholder="Your password" />
           </Form.Item>
 
-          {/* Submit Button */}
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              style={{
-                width: "100%",
-                background: "#1890ff",
-                border: "none",
-                fontSize: "16px",
-                fontWeight: "bold",
-              }}
-            >
-              Register
-            </Button>
-          </Form.Item>
+          <div className="login-actions">
+            <Form.Item>
+              <Button htmlType="submit" className="login-button">
+                REGISTER
+              </Button>
+            </Form.Item>
+
+            <div className="login-divider">OR</div>
+
+            <Form.Item>
+              <Button onClick={() => router.push("/login")} className="redirect-register-button">
+                BACK TO LOGIN
+              </Button>
+            </Form.Item>
+          </div>
         </Form>
-
-        {/* Already Registered? Login Button */}
-        <div style={{ marginTop: "10px", textAlign: "center" }}>
-        <p>Already registered?</p>
-        <Button type="link" onClick={() => router.push("/login")} style={{ fontSize: "16px" }}>
-          Go to Login
-        </Button>
-        </div>
-      </Card>
+      </div>
     </div>
   );
 };
 
 export default Register;
-
-
