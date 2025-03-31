@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"; // use NextJS router for navigation
 import { useApi } from "@/hooks/useApi";
 import { useEffect } from "react";
 import { Form, Input, Button } from "antd";
+import { UserOutlined, LockOutlined} from "@ant-design/icons";
 // import Head from "next/head"; // not needed for this build
 
 const Login: React.FC = () => {
@@ -93,7 +94,7 @@ const Login: React.FC = () => {
               colon={false}
               label={<label className="login-label">Username:</label>}
             >
-              <Input className="login-input" />
+              <Input prefix={<UserOutlined />} className="login-input" placeholder="Your username" />
             </Form.Item>
   
             <Form.Item
@@ -101,7 +102,7 @@ const Login: React.FC = () => {
               rules={[{ required: true, message: "Please enter your password!" }]}
               label={<label className="login-label">Password:</label>}
             >
-              <Input.Password className="login-input" />
+              <Input.Password prefix={<LockOutlined />} className="login-input" placeholder="Your password" />
             </Form.Item>
   
             <div className="login-actions">
