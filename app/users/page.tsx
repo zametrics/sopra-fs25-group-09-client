@@ -137,15 +137,22 @@ const Dashboard: React.FC = () => {
       
       console.log("Lobby creation response:", response);
       
-      // Type guard function to check if response has an id
-      const hasId = (obj: any): obj is { id: string | number } => {
-        return obj && typeof obj.id !== 'undefined';
+      const hasId = (obj: unknown): obj is { id: string | number } => {
+        return typeof obj === "object" && obj !== null && "id" in (obj as Record<string, unknown>);
       };
       
-      // Type guard function to check if response has data.id
-      const hasDataId = (obj: any): obj is { data: { id: string | number } } => {
-        return obj && obj.data && typeof obj.data.id !== 'undefined';
+      const hasDataId = (obj: unknown): obj is { data: { id: string | number } } => {
+        return (
+          typeof obj === "object" &&
+          obj !== null &&
+          "data" in (obj as Record<string, unknown>) &&
+          typeof (obj as { data: unknown }).data === "object" &&
+          (obj as { data: unknown }).data !== null &&
+          "id" in (obj as { data: Record<string, unknown> }).data
+        );
       };
+      
+      
       
       let lobbyId;
       
