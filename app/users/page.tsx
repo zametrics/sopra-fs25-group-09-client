@@ -135,11 +135,35 @@ const Dashboard: React.FC = () => {
       // Make the API call to create the lobby
       const response = await apiService.post("/lobbies", defaultLobbyData);
       
+      console.log("Lobby creation response:", response);
+      
+      // Type guard function to check if response has an id
+      const hasId = (obj: any): obj is { id: string | number } => {
+        return obj && typeof obj.id !== 'undefined';
+      };
+      
+      // Type guard function to check if response has data.id
+      const hasDataId = (obj: any): obj is { data: { id: string | number } } => {
+        return obj && obj.data && typeof obj.data.id !== 'undefined';
+      };
+      
+      let lobbyId;
+      
+      if (hasId(response)) {
+        lobbyId = response.id;
+      } else if (hasDataId(response)) {
+        lobbyId = response.data.id;
+      } else {
+        console.error("Could not determine lobby ID from response:", response);
+        message.error("Created lobby but couldn't get ID. Please check lobby list.");
+        return;
+      }
+      
       // Show success message and redirect to the lobby
-      message.success(`Lobby created successfully! ID: ${response.id}`);
+      message.success(`Lobby created successfully! ID: ${lobbyId}`);
       
       // Redirect to the lobby page
-      router.push(`/lobbies/${response.id}`);
+      router.push(`/lobbies/${lobbyId}`);
       
     } catch (error) {
       console.error("Error creating lobby:", error);
