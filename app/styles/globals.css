@@ -49,10 +49,6 @@ a {
   background-color: rgb(41, 44, 59);
 }
 
-.login-button {
-  width: 100%;
-}
-
 .card-container {
   display: flex;
   justify-content: center;
@@ -81,4 +77,180 @@ a {
 
 .custom-datepicker-dropdown .ant-picker-header {
   color: #000000 !important;
+}
+
+@font-face {
+  font-family: 'Kranky';
+  src: url('/fonts/Kranky.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Digitalt';
+  src: url('/fonts/Digitalt.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Koulen';
+  src: url('/fonts/Koulen.ttf') format('truetype');
+}
+
+.page-background {
+  height: 100vh;
+  overflow: hidden;
+  background: url('/images/background_new.jpg') no-repeat center center/cover;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.login-register-box {
+  background: rgba(255, 255, 255, 0.56);
+  border-radius: 35px;
+  padding: 40px;
+  max-width: 450px;
+  width: 100%;
+  text-align: center;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.69), 0 8px 20px rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.drawzone-logo-4rem {
+  font-size: 4rem;
+  margin-bottom: -0.1rem;
+  color: #000;
+  font-family: 'Kranky', serif;
+  font-weight: normal;
+  text-shadow:
+    -3px -3px 0 #fff,
+     3px -3px 0 #fff,
+    -3px  3px 0 #fff,
+     3px  3px 0 #fff,
+    -3px  0px 0 #fff,
+     3px  0px 0 #fff,
+     0px -3px 0 #fff,
+     0px  3px 0 #fff,
+     0    0   3px #fff;
+}
+
+.drawzone-subtitle-1-3rem {
+  font-size: 1.3rem;
+  font-weight: 500;
+  margin-bottom: 2rem;
+  color: #fff;
+  font-family: 'Digitalt', serif;
+  text-shadow:
+    0 -1px 0 #000,
+    1px 0 0 #000,
+    0 1px 0 #000,
+   -1px 0 0 #000,
+   -1px -1px 0 #000,
+    1px -1px 0 #000,
+    1px 1px 0 #000,
+   -1px 1px 0 #000;
+}
+
+.login-label {
+  font-weight: 500;
+  color: #000;
+  font-size: 1.1rem;
+  letter-spacing: 1.4px;
+  font-family: 'Digitalt', serif;
+  text-transform: uppercase;
+  margin-bottom: -15px;
+}
+
+.login-input {
+  height: 55px !important;
+  width: 95%  !important;
+  border-radius: 8px !important;
+  background-color: #fff !important;
+  border: 1px solid #000 !important;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3), 0 8px 20px rgba(0, 0, 0, 0.3) !important;
+  color: black !important
+
+}
+
+.login-actions {
+  margin-top: 50px;
+}
+
+.login-button {
+  width: 75% !important;
+  height: 52px !important;
+  background-color: #CBB0FF !important;
+  border-color: #7f5ac5 !important;
+  font-weight: 500 !important;
+  font-size: 1.8rem !important;
+  letter-spacing: 1.6px !important;
+  border-radius: 8px !important;
+  border: 1px solid #000 !important;
+  font-family: 'Digitalt', serif !important;
+  color: #000 !important;
+  transition: all 0.3s ease !important;
+  box-shadow:
+    0 0px 10px rgb(255, 255, 255, 0.4),
+    0 6px 12px rgba(0, 0, 0, 0.3) !important;
+  text-shadow:
+     0 -1px 0 #fff,
+     1px 0 0 #fff,
+     0 1px 0 #fff,
+    -1px 0 0 #fff,
+    -1px -1px 0 #fff,
+     1px -1px 0 #fff,
+     1px 1px 0 #fff,
+    -1px 1px 0 #fff !important;
+}
+
+.login-button:hover {
+  background-color: #dabaff !important;
+  box-shadow:
+    0 8px 20px rgba(127, 90, 197, 0.4),
+    0 12px 12px rgba(0, 0, 0, 0.1) !important;
+  transform: translateY(0px) !important;
+  cursor: pointer !important;
+}
+
+.login-button:active {
+  transform: translateY(1px) scale(0.98) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+.login-divider {
+  margin: 10px 0;
+  font-weight: 500;
+  font-size: 1.2rem;
+  letter-spacing: 1.3px;
+  font-family: 'Koulen', serif;
+  color: #000;
+}
+
+.redirect-register-button {
+  width: 58%  !important;
+  background-color: #444  !important;
+  color: white !important;
+  font-weight: 900 !important;
+  font-size: 0.9em !important;
+  letter-spacing: 1px !important;
+  border-radius: 8px !important;
+  margin-top: 1.2px !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.77), 0 8px 20px rgba(255, 255, 255, 0.5) !important;
+  border: 1px solid #fff !important;
+}
+
+.redirect-register-button:hover {
+  background-color: #5e5e5e !important;
+  transform: translateY(0px) !important;
+  cursor: pointer !important;
+}
+
+.redirect-register-button:active {
+  transform: translateY(1px) scale(0.99) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+.ant-form-item-required::before {
+  content: \"*\";
+  visibility: hidden;
 }

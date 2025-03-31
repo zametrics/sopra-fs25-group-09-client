@@ -74,114 +74,12 @@ const Login: React.FC = () => {
     router.push("/register");
   };
 
-
-  /* 
-    NEW LOGIN PAGE
-    Warning: Styles still *NEED* to be seperated to external .css file!
-  */
-  return (
-    <>
-
-      <style>
-        {`
-
-          @font-face {
-           font-family: 'Kranky';
-           src: url('/fonts/Kranky.ttf') format('truetype');
-           font-weight: normal;
-           font-style: normal;
-          }
-
-          @font-face {
-           font-family: 'Digitalt';
-           src: url('/fonts/Digitalt.ttf') format('truetype');
-           font-weight: normal;
-           font-style: normal;
-          }
-
-          @font-face {
-           font-family: 'Koulen';
-           src: url('/fonts/Koulen.ttf') format('truetype');
-           font-weight: normal;
-           font-style: normal;
-          }
-
-          .ant-form-item-required::before {
-            content: "*";
-            visibility: hidden;
-          }
-        `}
-      </style>
-
-      <div
-        style={{
-          height: "100vh",
-          overflow: "hidden",
-          background: "url('/images/background_new.jpg') no-repeat center center/cover",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          padding: "20px",
-          fontFamily: "Digitalt"
-        }}
-      >
-        <div
-          style={{
-            background: "rgba(255, 255, 255, 0.56)",
-            borderRadius: "35px",
-            padding: "40px",
-            maxWidth: "450px",
-            width: "100%",
-            textAlign: "center",
-            boxShadow: "inset 0 0 0 2px rgba(255, 255, 255, 0.69), 0 8px 20px rgba(255, 255, 255, 0.5)",
-            backdropFilter: "blur(1px)",
-            WebkitBackdropFilter: "blur(10px)"
-          }}
-        >
-          <h1
-            style={{
-              fontSize: "4rem",
-              marginBottom: "-0.1rem",
-              color: "#000",
-              fontFamily: "'Kranky', serif",
-              fontWeight: "normal",
-              textShadow: `
-                -3px -3px 0 #fff,
-               3px -3px 0 #fff,
-              -3px  3px 0 #fff,
-               3px  3px 0 #fff,
-              -3px  0px 0 #fff,
-               3px  0px 0 #fff,
-               0px -3px 0 #fff,
-               0px  3px 0 #fff,
-               0    0   3px #fff
-                `
-            }}
-            >
-              DRAWZONE
-            </h1>
-          <p
-            style={{
-              fontSize: "1.3rem",
-              fontWeight: -900,
-              marginBottom: "2rem",
-              color: "#fff",
-              fontFamily: "'Digitalt', serif",
-              textShadow: `
-                0 -1px 0 #000,
-                1px 0 0 #000,
-                0 1px 0 #000,
-               -1px 0 0 #000,
-               -1px -1px 0 #000,
-                1px -1px 0 #000,
-                1px 1px 0 #000,
-               -1px 1px 0 #000
-            `
-            }}
-          >
-            ART BATTLE ROYALE
-          </p>
-
+    return (
+      <div className="page-background">
+        <div className="login-register-box">
+          <h1 className="drawzone-logo-4rem">DRAWZONE</h1>
+          <p className="drawzone-subtitle-1-3rem">ART BATTLE ROYALE</p>
+  
           <Form
             form={form}
             name="login"
@@ -189,149 +87,36 @@ const Login: React.FC = () => {
             onFinish={handleLogin}
             layout="vertical"
           >
-            
             <Form.Item
               name="username"
               rules={[{ required: true, message: "Please enter your username!" }]}
               colon={false}
-              label={
-                <div style={{ marginBottom: "-15px" }}>
-                 <span
-                   style={{
-                     fontWeight: 500,
-                     color: "#000",
-                     fontSize: "1.1rem",
-                     letterSpacing: "1.4px",
-                     fontFamily: "'Digitalt', serif",
-                     textTransform: "uppercase"
-                   }}
-                 >
-                    Username:
-                  </span>
-                </div>
-              }
+              label={<label className="login-label">Username:</label>}
             >
-              <Input style={{
-                 height: "55px",
-                 width: "95%",
-                 borderRadius: "8px",
-                 backgroundColor: "#fff",
-                 border: "1px solid #000",
-                 boxShadow: "inset 0 0 0 1px rgba(0, 0, 0, 0.3), 0 8px 20px rgba(0, 0, 0, 0.3)",
-                 color: "#000"
-               }} />
+              <Input className="login-input" />
             </Form.Item>
-
+  
             <Form.Item
               name="password"
-              label={
-                <div style={{ marginBottom: "-15px" }}>
-                 <span
-                   style={{
-                    fontWeight: 500,
-                    color: "#000",
-                    fontSize: "1.1rem",
-                    letterSpacing: "1.4px",
-                    fontFamily: "'Digitalt', serif",
-                    textTransform: "uppercase"
-                   }}
-                 >
-                    Password:
-                  </span>
-                </div>
-              }
-
               rules={[{ required: true, message: "Please enter your password!" }]}
+              label={<label className="login-label">Password:</label>}
             >
-              <Input.Password style={{
-                 height: "55px",
-                 width: "95%",
-                 borderRadius: "8px",
-                 backgroundColor: "#fff",
-                 border: "1px solid #000",
-                 boxShadow: "inset 0 0 0 1px rgba(0, 0, 0, 0.3), 0 8px 20px rgba(0, 0, 0, 0.3)",
-                 color: "#000"
-               }} />
+              <Input.Password className="login-input" />
             </Form.Item>
-            
-          <div style={{ marginTop: "50px" }}>
-            <Form.Item style={{ marginBottom: "8px" }}>
-              <Button
-                type="primary"
-                htmlType="submit"
-                style={{
-                  width: "75%",
-                  height: "52px",
-                  backgroundColor: "#CBB0FF",
-                  borderColor: "#7f5ac5",
-                  fontWeight: "bold",
-                  fontSize: "1.1rem",
-                  letterSpacing: "1.2px",
-                  borderRadius: "8px",
-                  border: "1px solid #000",
-                  boxShadow: "inset 0 0 0 1px rgba(0, 0, 0, 0.3), 0 8px 20px rgba(0, 0, 0, 0.3)",
-                }}
-              >
-                <p
-            style={{
-              fontSize: "1.6rem",
-              letterSpacing: "4px",
-              fontWeight: 500,
-              color: "#000",
-              fontFamily: "'Digitalt', serif",
-              textShadow: `
-                 0 -1px 0 #fff,
-                 1px 0 0 #fff,
-                 0 1px 0 #fff,
-                -1px 0 0 #fff,
-                -1px -1px 0 #fff,
-                 1px -1px 0 #fff,
-                 1px 1px 0 #fff,
-                -1px 1px 0 #fff
-              `
-            }}
-          >
-            LOGIN
-          </p>
-              </Button>
-            </Form.Item>
-
-            <div style={{ 
-              margin: "10px 0", 
-              fontWeight: 500,
-              fontSize: "1.2rem",
-              letterSpacing: "1.3px",
-              fontFamily: "'Koulen', serif",
-              color: "#000"
-            }}
-            >OR</div>
-
-            <Form.Item>
-              <Button
-                type="default"
-                onClick={handleRegisterClick}
-                style={{
-                  width: "58%",
-                  backgroundColor: "#444",
-                  color: "white",
-                  fontWeight: 900,
-                  fontSize: "0.8em",
-                  letterSpacing: "1px",
-                  borderRadius: "8px",
-                  marginTop: "1.2px",
-                  boxShadow: "inset 0 0 0 1px rgba(255, 255, 255, 0.77), 0 8px 20px rgba(255, 255, 255, 0.5)",
-                  border: "1px solid #fff"
-                }}
-              >
-                CREATE AN ACCOUNT
-              </Button>
-            </Form.Item>
+  
+            <div className="login-actions">
+              <Form.Item>
+                <Button htmlType="submit" className="login-button">LOGIN</Button>
+              </Form.Item>
+              <div className="login-divider">OR</div>
+              <Form.Item>
+                <Button onClick={handleRegisterClick} className="redirect-register-button">CREATE AN ACCOUNT</Button>
+              </Form.Item>
             </div>
           </Form>
         </div>
       </div>
-    </>
-  );
-};
-
-export default Login;
+    );
+  };
+  
+  export default Login;
