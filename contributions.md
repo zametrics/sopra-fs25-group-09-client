@@ -45,7 +45,7 @@ Note: If a team member fails to show continuous progress after using their Joker
 |                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
 | **[@githubUser2]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
 |                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
-| **[@githubUser3]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+|  **@ortakyakuza** | 05.04.2025    | https://github.com/zametrics/sopra-fs25-group-09-server/commit/1f033bdb8bd879b7f47916b3841fee173a3698a9          | Implemented `LobbyControllerTest` to cover multiple lobby-related endpoints with unit tests    | Improves backend test coverage and helps ensure that key lobby functionalities behave as expected.     |
 |                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
 | **[@githubUser4]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
 |                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
