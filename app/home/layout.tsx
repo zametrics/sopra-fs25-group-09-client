@@ -277,10 +277,8 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
                     </span>
                     {showAvatarMenu && (
                       <div className="avatar-menu">
-                        <button onClick={handleUploadImage}>Upload Image</button>
-                        <button onClick={handleDeleteImage} style={{ color: "red" }}>
-                          Delete Image
-                        </button>
+                        <button onClick={handleUploadImage} className="upload-image-btn">upload image</button>
+                        <button onClick={handleDeleteImage} className="delete-image-btn">delete image</button>
                       </div>
                     )}
                   </div>

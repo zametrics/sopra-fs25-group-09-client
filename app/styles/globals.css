@@ -360,7 +360,6 @@ a {
   flex-direction: column;
   gap: 0px;
   opacity: 1;
-  pointer-events: none;
   transition: opacity 1s ease-in-out;
 }
 
