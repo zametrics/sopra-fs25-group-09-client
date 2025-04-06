@@ -6,6 +6,7 @@ import { LogoutOutlined } from "@ant-design/icons";
 import { message } from "antd";
 import { useApi } from "@/hooks/useApi";
 import { User } from "@/types/user";
+import { Lobby } from "@/types/lobby";
 import useLocalStorage from "@/hooks/useLocalStorage"; // Hook to manage local storage values
 
 export default function HomeLayout({ children }: { children: React.ReactNode }) {
@@ -240,7 +241,7 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
             try {
               const userIdStr = localStorage.getItem("userId");
               const userId = userIdStr ? JSON.parse(userIdStr) : null;
-              const response = await apiService.post("/lobbies", {
+              const response = await apiService.post<Lobby>("/lobbies", {
                 numOfMaxPlayers: 8,
                 playerIds: [userId],
                 wordset: "english",
@@ -248,7 +249,7 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
                 drawTime: 80,
                 lobbyOwner: userId,
               });
-              const lobbyId = response?.data?.id || response?.id;
+              const lobbyId = response.id;
               router.push(`/lobbies/${lobbyId}`);
             } catch {
               message.error("Failed to create lobby.");
