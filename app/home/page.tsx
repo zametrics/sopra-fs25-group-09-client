@@ -7,13 +7,15 @@
 // clicking on a user in this list will display /app/users/[id]/page.tsx
 "use client"; // For components that need React hooks and browser APIs, SSR (server-side rendering) has to be disabled. Read more here: https://nextjs.org/docs/pages/building-your-application/rendering/server-side-rendering
 
-import React, {useState } from "react";
+
 import { useRouter } from "next/navigation"; // Next.js navigation hook for client-side routing
 import { useApi } from "@/hooks/useApi"; // Custom API hook for making backend requests
 import useLocalStorage from "@/hooks/useLocalStorage"; // Hook to manage local storage values
 import { Typography, message } from "antd"; // UI components from Ant Design
 import { Form } from "antd"; // Importing the type for table properties
 import { LogoutOutlined} from "@ant-design/icons"; // Icons from Ant Design
+import { User } from "@/types/user"; // Added User type import
+import React, { useEffect, useState } from "react"; // Added useEffect
 
 import withAuth from "@/hooks/withAuth"; // Import the authentication wrapper
 
@@ -30,6 +32,8 @@ const Dashboard: React.FC = () => {
   const userId = localStorage.getItem("userId");
   const username = localStorage.getItem("username");
   const [isCreatingLobby, setIsCreatingLobby] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  
 
   const {
     // value: token, // is commented out because we don't need to know the token value for logout
@@ -64,6 +68,22 @@ const Dashboard: React.FC = () => {
     router.push("/login");
   };
   
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const userIdStr = localStorage.getItem("userId");
+        const id = userIdStr ? JSON.parse(userIdStr) : null;
+        if (!id) return;
+
+        const response = await apiService.get<User>(`/users/${id}`);
+        setCurrentUser(response);
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      }
+    };
+    fetchCurrentUser();
+  }, [apiService]);
+
   // New function to create a lobby with default values
   const handleCreateLobby = async () => {
     setIsCreatingLobby(true);
@@ -155,34 +175,45 @@ const Dashboard: React.FC = () => {
   return (
     <div className="page-background">
       <div className="home-wrapper">
-        {/* Left Box */}
+        {/* Left Box - No changes */}
         <div className="left-box">
           <img src="/icons/settings_icon.png" alt="Settings" className="settings-icon" />
           <h1 className="drawzone-logo-3-7rem">DRAWZONE</h1>
           <p className="drawzone-subtitle-1-5rem">ART BATTLE ROYALE</p>
-
           <button className="green-button" onClick={handleJoinLobby}>
             JOIN LOBBY
           </button>
-          <button className="green-button" 
+          <button
+            className="green-button"
             onClick={handleCreateLobby}
-            disabled={isCreatingLobby}>
-            
+            disabled={isCreatingLobby}
+          >
             HOST GAME
           </button>
         </div>
 
         {/* Right Side */}
         <div className="right-side">
-          {/* Profile */}
+          {/* Profile - Changed avatar image source */}
           <div className="profile-box">
             <div className="profile-top-row">
-              <img src="/icons/avatar.png" alt="Avatar" className="avatar-image" />
+              <img
+                src={currentUser?.avatarUrl || "/icons/avatar.png"} // Changed to use avatarUrl with fallback
+                alt="Avatar"
+                className="avatar-image"
+                style={{ // Added styling to match UserProfile
+                  width: "87px",
+                  height: "87px",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                }}
+              />
               <div className="profile-username">{username}</div>
             </div>
-            <button className="edit-profile-button"
-            onClick={() => router.push(`/home/${userId}`)} // Redirecting to user's profile edit page
-              >
+            <button
+              className="edit-profile-button"
+              onClick={() => router.push(`/home/${userId}`)} // Changed route to match UserProfile
+            >
               Edit Profile
             </button>
             <button className="logout-button" onClick={handleLogout}>
@@ -190,7 +221,7 @@ const Dashboard: React.FC = () => {
             </button>
           </div>
 
-          {/* Quickplay */}
+          {/* Quickplay - No changes */}
           <div className="quickplay-box">
             <h2 className="quickplay-title">QUICKPLAY</h2>
             <button className="green-button" onClick={handlePlay}>
