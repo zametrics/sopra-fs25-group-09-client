@@ -35,24 +35,25 @@ const UserProfile: React.FC = () => {
     }
   }, []);
 
-  // New function to handle avatar URL save
-  const saveAvatar = async () => {
-    if (!avatarUrl.trim()) {
-      message.error("Please enter a valid image URL.");
-      return;
-    }
+// New function to handle avatar URL save
+const saveAvatar = async () => {
+  if (!avatarUrl.trim()) {
+    message.error("Please enter a valid image URL.");
+    return;
+  }
 
-    try {
-      const updatedFields = { avatarUrl };
-      await apiService.put(`/users/${user?.id}`, updatedFields);
-      message.success("Profile picture updated successfully!");
-      window.location.reload();
-      setIsEditingAvatar(false);
-    } catch (error) {
-      message.error("Error updating profile picture.");
-      console.error("Update error:", error);
-    }
-  };
+  try {
+    const updatedFields = { avatarUrl };
+    // Correct endpoint for updating avatar URL
+    await apiService.put(`/users/${user?.id}/avatar`, updatedFields);
+    message.success("Profile picture updated successfully!");
+    window.location.reload();  // Reload to reflect changes
+    setIsEditingAvatar(false);  // Exit editing mode
+  } catch (error) {
+    message.error("Error updating profile picture.");
+    console.error("Update error:", error);
+  }
+};
 
   // Effect to fetch the user data based on the ID in the URL
   useEffect(() => {
