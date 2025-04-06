@@ -50,8 +50,28 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
     fetchUser();
   }, [apiService, editUserId, username, localAvatarUrl]);
 
-  const handleLogout = () => {
-    localStorage.clear();
+  const handleLogout = async () => {
+    const storedToken = localStorage.getItem("token");
+  
+    // Extract the token from the stored object
+    const parsedToken = storedToken ? JSON.parse(storedToken)?.token : null;
+  
+    // Log the parsedToken value to the console
+    console.log("Parsed Token:", parsedToken);
+  
+    if (parsedToken) {
+      try {
+        // Send the token directly, not wrapped in an object
+        await apiService.post("/logout", { token: parsedToken });  
+      } catch (error) {
+        console.error("Logout failed", error);
+      }
+    }
+  
+    // Clear the token and username from localStorage
+    localStorage.removeItem("token");
+    localStorage.removeItem("username");
+    localStorage.removeItem("userId");
     router.push("/login");
   };
 

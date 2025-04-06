@@ -13,10 +13,8 @@ import { useApi } from "@/hooks/useApi"; // Custom API hook for making backend r
 import useLocalStorage from "@/hooks/useLocalStorage"; // Hook to manage local storage values
 import { Typography, message } from "antd"; // UI components from Ant Design
 import { Form } from "antd"; // Importing the type for table properties
-import { LogoutOutlined} from "@ant-design/icons"; // Icons from Ant Design
 import { User } from "@/types/user"; // Added User type import
 import React, { useEffect, useState } from "react"; // Added useEffect
-import { Spin } from "antd";
 
 import withAuth from "@/hooks/withAuth"; // Import the authentication wrapper
 
@@ -42,30 +40,7 @@ const Dashboard: React.FC = () => {
 
   } = useLocalStorage<string>("token", ""); // Fetching and managing the token in local storage
 
-  const handleLogout = async () => {
-    const storedToken = localStorage.getItem("token");
-  
-    // Extract the token from the stored object
-    const parsedToken = storedToken ? JSON.parse(storedToken)?.token : null;
-  
-    // Log the parsedToken value to the console
-    console.log("Parsed Token:", parsedToken);
-  
-    if (parsedToken) {
-      try {
-        // Send the token directly, not wrapped in an object
-        await apiService.post("/logout", { token: parsedToken });  
-      } catch (error) {
-        console.error("Logout failed", error);
-      }
-    }
-  
-    // Clear the token and username from localStorage
-    localStorage.removeItem("token");
-    localStorage.removeItem("username");
-    localStorage.removeItem("userId");
-    router.push("/login");
-  };
+
   
   useEffect(() => {
     const fetchCurrentUser = async () => {
