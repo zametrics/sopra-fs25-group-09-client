@@ -6,6 +6,7 @@ import { LogoutOutlined } from "@ant-design/icons";
 import { message } from "antd";
 import { useApi } from "@/hooks/useApi";
 import { User } from "@/types/user";
+import useLocalStorage from "@/hooks/useLocalStorage"; // Hook to manage local storage values
 
 export default function HomeLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -23,6 +24,18 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
 
   const isProfilePage = pathname.startsWith("/home/") && pathname !== "/home";
 
+  const [isCreatingLobby, setIsCreatingLobby] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const {
+    // value: token, // is commented out because we don't need to know the token value for logout
+    // set: setToken, // is commented out because we don't need to set or update the token value    
+
+    //clear: clearToken, // all we need in this scenario is a method to clear the token
+
+  } = useLocalStorage<string>("token", ""); // Fetching and managing the token in local storage
+
+
   useEffect(() => {
     if (isProfilePage) {
       const parts = pathname.split("/");
@@ -32,6 +45,22 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
       setEditUserId(null);
     }
   }, [pathname]);
+
+    useEffect(() => {
+      const fetchCurrentUser = async () => {
+        try {
+          const userIdStr = localStorage.getItem("userId");
+          const userId = userIdStr ? JSON.parse(userIdStr) : null;
+          if (!userId) return;
+  
+          const response = await apiService.get<User>(`/users/${userId}`);
+          setCurrentUser(response);
+        } catch (error) {
+          console.error("Error fetching current user:", error);
+        }
+      };
+      fetchCurrentUser();
+    }, [apiService]);
 
   useEffect(() => {
     if (!editUserId) {
@@ -130,6 +159,76 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
   const handleConfirmChanges = async () => {
     await Promise.all([saveUsername(), saveAvatar()]);
     router.push("/home");
+  };
+
+  const handleCreateLobby = async () => {
+    setIsCreatingLobby(true);
+    
+    try {
+      // Get the current user's ID
+      const userIdStr = localStorage.getItem("userId");
+      const userId = userIdStr ? JSON.parse(userIdStr) : null;
+      
+      if (!userId) {
+        message.error("User ID not found. Please log in again.");
+        setIsCreatingLobby(false);
+        return;
+      }
+      
+      // Default values as specified
+      const defaultLobbyData = {
+        numOfMaxPlayers: 8,
+        playerIds: [userId], // Add the creator as the first player
+        wordset: "english",
+        numOfRounds: 3,
+        drawTime: 80,
+        lobbyOwner: userId // Set the lobby owner
+      };
+      
+      // Make the API call to create the lobby
+      const response = await apiService.post("/lobbies", defaultLobbyData);
+      
+      console.log("Lobby creation response:", response);
+      
+      const hasId = (obj: unknown): obj is { id: string | number } => {
+        return typeof obj === "object" && obj !== null && "id" in (obj as Record<string, unknown>);
+      };
+      
+      const hasDataId = (obj: unknown): obj is { data: { id: string | number } } => {
+        return (
+          typeof obj === "object" &&
+          obj !== null &&
+          "data" in (obj as Record<string, unknown>) &&
+          typeof (obj as { data: unknown }).data === "object" &&
+          (obj as { data: unknown }).data !== null &&
+          "id" in (obj as { data: Record<string, unknown> }).data
+        );
+      };
+      
+      let lobbyId;
+      
+      if (hasId(response)) {
+        lobbyId = response.id;
+      } else if (hasDataId(response)) {
+        lobbyId = response.data.id;
+      } else {
+        console.error("Could not determine lobby ID from response:", response);
+        message.error("Created lobby but couldn't get ID. Please check lobby list.");
+        return;
+      }
+      
+      // Show success message and redirect to the lobby
+      message.success(`Lobby created successfully! ID: ${lobbyId}`);
+      
+      // Redirect to the lobby page
+      router.push(`/lobbies/${lobbyId}`);
+      
+    } catch (error) {
+      console.error("Error creating lobby:", error);
+      message.error("Failed to create lobby. Please try again.");
+    } finally {
+      setIsCreatingLobby(false);
+    }
   };
 
   return (
