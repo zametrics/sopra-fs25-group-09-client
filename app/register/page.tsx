@@ -41,12 +41,12 @@ const Register = () => {
         return { isValid: true, message: "Password is valid" };
       };
 
-      /*
+      
       // Validate password
       const passwordValidation = validatePassword(values.password);
       if (!passwordValidation.isValid) {
         throw new Error(passwordValidation.message);
-      } */
+      } 
 
       // Send registration request to the backend
       const response = await apiService.post<UserGetDTO>("/users", values);
