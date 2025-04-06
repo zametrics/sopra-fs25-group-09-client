@@ -4,7 +4,7 @@ import React from "react";
 import { useRouter } from "next/navigation"; // For navigating after signup
 import { useApi } from "@/hooks/useApi"; // API service for making requests
 import { Form, Input, Button } from "antd"; // UI components
-import { UserOutlined, LockOutlined, IdcardOutlined } from "@ant-design/icons";
+import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import "@/styles/globals.css";
 
 interface UserGetDTO {
@@ -24,7 +24,7 @@ const Register = () => {
   //const { set: setToken } = useLocalStorage<string>("token", "");
 
   // Handle form submission
-  const handleRegister = async (values: { name: string; username: string; password: string }) => {
+  const handleRegister = async (values: { username: string; password: string }) => {
     try {
       // Send registration request to the backend
       const response = await apiService.post<UserGetDTO>("/users", values); // Ensure the correct DTO type
@@ -64,15 +64,7 @@ const Register = () => {
           onFinish={handleRegister}
           layout="vertical"
           size="large"
-        >
-          <Form.Item
-            name="name"
-            rules={[{ required: true, message: "Please enter your name" }]}
-            label={<label className="login-label">Name:</label>}
-          >
-            <Input prefix={<IdcardOutlined />} className="login-input" placeholder="Your name" />
-          </Form.Item>
-
+        > 
           <Form.Item
             name="username"
             rules={[{ required: true, message: "Please enter a username" }]}
