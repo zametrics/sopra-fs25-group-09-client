@@ -52,8 +52,6 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
           const userId = userIdStr ? JSON.parse(userIdStr) : null;
           if (!userId) return;
   
-          const response = await apiService.get<User>(`/users/${userId}`);
-
         } catch (error) {
           console.error("Error fetching current user:", error);
         }
@@ -160,6 +158,7 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
     router.push("/home");
   };
 
+/*
   const handleCreateLobby = async () => {
 
     
@@ -227,7 +226,8 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
     } finally {
     }
   };
-
+*/
+  
   return (
     <div className="page-background">
       <div className="home-wrapper">
