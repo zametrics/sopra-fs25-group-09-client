@@ -21,7 +21,7 @@ import withAuth from "@/hooks/withAuth"; // Import the authentication wrapper
 // Optionally, you can import a CSS module or file for additional styling:
 // import "@/styles/views/Dashboard.scss";
 
-const { Title } = Typography; // Extracting the Title component from Typography for styling
+const {} = Typography; // Extracting the Title component from Typography for styling
 
 
 const Dashboard: React.FC = () => {
