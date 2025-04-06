@@ -41,13 +41,10 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
     }
 
     const fetchUser = async () => {
-      try {
         const userData = await apiService.get<User>(`/users/${editUserId}`);
         setNewUsername(userData.username || "");
         setAvatarUrl(userData.avatarUrl || localAvatarUrl);
-      } catch (error) {
-        message.error("Failed to load user data.");
-      }
+      
     };
 
     fetchUser();
@@ -111,12 +108,8 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
   };
 
   const handleConfirmChanges = async () => {
-    try {
-      await Promise.all([saveUsername(), saveAvatar()]);
-      router.push("/home");
-    } catch (error) {
-      message.error("Update failed.");
-    }
+    await Promise.all([saveUsername(), saveAvatar()]);
+    router.push("/home");
   };
 
   return (

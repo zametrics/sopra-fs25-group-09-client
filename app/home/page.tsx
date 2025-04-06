@@ -30,8 +30,6 @@ const Dashboard: React.FC = () => {
   const router = useRouter(); // Next.js hook for navigation
   const apiService = useApi(); // Custom hook for making API requests
   const [] = Form.useForm();
-  const userId = localStorage.getItem("userId");
-  const username = localStorage.getItem("username");
   const [isCreatingLobby, setIsCreatingLobby] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
@@ -73,10 +71,10 @@ const Dashboard: React.FC = () => {
     const fetchCurrentUser = async () => {
       try {
         const userIdStr = localStorage.getItem("userId");
-        const id = userIdStr ? JSON.parse(userIdStr) : null;
-        if (!id) return;
+        const userId = userIdStr ? JSON.parse(userIdStr) : null;
+        if (!userId) return;
 
-        const response = await apiService.get<User>(`/users/${id}`);
+        const response = await apiService.get<User>(`/users/${userId}`);
         setCurrentUser(response);
       } catch (error) {
         console.error("Error fetching current user:", error);
