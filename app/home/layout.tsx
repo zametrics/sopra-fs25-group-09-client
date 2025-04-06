@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { LogoutOutlined } from "@ant-design/icons";
 import { message } from "antd";
 import { useApi } from "@/hooks/useApi";
+import { User } from "@/types/user";
 
 export default function HomeLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -33,22 +34,24 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
   }, [pathname]);
 
   useEffect(() => {
-    if (!editUserId) return;
+    if (!editUserId) {
+      setNewUsername(username || "");
+      setAvatarUrl(localAvatarUrl);
+      return;
+    }
 
     const fetchUser = async () => {
       try {
-        const userData = await apiService.get(`/users/${editUserId}`);
+        const userData = await apiService.get<User>(`/users/${editUserId}`);
         setNewUsername(userData.username || "");
-        setAvatarUrl(userData.avatarUrl || "");
-        localStorage.setItem("username", userData.username || "");
-        localStorage.setItem("avatarUrl", userData.avatarUrl || "");
+        setAvatarUrl(userData.avatarUrl || localAvatarUrl);
       } catch (error) {
         message.error("Failed to load user data.");
       }
     };
 
     fetchUser();
-  }, [apiService, editUserId]);
+  }, [apiService, editUserId, username, localAvatarUrl]);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -59,25 +62,57 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
     router.push(`/home/${currentUserId}`);
   };
 
-  const  handleUploadImage= () => {
+  const handleUploadImage = () => {
     const url = prompt("Enter new image URL:");
-    if (url) setAvatarUrl(url);
+    if (url && url.trim()) {
+      setAvatarUrl(url);
+    } else if (url !== null) {
+      message.error("Please enter a valid image URL.");
+    }
   };
 
   const handleDeleteImage = () => {
-    setAvatarUrl("");
+    setAvatarUrl("/icons/avatar.png"); // Reset to default avatar
   };
-  
+
+  const saveAvatar = async () => {
+    if (!avatarUrl.trim()) {
+      message.error("Please enter a valid image URL.");
+      return;
+    }
+
+    try {
+      const updatedFields = { avatarUrl };
+      await apiService.put(`/users/${editUserId}/avatar`, updatedFields);
+      message.success("Profile picture updated successfully!");
+      localStorage.setItem("avatarUrl", avatarUrl);
+      setShowAvatarMenu(false);
+    } catch (error) {
+      message.error("Error updating profile picture.");
+      console.error("Update error:", error);
+    }
+  };
+
+  const saveUsername = async () => {
+    if (!newUsername.trim()) {
+      message.error("Username cannot be empty.");
+      return;
+    }
+
+    try {
+      const updatedFields = { newUsername };
+      await apiService.put(`/users/${editUserId}`, updatedFields);
+      message.success("Username updated successfully!");
+      localStorage.setItem("username", newUsername);
+    } catch (error) {
+      message.error("Error updating username. It might be taken.");
+      console.error("Update error:", error);
+    }
+  };
 
   const handleConfirmChanges = async () => {
     try {
-      await apiService.put(`/users/${editUserId}`, {
-        newUsername,
-        avatarUrl,
-      });
-      message.success("Profile updated!");
-      localStorage.setItem("username", newUsername);
-      localStorage.setItem("avatarUrl", avatarUrl);
+      await Promise.all([saveUsername(), saveAvatar()]);
       router.push("/home");
     } catch (error) {
       message.error("Update failed.");
