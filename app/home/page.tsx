@@ -28,10 +28,10 @@ const Dashboard: React.FC = () => {
   const router = useRouter(); // Next.js hook for navigation
   const apiService = useApi(); // Custom hook for making API requests
   const [] = Form.useForm();
-  const [setUsers] = useState<User[] | null>(null); // State to store user data
-  const [setIsCreatingLobby] = useState(false); // State to track lobby creation status
+  const [_users, setUsers] = useState<User[] | null>(null);
   const userId = localStorage.getItem("userId");
   const username = localStorage.getItem("username");
+  const [isCreatingLobby, setIsCreatingLobby] = useState(false);
 
   const {
     // value: token, // is commented out because we don't need to know the token value for logout
@@ -183,7 +183,10 @@ const Dashboard: React.FC = () => {
           <button className="green-button" onClick={handleJoinLobby}>
             JOIN LOBBY
           </button>
-          <button className="green-button" onClick={handleCreateLobby}>
+          <button className="green-button" 
+            onClick={handleCreateLobby}
+            disabled={isCreatingLobby}>
+            
             HOST GAME
           </button>
         </div>
