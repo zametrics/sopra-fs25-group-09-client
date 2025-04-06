@@ -144,11 +144,6 @@ const Dashboard: React.FC = () => {
     router.push("/join-lobby");
   };
 
-  const handleHostGame = () => {
-    console.log("Hosting game...");
-    // Redirect to host game page or handle hosting logic
-    router.push("/host-game");
-  };
 
   const handlePlay = () => {
     console.log("Starting Quickplay...");
@@ -186,7 +181,7 @@ const Dashboard: React.FC = () => {
           <button className="green-button" onClick={handleJoinLobby}>
             JOIN LOBBY
           </button>
-          <button className="green-button" onClick={handleHostGame}>
+          <button className="green-button" onClick={handleCreateLobby}>
             HOST GAME
           </button>
         </div>
