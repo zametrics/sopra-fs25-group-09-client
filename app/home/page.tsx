@@ -13,7 +13,7 @@ import { useApi } from "@/hooks/useApi"; // Custom API hook for making backend r
 import useLocalStorage from "@/hooks/useLocalStorage"; // Hook to manage local storage values
 import { User } from "@/types/user"; // Importing the User type for TypeScript
 import { Button, Card, Table, Avatar, Typography, Space, message } from "antd"; // UI components from Ant Design
-import type { TableProps } from "antd"; // Importing the type for table properties
+import { Form, Input } from "antd"; // Importing the type for table properties
 import { LogoutOutlined, UserOutlined, PlusOutlined } from "@ant-design/icons"; // Icons from Ant Design
 
 import withAuth from "@/hooks/withAuth"; // Import the authentication wrapper
@@ -23,50 +23,11 @@ import withAuth from "@/hooks/withAuth"; // Import the authentication wrapper
 
 const { Title } = Typography; // Extracting the Title component from Typography for styling
 
-// Defining columns for the Ant Design table that displays User objects
-const columns: TableProps<User>["columns"] = [
-  {
-    title: "Avatar", // Table column title
-    dataIndex: "avatar", // The key in the user object that holds avatar URLs
-    key: "avatar",
-    render: () => (
-      // Displays a default user icon if no avatar is available
-      <Avatar src={undefined} icon={<UserOutlined />} />
-    ),
-  },
-  {
-    title: "Username",
-    dataIndex: "username",
-    key: "username",
-    render: (text) => (
-      <span
-        style={{
-          display: "inline-block",
-          padding: "4px 8px",
-          border: "1px solidrgb(13, 21, 28)",
-          borderRadius: "5px",
-          backgroundColor: "rgba(234, 234, 234, 0.1)",
-          color: "rgb(255, 255, 255)",
-          fontWeight: "bold",
-          cursor: "pointer",
-        }}
-      >
-        {text}
-      </span>
-    ),
-  },
-
-  
-  {
-    title: "ID",
-    dataIndex: "id",
-    key: "id",
-  },
-];
 
 const Dashboard: React.FC = () => {
   const router = useRouter(); // Next.js hook for navigation
   const apiService = useApi(); // Custom hook for making API requests
+  const [form] = Form.useForm();
   const [users, setUsers] = useState<User[] | null>(null); // State to store user data
   const [isCreatingLobby, setIsCreatingLobby] = useState(false); // State to track lobby creation status
 
@@ -194,59 +155,41 @@ const Dashboard: React.FC = () => {
   // - Since 'apiService' is a custom hook with memoization, this will not re-run unnecessarily.
 
   return (
+    <div className="page-background">
+      <div className="home-wrapper">
 
-<div
-  style={{
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    height: "100vh", // Makes the background cover the full viewport
-    padding: "2rem",
-    background: `url(/images/background.jpg) no-repeat center center/cover`, // This uses the image as the background
-  }}
->
+        {/* Linke Box */}
+        <div className="left-box">
+          <img src="/icons/settings_icon.png" alt="Settings" className="settings-icon" />
 
-      <Card
-        title={<Title level={3}>👥 User Overview</Title>} // Displaying a title with an icon
-        loading={!users} // Shows a loading state if users haven't been fetched yet
-        style={{ 
-          width: "80%", 
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)", // Adds a subtle shadow for a cleaner UI
-          borderRadius: "10px", // Rounds the card's edges for a modern look
-          padding: "2rem"
-        }}
-      >
-        {users && (
-          <>
-            {/* Ant Design Table Component */}
-            <Table<User>
-              columns={columns} // Columns defined above
-              dataSource={users} // The user data fetched from the backend
-              rowKey="id" // Ensures each row has a unique identifier
-              pagination={{ pageSize: 5 }} // Limits the number of users displayed per page
-              onRow={(row) => ({
-                onClick: () => router.push(`/home/${row.id}`), // Navigates to a user's profile on click
-                style: { cursor: "pointer" }, // Changes the cursor to indicate clickability
-              })}
-            />
-            
-            {/* Buttons for Logout and Create Lobby */}
-            <Space style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
-              <Button onClick={handleLogout} type="primary" icon={<LogoutOutlined />} danger>
-                Logout
-              </Button>
-              <Button 
-                onClick={handleCreateLobby} 
-                type="primary" 
-                icon={<PlusOutlined />}
-                loading={isCreatingLobby}
-              >
-                Create Lobby
-              </Button>
-            </Space>
-          </>
-        )}
-      </Card>
+          <h1 className="drawzone-logo-3-7rem">DRAWZONE</h1>
+          <p className="drawzone-subtitle-1-5rem">ART BATTLE ROYALE</p>
+
+          <button className="green-button">JOIN LOBBY</button>
+          <button className="green-button">HOST GAME</button>
+        </div>
+
+        {/* Rechte Seite */}
+        <div className="right-side">
+          
+          {/* Oben: Profil */}
+          <div className="profile-box">
+            <div className="profile-top-row">
+              <img src="/icons/avatar.png" alt="Avatar" className="avatar-image" />
+            <div className="profile-username">user1</div>
+            </div>
+              <button className="edit-profile-button">Edit Profile</button>
+              <button className="logout-button">Log out</button>
+          </div>
+
+
+          {/* Unten: Quickplay */}
+          <div className="quickplay-box">
+            <h2 className="quickplay-title">QUICKPLAY</h2>
+            <button className="green-button">PLAY</button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
