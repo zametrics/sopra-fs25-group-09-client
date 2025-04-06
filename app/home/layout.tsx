@@ -24,8 +24,7 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
 
   const isProfilePage = pathname.startsWith("/home/") && pathname !== "/home";
 
-  const [isCreatingLobby, setIsCreatingLobby] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
 
   const {
     // value: token, // is commented out because we don't need to know the token value for logout
@@ -54,7 +53,7 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
           if (!userId) return;
   
           const response = await apiService.get<User>(`/users/${userId}`);
-          setCurrentUser(response);
+
         } catch (error) {
           console.error("Error fetching current user:", error);
         }
@@ -162,7 +161,7 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
   };
 
   const handleCreateLobby = async () => {
-    setIsCreatingLobby(true);
+
     
     try {
       // Get the current user's ID
@@ -171,7 +170,6 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
       
       if (!userId) {
         message.error("User ID not found. Please log in again.");
-        setIsCreatingLobby(false);
         return;
       }
       
@@ -227,7 +225,6 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
       console.error("Error creating lobby:", error);
       message.error("Failed to create lobby. Please try again.");
     } finally {
-      setIsCreatingLobby(false);
     }
   };
 
