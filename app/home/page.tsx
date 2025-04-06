@@ -8,12 +8,9 @@
 "use client"; // For components that need React hooks and browser APIs, SSR (server-side rendering) has to be disabled. Read more here: https://nextjs.org/docs/pages/building-your-application/rendering/server-side-rendering
 
 
-import { useRouter } from "next/navigation"; // Next.js navigation hook for client-side routing
-import { useApi } from "@/hooks/useApi"; // Custom API hook for making backend requests
-import { Typography, message } from "antd"; // UI components from Ant Design
+import { Typography } from "antd"; // UI components from Ant Design
 import { Form } from "antd"; // Importing the type for table properties
-import { User } from "@/types/user"; // Added User type import
-import React, { useEffect, useState } from "react"; // Added useEffect
+
 
 import withAuth from "@/hooks/withAuth"; // Import the authentication wrapper
 
@@ -24,8 +21,7 @@ const {} = Typography; // Extracting the Title component from Typography for sty
 
 
 const Dashboard: React.FC = () => {
-  const router = useRouter(); // Next.js hook for navigation
-  const apiService = useApi(); // Custom hook for making API requests
+
   const [] = Form.useForm();
 
   
