@@ -15,7 +15,6 @@ const withAuth = <P extends object>(WrappedComponent: React.FC<P>) => {
       typeof window !== "undefined" ? localStorage.getItem("userId") : null;
 
     const [isAllowed, setIsAllowed] = useState<boolean>(false);
-    const [loading, setLoading] = useState<boolean>(true);
     
     useEffect(() => {
       if (!token || !userId) {
@@ -41,9 +40,7 @@ const withAuth = <P extends object>(WrappedComponent: React.FC<P>) => {
           console.error("Authentication error:", error);
           setIsAllowed(false);
           router.push("/unauthorized?countdown=15");
-        } finally {
-          setLoading(false);
-        }
+        } 
       };
 
       verifyUserToken();
