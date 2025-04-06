@@ -22,6 +22,7 @@ const Register = () => {
 
   // Handle form submission
   const handleRegister = async (values: { username: string; password: string }) => {
+    
     try {
       // Password validation
       const validatePassword = (password: string): { isValid: boolean; message: string } => {
@@ -40,11 +41,12 @@ const Register = () => {
         return { isValid: true, message: "Password is valid" };
       };
 
+      /*
       // Validate password
       const passwordValidation = validatePassword(values.password);
       if (!passwordValidation.isValid) {
         throw new Error(passwordValidation.message);
-      }
+      } */
 
       // Send registration request to the backend
       const response = await apiService.post<UserGetDTO>("/users", values);
