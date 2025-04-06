@@ -125,7 +125,7 @@ return (
     }}
   >
     <Card
-      title={<Title level={3}>User Profile of {user?.name}</Title>}
+      title={<Title level={3}>User Profile of {user?.username}</Title>}
       loading={!user} // Show a loading spinner while fetching data
       style={{
         width: "80%",
