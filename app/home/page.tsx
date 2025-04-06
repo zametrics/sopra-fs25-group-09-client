@@ -7,11 +7,10 @@
 // clicking on a user in this list will display /app/users/[id]/page.tsx
 "use client"; // For components that need React hooks and browser APIs, SSR (server-side rendering) has to be disabled. Read more here: https://nextjs.org/docs/pages/building-your-application/rendering/server-side-rendering
 
-import React, { useEffect, useState } from "react";
+import React, {useState } from "react";
 import { useRouter } from "next/navigation"; // Next.js navigation hook for client-side routing
 import { useApi } from "@/hooks/useApi"; // Custom API hook for making backend requests
 import useLocalStorage from "@/hooks/useLocalStorage"; // Hook to manage local storage values
-import { User } from "@/types/user"; // Importing the User type for TypeScript
 import { Typography, message } from "antd"; // UI components from Ant Design
 import { Form } from "antd"; // Importing the type for table properties
 import { LogoutOutlined} from "@ant-design/icons"; // Icons from Ant Design
