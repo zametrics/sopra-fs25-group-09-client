@@ -70,7 +70,7 @@ const LobbyPage: React.FC = () => {
   };
 
   const goBack = () => {
-    router.push('/users');
+    router.push('/home');
   };
 
   if (loading) {
