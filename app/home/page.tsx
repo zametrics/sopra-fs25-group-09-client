@@ -225,7 +225,7 @@ const Dashboard: React.FC = () => {
               rowKey="id" // Ensures each row has a unique identifier
               pagination={{ pageSize: 5 }} // Limits the number of users displayed per page
               onRow={(row) => ({
-                onClick: () => router.push(`/users/${row.id}`), // Navigates to a user's profile on click
+                onClick: () => router.push(`/home/${row.id}`), // Navigates to a user's profile on click
                 style: { cursor: "pointer" }, // Changes the cursor to indicate clickability
               })}
             />

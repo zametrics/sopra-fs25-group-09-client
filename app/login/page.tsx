@@ -29,7 +29,7 @@ const Login: React.FC = () => {
     
     // If a token exists, redirect to the dashboard
     if (token) {
-      router.push("/users");
+      router.push("/home");
     }
   }, [router]);
 
@@ -57,7 +57,7 @@ const Login: React.FC = () => {
         localStorage.setItem("username", values.username); // Store username from input
         localStorage.setItem("userId", response.userId);
 
-        router.push("/users"); // Redirect to users dashboard
+        router.push("/home"); // Redirect to users dashboard
       } else {
         // Set error message instead of alert
         setErrorMessage("Login failed. Check your username and password.");

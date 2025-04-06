@@ -42,7 +42,7 @@ const Register = () => {
       }
 
       // Redirect to dashboard after successful signup
-      router.push("/users");
+      router.push("/home");
     } catch (error: unknown) {
       if (error instanceof Error) {
         alert(`Something went wrong during registration:\n${error.message}`);

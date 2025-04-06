@@ -214,7 +214,7 @@ return (
 
           {/* Back Button */}
           <Space style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
-            <Button onClick={() => router.push("/users")} type="default">
+            <Button onClick={() => router.push("/home")} type="default">
               Back to User List
             </Button>
           </Space>
