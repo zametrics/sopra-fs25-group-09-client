@@ -345,18 +345,85 @@ a {
 
 .avatar-menu {
   position: absolute;
-  top: 100%;
-  right: 0;
+  width: 150px;
+  height: 70px;
+  top: 40px;
+  left: 95px;
+  align-items: center;
   background: white;
   border-radius: 8px;
-  padding: 6px 10px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  padding: 0px 10px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  transition: opacity 0.2s ease;
+  gap: 0px;
   opacity: 1;
+  pointer-events: none;
+  transition: opacity 1s ease-in-out;
+}
+
+/* Pfeil links */
+.avatar-menu::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -8px;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 8px solid white; /* Farbe = Hintergrund der Box */
+  z-index: 11;
+}
+
+/* Umrandung des Pfeils */
+.avatar-menu::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -11px;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-right: 10px solid rgba(0, 0, 0, 0.07); /* Gleiche Farbe wie Rahmen */
+  z-index: 10;
+}
+
+
+.upload-image-btn {
+  color: #146FE1;
+  font-size: 17px;
+  font-weight: 600;
+  height: 35px;
+  width: 146px;
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  background-color: transparent;
+  cursor: pointer;
+}
+.upload-image-btn:hover{
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.delete-image-btn {
+  color: #FE6544;
+  font-size: 17px;
+  font-weight: 600;
+  height: 35px;
+  width: 146px;
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.2);
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.delete-image-btn:hover{
+  background-color: rgba(0, 0, 0, 0.08);
 }
 
 .profile-username {
@@ -405,6 +472,11 @@ a {
   cursor: pointer;
 }
 
+.edit-profile-button.hover {
+  background-color: #000000;
+}
+
+
 .confirm-edit-profile-button {
   width: 100%;
   padding: 10px;
@@ -422,10 +494,6 @@ a {
     inset 0 0 0 1px rgba(0, 0, 0, 0.15),
     0 2px 6px rgba(0, 0, 0, 0.1);
   cursor: pointer;
-}
-
-.edit-profile-button:hover {
-  background-color: #ececec;
 }
 
 
