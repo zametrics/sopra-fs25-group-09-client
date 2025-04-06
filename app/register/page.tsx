@@ -20,23 +20,42 @@ const Register = () => {
   const apiService = useApi();
   const [form] = Form.useForm();
 
-  // Hook to store token in local storage
-  //const { set: setToken } = useLocalStorage<string>("token", "");
-
   // Handle form submission
   const handleRegister = async (values: { username: string; password: string }) => {
     try {
+      // Password validation
+      const validatePassword = (password: string): { isValid: boolean; message: string } => {
+        const minLength = password.length >= 4;
+        const maxLength = password.length <= 32;
+        const hasLetter = /[a-zA-Z]/.test(password);
+        const hasNumber = /\d/.test(password);
+        const noSpaces = !/\s/.test(password);
+
+        if (!minLength) return { isValid: false, message: "Password must be at least 4 characters long" };
+        if (!maxLength) return { isValid: false, message: "Password cannot exceed 32 characters" };
+        if (!hasLetter) return { isValid: false, message: "Password must contain at least one letter" };
+        if (!hasNumber) return { isValid: false, message: "Password must contain at least one number" };
+        if (!noSpaces) return { isValid: false, message: "Password cannot contain spaces" };
+        
+        return { isValid: true, message: "Password is valid" };
+      };
+
+      // Validate password
+      const passwordValidation = validatePassword(values.password);
+      if (!passwordValidation.isValid) {
+        throw new Error(passwordValidation.message);
+      }
+
       // Send registration request to the backend
-      const response = await apiService.post<UserGetDTO>("/users", values); // Ensure the correct DTO type
+      const response = await apiService.post<UserGetDTO>("/users", values);
 
       // Extract the token from the response (UserGetDTO)
       if (response.token != null) {
         // Store the token in localStorage (as a string)
-        const tokenData = { token: response.token }; 
+        const tokenData = { token: response.token };
         localStorage.setItem("token", JSON.stringify(tokenData));
-        localStorage.setItem("username", values.username); // Store username from input
+        localStorage.setItem("username", values.username);
         localStorage.setItem("userId", response.id.toString());
-
       } else {
         throw new Error("Token not found in the response");
       }

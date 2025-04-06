@@ -6,4 +6,5 @@ export interface User {
   status: string | null;
   createdAt: string;
   dateOfBirth: string | null;
+  avatarUrl: string| null;
 }
