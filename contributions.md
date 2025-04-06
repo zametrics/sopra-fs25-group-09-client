@@ -41,11 +41,11 @@ Note: If a team member fails to show continuous progress after using their Joker
 
 | **Student**      | **Date**  | **Link to Commit**          | **Description**                     | **Relevance**                          |
 |-------------------|-----------|-----------------------------|-------------------------------------|-----------------------------------------|
-| **[@githubUser1]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+| **@Danino42** | 05.04.2025    | https://github.com/zametrics/sopra-fs25-group-09-client/commit/73830082821e8d8f543e2fbb56bf5f934daf80d9          | Creating the /lobbies/{lobbyId} route so that the lobbies can be visited. Till now only the default values are shown and the unique ID.     | Essential for the game functionality.     |
 |                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
 | **[@githubUser2]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
 |                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
-| **[@githubUser3]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+|  **@ortakyakuza** | 05.04.2025    | https://github.com/zametrics/sopra-fs25-group-09-server/commit/1f033bdb8bd879b7f47916b3841fee173a3698a9          | Implemented `LobbyControllerTest` to cover multiple lobby-related endpoints with unit tests    | Improves backend test coverage and helps ensure that key lobby functionalities behave as expected.     |
 |                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
 | **[@githubUser4]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
 |                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
