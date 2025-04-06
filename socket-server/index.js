@@ -13,7 +13,7 @@ const io = new Server(server, {
   path: '/api/socket',  // This is important for correct routing of the Socket.IO connection
   cors: {
     origin: '*',  // Allow connections from any origin (for testing purposes, change in production)
-    methods: ['GET', 'POST'],
+    methods: ['POST'],
   },
 });
 
