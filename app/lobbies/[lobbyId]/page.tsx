@@ -75,7 +75,7 @@ const LobbyPage: React.FC = () => {
 
   // Initialize Socket.IO
   useEffect(() => {
-    const socketIo = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001', {
+    const socketIo = io('https://socket-server-826256454260.europe-west1.run.app', {
       path: '/api/socket',
     });
     setSocket(socketIo);
