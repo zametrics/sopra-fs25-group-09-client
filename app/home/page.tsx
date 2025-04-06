@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation"; // Next.js navigation hook for clie
 import { useApi } from "@/hooks/useApi"; // Custom API hook for making backend requests
 import useLocalStorage from "@/hooks/useLocalStorage"; // Hook to manage local storage values
 import { User } from "@/types/user"; // Importing the User type for TypeScript
-import { Typography, Space, message } from "antd"; // UI components from Ant Design
+import { Typography, message } from "antd"; // UI components from Ant Design
 import { Form } from "antd"; // Importing the type for table properties
 import { LogoutOutlined} from "@ant-design/icons"; // Icons from Ant Design
 
@@ -27,9 +27,9 @@ const { Title } = Typography; // Extracting the Title component from Typography 
 const Dashboard: React.FC = () => {
   const router = useRouter(); // Next.js hook for navigation
   const apiService = useApi(); // Custom hook for making API requests
-  const [form] = Form.useForm();
-  const [users, setUsers] = useState<User[] | null>(null); // State to store user data
-  const [isCreatingLobby, setIsCreatingLobby] = useState(false); // State to track lobby creation status
+  const [] = Form.useForm();
+  const [setUsers] = useState<User[] | null>(null); // State to store user data
+  const [setIsCreatingLobby] = useState(false); // State to track lobby creation status
   const userId = localStorage.getItem("userId");
   const username = localStorage.getItem("username");
 
