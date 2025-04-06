@@ -5,8 +5,9 @@ import { useParams, useRouter } from "next/navigation"; // Use useParams from ne
 import { useApi } from "@/hooks/useApi"; // Custom hook to make API requests
 import { User } from "@/types/user"; // TypeScript type for User
 import { Card, Typography, Space, Button, Divider, message, DatePicker, Input } from "antd"; // Ant Design components
-import dayjs from "dayjs"; // Import dayjs for date handling
-import withAuth from "@/hooks/withAuth"; // Import the authentication wrapper
+import { UploadOutlined } from '@ant-design/icons';
+import withAuth from "@/hooks/withAuth";
+import dayjs from "dayjs";
 
 const { Title, Text } = Typography; // Extract Title and Text for typography styling
 
@@ -17,7 +18,10 @@ const UserProfile: React.FC = () => {
   const [dateOfBirth, setDateOfBirth] = useState<string>(""); // Date of Birth input (string)
   const [isEditing, setIsEditing] = useState(false); // For toggle editing mode
   const { id } = useParams(); // Extract the 'id' from the URL params
-
+  
+  const [avatarUrl, setAvatarUrl] = useState<string>(""); // New state for avatar URL input
+  const [isEditingAvatar, setIsEditingAvatar] = useState(false); // Track avatar edit state
+  
   // State to handle client-side logic
   const [isClient, setIsClient] = useState(false); 
   const [parsedToken, setParsedToken] = useState<string | null>(null);
@@ -31,6 +35,25 @@ const UserProfile: React.FC = () => {
     }
   }, []);
 
+  // New function to handle avatar URL save
+  const saveAvatar = async () => {
+    if (!avatarUrl.trim()) {
+      message.error("Please enter a valid image URL.");
+      return;
+    }
+
+    try {
+      const updatedFields = { avatarUrl };
+      await apiService.put(`/users/${user?.id}`, updatedFields);
+      message.success("Profile picture updated successfully!");
+      window.location.reload();
+      setIsEditingAvatar(false);
+    } catch (error) {
+      message.error("Error updating profile picture.");
+      console.error("Update error:", error);
+    }
+  };
+
   // Effect to fetch the user data based on the ID in the URL
   useEffect(() => {
     if (!id) return; // If no ID is available, return early
@@ -40,6 +63,7 @@ const UserProfile: React.FC = () => {
         const response = await apiService.get<User>(`/users/${id}`); // Make API call to fetch user data
         setUser(response); // Update state with the fetched user data
         setDateOfBirth(response.dateOfBirth || ""); // Pre-fill date of birth (if any)
+        setAvatarUrl(response.avatarUrl || "");
       } catch (error) {
         console.error("Error fetching user data:", error); // Log error if the request fails
       }
@@ -113,7 +137,6 @@ const saveUsername = async () => {
 if (!isClient) return null; 
 
 return (
-  
   <div
     style={{
       display: "flex",
@@ -126,7 +149,7 @@ return (
   >
     <Card
       title={<Title level={3}>User Profile of {user?.username}</Title>}
-      loading={!user} // Show a loading spinner while fetching data
+      loading={!user}
       style={{
         width: "80%",
         boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
@@ -136,6 +159,58 @@ return (
     >
       {user && (
         <>
+          {/* Avatar Section */}
+          <Text style={{ fontSize: "16px", fontWeight: "500" }}>Profile Picture:</Text>
+          <div style={{ marginTop: "8px", marginBottom: "16px" }}>
+            {user.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt="Profile"
+                style={{
+                  width: "100px",
+                  height: "100px",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  marginBottom: "10px",
+                }}
+              />
+            ) : (
+              <Text type="secondary">No profile picture set</Text>
+            )}
+            {user.token === parsedToken && (
+              <>
+                {isEditingAvatar ? (
+                  <div>
+                    <Input
+                      value={avatarUrl}
+                      onChange={(e) => setAvatarUrl(e.target.value)}
+                      placeholder="Enter image URL"
+                      style={{ marginBottom: "10px" }}
+                    />
+                    <Space>
+                      <Button type="primary" onClick={saveAvatar}>
+                        Save
+                      </Button>
+                      <Button onClick={() => setIsEditingAvatar(false)}>
+                        Cancel
+                      </Button>
+                    </Space>
+                  </div>
+                ) : (
+                  <Button
+                    type="link"
+                    icon={<UploadOutlined />}
+                    onClick={() => setIsEditingAvatar(true)}
+                    style={{ marginLeft: "10px" }}
+                  >
+                    {user.avatarUrl ? "Change" : "Add"} Picture
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+          <Divider />
+
           {/* Username Editing Section */}
           <Text style={{ fontSize: "16px", fontWeight: "500" }}>Username:</Text>
           {isEditingUsername ? (
@@ -153,10 +228,10 @@ return (
           ) : (
             <div style={{ marginTop: "8px" }}>
               <Text>{user.username}</Text>
-              {user.token == parsedToken && (
-                <Button 
-                  type="link" 
-                  onClick={() => setIsEditingUsername(true)} 
+              {user.token === parsedToken && (
+                <Button
+                  type="link"
+                  onClick={() => setIsEditingUsername(true)}
                   style={{ marginLeft: "10px" }}
                 >
                   Edit
@@ -164,16 +239,6 @@ return (
               )}
             </div>
           )}
-          <Divider />
-
-          {/* Other User Info */}
-          <Text style={{ fontSize: "16px", fontWeight: "500" }}>
-            Online Status: {user.status}
-          </Text>
-          <Divider />
-          <Text style={{ fontSize: "16px", fontWeight: "500" }}>
-          Created on: {user.createdAt && dayjs(user.createdAt).format('YYYY-MM-DD')}
-          </Text>
           <Divider />
 
           {/* Date of Birth Editing Section */}
@@ -199,17 +264,27 @@ return (
           ) : (
             <div style={{ marginTop: "8px" }}>
               <Text>{user.dateOfBirth || "Not Set"}</Text>
-              {user.token == parsedToken && (
-              <Button 
-                type="link" 
-                onClick={() => setIsEditing(true)} 
-                style={{ marginLeft: "10px" }}
-              >
-                Edit
-              </Button>
+              {user.token === parsedToken && (
+                <Button
+                  type="link"
+                  onClick={() => setIsEditing(true)}
+                  style={{ marginLeft: "10px" }}
+                >
+                  Edit
+                </Button>
               )}
             </div>
           )}
+          <Divider />
+
+          {/* Other User Info */}
+          <Text style={{ fontSize: "16px", fontWeight: "500" }}>
+            Online Status: {user.status}
+          </Text>
+          <Divider />
+          <Text style={{ fontSize: "16px", fontWeight: "500" }}>
+            Created on: {user.createdAt && dayjs(user.createdAt).format("YYYY-MM-DD")}
+          </Text>
           <Divider />
 
           {/* Back Button */}
@@ -223,7 +298,6 @@ return (
     </Card>
   </div>
 );
-
 };
 
 export default withAuth(UserProfile);
