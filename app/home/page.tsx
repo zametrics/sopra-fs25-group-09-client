@@ -137,6 +137,26 @@ const Dashboard: React.FC = () => {
     }
   };
   
+  
+  const handleJoinLobby = () => {
+    console.log("Joining lobby...");
+    // Redirect or handle joining the lobby
+    router.push("/join-lobby");
+  };
+
+  const handleHostGame = () => {
+    console.log("Hosting game...");
+    // Redirect to host game page or handle hosting logic
+    router.push("/host-game");
+  };
+
+  const handlePlay = () => {
+    console.log("Starting Quickplay...");
+    // Redirect to Quickplay page or handle play logic
+    router.push("/quickplay");
+  };
+
+
   // Fetching the list of users when the component loads
   useEffect(() => {
     const fetchUsers = async () => {
@@ -157,36 +177,40 @@ const Dashboard: React.FC = () => {
   return (
     <div className="page-background">
       <div className="home-wrapper">
-
-        {/* Linke Box */}
+        {/* Left Box */}
         <div className="left-box">
           <img src="/icons/settings_icon.png" alt="Settings" className="settings-icon" />
-
           <h1 className="drawzone-logo-3-7rem">DRAWZONE</h1>
           <p className="drawzone-subtitle-1-5rem">ART BATTLE ROYALE</p>
 
-          <button className="green-button">JOIN LOBBY</button>
-          <button className="green-button">HOST GAME</button>
+          <button className="green-button" onClick={handleJoinLobby}>
+            JOIN LOBBY
+          </button>
+          <button className="green-button" onClick={handleHostGame}>
+            HOST GAME
+          </button>
         </div>
 
-        {/* Rechte Seite */}
+        {/* Right Side */}
         <div className="right-side">
-          
-          {/* Oben: Profil */}
+          {/* Profile */}
           <div className="profile-box">
             <div className="profile-top-row">
               <img src="/icons/avatar.png" alt="Avatar" className="avatar-image" />
-            <div className="profile-username">user1</div>
+              <div className="profile-username">user1</div>
             </div>
-              <button className="edit-profile-button">Edit Profile</button>
-              <button className="logout-button">Log out</button>
+            <button className="edit-profile-button">Edit Profile</button>
+            <button className="logout-button" onClick={handleLogout}>
+              <LogoutOutlined /> Log out
+            </button>
           </div>
 
-
-          {/* Unten: Quickplay */}
+          {/* Quickplay */}
           <div className="quickplay-box">
             <h2 className="quickplay-title">QUICKPLAY</h2>
-            <button className="green-button">PLAY</button>
+            <button className="green-button" onClick={handlePlay}>
+              PLAY
+            </button>
           </div>
         </div>
       </div>
