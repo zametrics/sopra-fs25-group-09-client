@@ -12,9 +12,9 @@ import { useRouter } from "next/navigation"; // Next.js navigation hook for clie
 import { useApi } from "@/hooks/useApi"; // Custom API hook for making backend requests
 import useLocalStorage from "@/hooks/useLocalStorage"; // Hook to manage local storage values
 import { User } from "@/types/user"; // Importing the User type for TypeScript
-import { Button, Card, Table, Avatar, Typography, Space, message } from "antd"; // UI components from Ant Design
-import { Form, Input } from "antd"; // Importing the type for table properties
-import { LogoutOutlined, UserOutlined, PlusOutlined } from "@ant-design/icons"; // Icons from Ant Design
+import { Typography, Space, message } from "antd"; // UI components from Ant Design
+import { Form } from "antd"; // Importing the type for table properties
+import { LogoutOutlined} from "@ant-design/icons"; // Icons from Ant Design
 
 import withAuth from "@/hooks/withAuth"; // Import the authentication wrapper
 
@@ -30,6 +30,8 @@ const Dashboard: React.FC = () => {
   const [form] = Form.useForm();
   const [users, setUsers] = useState<User[] | null>(null); // State to store user data
   const [isCreatingLobby, setIsCreatingLobby] = useState(false); // State to track lobby creation status
+  const userId = localStorage.getItem("userId");
+  const username = localStorage.getItem("username");
 
   const {
     // value: token, // is commented out because we don't need to know the token value for logout
@@ -192,9 +194,13 @@ const Dashboard: React.FC = () => {
           <div className="profile-box">
             <div className="profile-top-row">
               <img src="/icons/avatar.png" alt="Avatar" className="avatar-image" />
-              <div className="profile-username">user1</div>
+              <div className="profile-username">{username}</div>
             </div>
-            <button className="edit-profile-button">Edit Profile</button>
+            <button className="edit-profile-button"
+            onClick={() => router.push(`/home/${userId}`)} // Redirecting to user's profile edit page
+              >
+              Edit Profile
+            </button>
             <button className="logout-button" onClick={handleLogout}>
               <LogoutOutlined /> Log out
             </button>
