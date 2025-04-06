@@ -125,7 +125,7 @@ const LobbyPage: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <Card>
           <Title level={3}>Lobby Not Found</Title>
-          <Text>The lobby you're looking for doesn't exist or has been closed.</Text>
+          <Title level={2}>Lobby {`#${lobbyId}`}</Title>
           <Button onClick={goBack} type="primary" style={{ marginTop: 16 }}>
             Return to Dashboard
           </Button>
