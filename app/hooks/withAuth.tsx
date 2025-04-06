@@ -49,7 +49,7 @@ const withAuth = <P extends object>(WrappedComponent: React.FC<P>) => {
       verifyUserToken();
     }, [token, userId, router, apiService]);
 
-    if (loading) return <p>Loading...</p>;
+    
     if (!isAllowed) return null;
 
     return <WrappedComponent {...props} />;

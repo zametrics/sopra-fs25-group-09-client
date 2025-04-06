@@ -16,6 +16,7 @@ import { Form } from "antd"; // Importing the type for table properties
 import { LogoutOutlined} from "@ant-design/icons"; // Icons from Ant Design
 import { User } from "@/types/user"; // Added User type import
 import React, { useEffect, useState } from "react"; // Added useEffect
+import { Spin } from "antd";
 
 import withAuth from "@/hooks/withAuth"; // Import the authentication wrapper
 
@@ -171,66 +172,9 @@ const Dashboard: React.FC = () => {
     router.push("/quickplay");
   };
 
-
   return (
-    <div className="page-background">
-      <div className="home-wrapper">
-        {/* Left Box - No changes */}
-        <div className="left-box">
-          <img src="/icons/settings_icon.png" alt="Settings" className="settings-icon" />
-          <h1 className="drawzone-logo-3-7rem">DRAWZONE</h1>
-          <p className="drawzone-subtitle-1-5rem">ART BATTLE ROYALE</p>
-          <button className="green-button" onClick={handleJoinLobby}>
-            JOIN LOBBY
-          </button>
-          <button
-            className="green-button"
-            onClick={handleCreateLobby}
-            disabled={isCreatingLobby}
-          >
-            HOST GAME
-          </button>
-        </div>
-
-        {/* Right Side */}
-        <div className="right-side">
-          {/* Profile - Changed avatar image source */}
-          <div className="profile-box">
-            <div className="profile-top-row">
-              <img
-                src={currentUser?.avatarUrl || "/icons/avatar.png"} // Changed to use avatarUrl with fallback
-                alt="Avatar"
-                className="avatar-image"
-                style={{ // Added styling to match UserProfile
-                  width: "87px",
-                  height: "87px",
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                }}
-              />
-              <div className="profile-username">{username}</div>
-            </div>
-            <button
-              className="edit-profile-button"
-              onClick={() => router.push(`/home/${userId}`)} // Changed route to match UserProfile
-            >
-              Edit Profile
-            </button>
-            <button className="logout-button" onClick={handleLogout}>
-              <LogoutOutlined /> Log out
-            </button>
-          </div>
-
-          {/* Quickplay - No changes */}
-          <div className="quickplay-box">
-            <h2 className="quickplay-title">QUICKPLAY</h2>
-            <button className="green-button" onClick={handlePlay}>
-              PLAY
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <>
+    </>
   );
 };
 
