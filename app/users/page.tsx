@@ -56,11 +56,7 @@ const columns: TableProps<User>["columns"] = [
     ),
   },
 
-  {
-    title: "Name",
-    dataIndex: "name",
-    key: "name",
-  },
+  
   {
     title: "ID",
     dataIndex: "id",
