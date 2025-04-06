@@ -28,7 +28,6 @@ const Dashboard: React.FC = () => {
   const router = useRouter(); // Next.js hook for navigation
   const apiService = useApi(); // Custom hook for making API requests
   const [] = Form.useForm();
-  const [_users, setUsers] = useState<User[] | null>(null);
   const userId = localStorage.getItem("userId");
   const username = localStorage.getItem("username");
   const [isCreatingLobby, setIsCreatingLobby] = useState(false);
@@ -153,23 +152,6 @@ const Dashboard: React.FC = () => {
     router.push("/quickplay");
   };
 
-
-  // Fetching the list of users when the component loads
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const users: User[] = await apiService.get<User[]>("/users"); // Making an API call to fetch users
-        setUsers(users); // Updating state with fetched users
-        console.log("Fetched users:", users); // Logging users to the console for debugging
-      } catch (error) {
-        console.error("Error fetching users:", error); // Logs error if API call fails
-      }
-    };
-
-    fetchUsers(); // Calls the function to fetch users when the component mounts
-  }, [apiService]); // Dependency array:
-  // - This ensures the effect runs only when 'apiService' changes.
-  // - Since 'apiService' is a custom hook with memoization, this will not re-run unnecessarily.
 
   return (
     <div className="page-background">
