@@ -649,20 +649,6 @@ a {
   -webkit-text-stroke: 0.5px black;
 }
 
-.lobby-banner {
-  background-color: #8769da;
-  border-radius: 10px;
-  color: white;
-  width: 300px;
-}
-
-.lobby-banner:after {
-  background-color: #8769da;
-  width: 10px;
-  margin-top: -20px;
-  margin-right: 200px;
-}
-
 .player-list {
   margin-top: 25px;
   display: flex;
@@ -769,6 +755,145 @@ a {
   justify-content: center;
   padding: 0;
 }
+
+
+.lobby-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: -50px;
+  margin-bottom: 20px;
+}
+
+.lobby-banner {
+  background-color: #a75efa;
+  color: white;
+  height:40px;
+  font-family: 'Digitalt', sans-serif;
+  font-size: 1.9rem;
+  font-weight:bold;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  letter-spacing: 1.2;
+  border-radius: 999px;
+  text-align: center;
+  width: 100%;
+  -webkit-text-stroke: 0.2px rgb(0, 0, 0);
+}
+
+.close-button {
+  background: #a75efa;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin-left: -50px;
+  width: 48px;
+  height: 48px;
+  border: 4px solid #ffffff;
+  color: #ffffff;
+  cursor: pointer;
+  -webkit-text-stroke: 2px rgb(255, 255, 255);
+}
+
+.lobby-setting-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.lobby-label {
+  font-weight: 500;
+  font-size: 1.9rem;
+  font-family: 'Digitalt', sans-serif;
+  color: #ffffff;
+  display: block;
+  margin-top: 25px;
+  -webkit-text-stroke: 1.5px rgb(0, 0, 0);
+}
+
+input[type="range"] {
+  width: 80%;
+  margin-right: 10px;
+}
+
+.slider-value {
+  display: inline-block;
+  min-width: 30px;
+  text-align: center;
+  font-weight: bold;
+  color: #333;
+  font-family: Arial, sans-serif;
+}
+
+.wordset-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+textarea {
+  width: 100%;
+  height: 70px;
+  border-radius: 5px;
+  padding: 5px;
+  font-family: monospace;
+  resize: none;
+  border: 1px solid #4e4e4e;
+  background-color: #fff;
+  font-size: 0.65rem;
+}
+
+.lobby-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 30px;
+  gap: 20px;
+}
+
+.roomcode-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 12px;
+  margin-right: 10px;
+}
+
+.roomcode-label {
+  font-size: 1.7rem;
+  font-weight: bold;
+  color: #ffffff;
+  text-transform: uppercase;
+  font-family: 'Digitalt', sans-serif;
+  letter-spacing: 1px;
+  -webkit-text-stroke: 0.6px rgb(0, 0, 0);
+  margin-bottom: -13;
+  margin-top: -30;
+}
+
+.roomcode-value {
+  background-color: white;
+  border: 2px solid #333;
+  border-radius: 12px;
+  height: 50px;
+  padding: 1px 10px;
+  font-size: 2.6rem;
+  font-weight: 500;
+  font-family: 'Digitalt', sans-serif;
+  letter-spacing: 2px;
+  color: black;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.1s ease, background-color 0.3s ease;
+  user-select: none;
+}
+
+.roomcode-value:hover {
+  background-color: #f4f4f4;
+  transform: scale(1.02);
+}
+
 
 
 .ant-form-item-required::before {

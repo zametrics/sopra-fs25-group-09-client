@@ -3,13 +3,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useApi } from '@/hooks/useApi';
-import { Card, Typography, Button, Spin, List, message, Input } from 'antd';
-import { CopyOutlined} from '@ant-design/icons';
+import { Button, Spin, message, Input } from 'antd';
 import { useRouter } from 'next/navigation';
 import withAuth from '@/hooks/withAuth';
 import io, { Socket } from 'socket.io-client';
 
-const {Text } = Typography;
 
 interface LobbyData {
   id: number;
@@ -43,6 +41,7 @@ const LobbyPage: React.FC = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState<string>('');
+  const [copied, setCopied] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const currentUserId = typeof window !== "undefined" ? localStorage.getItem("userId") : "";
@@ -79,7 +78,7 @@ const LobbyPage: React.FC = () => {
 
   // Initialize Socket.IO
   useEffect(() => {
-    const socketIo = io('https://socket-server-826256454260.europe-west1.run.app', {
+    const socketIo = io('http://localhost:3001/', {
       path: '/api/socket',
     });
     setSocket(socketIo);
@@ -100,10 +99,12 @@ const LobbyPage: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const copyLobbyCode = () => {
-    navigator.clipboard.writeText(lobbyId).then(() => message.success("Lobby code copied to clipboard!")).catch(() => message.error("Failed to copy lobby code"));
-  };
-
+  function copyLobbyCode() {
+    navigator.clipboard.writeText(lobbyId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1000);
+    });
+  }
   const goBack = () => {
     router.push('/home');
   };
@@ -211,32 +212,71 @@ const LobbyPage: React.FC = () => {
       
 
       {/* Settings Box */}
-      <div className='settings-box'>
-        <h1 className= "drawzone-logo-4rem">DRAWZONE</h1>
-        <p className='drawzone-subtitle-1-5rem'>Art Battle Royale</p>
-        <h2 className='lobby-banner'>Host a lobby</h2>
-        <Button className='lobby-banner:after' onClick={goBack}>goBack
-        </Button>
-          <div>
-            <List bordered>
-              <List.Item><Text>Max Players: {lobby.numOfMaxPlayers}</Text></List.Item>
-              <List.Item><Text>Wordset: {lobby.wordset}</Text></List.Item>
-              <List.Item><Text>Rounds: {lobby.numOfRounds}</Text></List.Item>
-              <List.Item><Text>Draw Time: {lobby.drawTime} seconds</Text></List.Item>
-            </List>
-          </div>
-
-
-        <div>
-          <Button className='green-button'>Start</Button>
-          <Card type="inner" title="Roomcode:">
-          <div>
-            <Text>{lobbyId}</Text>
-            <Button icon={<CopyOutlined />} onClick={copyLobbyCode}/>
-          </div>
-        </Card>
+      <div className="settings-box">
+        <h1 className="drawzone-logo-4rem">DRAWZONE</h1>
+        <p className="drawzone-subtitle-1-5rem">ART BATTLE ROYALE</p>
+        
+        <div className="lobby-header">
+          <h2 className="lobby-banner">HOST A LOBBY</h2>
+          <button className="close-button" onClick={goBack}>✕</button>
         </div>
+        
+        <div className="lobby-setting-group">
+          <label className="lobby-label">PLAYERS:</label>
+          <input type="range" min={2} max={8} value={lobby.numOfMaxPlayers}/>
+          <span className="slider-value">{lobby.numOfMaxPlayers}</span>
+        </div>
+        
+        <div className="lobby-setting-group">
+          <label className="lobby-label">DRAWTIME:</label>
+          <input type="range" min={15} max={120} step={5} value={lobby.drawTime}/>
+          <span className="slider-value">{lobby.drawTime}s</span>
+        </div>
+        
+        <div className="lobby-setting-group">
+          <label className="lobby-label">ROUNDS:</label>
+          <input type="range" min={1} max={10} value={lobby.numOfRounds}/>
+          <span className="slider-value">{lobby.numOfRounds}</span>
+        </div>
+        
+        <div className="lobby-setting-group">
+          <label className="lobby-label">CUSTOM WORDS:</label>
+          <div className="wordset-controls">
+            <select>
+              <option value="english">Choose wordlist</option>
+              <option value="animals">Animals</option>
+              <option value="custom">Custom</option>
+            </select>
+            <label>
+              <input type="checkbox" />
+              Use custom words only
+            </label>
+        </div>
+        <textarea
+          placeholder="Minimum of 10 words. 1–32 characters per word! Separated by a , (comma)"
+        />
       </div>
+      
+
+
+      <div className="lobby-actions">
+        <button className="green-button" style={{width: 300, marginLeft: 10}}>START</button>
+
+        <div className="roomcode-box">
+          <div className="roomcode-label">ROOMCODE:</div>
+          <div
+            className="roomcode-value"
+            onClick={copyLobbyCode}
+            title="Click to copy"
+          >
+            {copied ? 'Copied!' : lobbyId}
+          </div>
+        </div>
+
+      </div>
+        
+      </div>
+
 
 
      {/* Chat Box */}
