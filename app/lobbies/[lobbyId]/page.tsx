@@ -49,7 +49,7 @@ const LobbyPage: React.FC = () => {
   const localAvatarUrl = typeof window !== "undefined" ? localStorage.getItem("avatarUrl") || "/icons/avatar.png" : "/icons/avatar.png";
 
 
-  // Fetch lobby data
+// Fetch lobby data
   useEffect(() => {
     const fetchLobby = async () => {
       setLoading(true);
@@ -77,30 +77,35 @@ const LobbyPage: React.FC = () => {
     }
   }, [lobbyId, apiService]);
 
-  //test 'http://localhost:3001/'
+  //test https://socket-server-826256454260.europe-west1.run.app
   useEffect(() => {
-    const socketIo = io('https://socket-server-826256454260.europe-west1.run.app', {
+    const socketIo = io('http://localhost:3001/', {
       path: '/api/socket',
     });
     setSocket(socketIo);
   
-    // Join lobby with userId
-  socketIo.emit('joinLobby', { lobbyId, userId: currentUserId });
+// Get current user's username from players state or fetch it
+const currentUsername = players.find((p) => p.id === Number(currentUserId))?.username ||"unknwon";
 
-  // Listen for chat messages
-  socketIo.on('chatMessage', (message: ChatMessage) => {
-    setMessages((prev) => [...prev, message]);
-  });
+// Join lobby with userId and username
+socketIo.emit('joinLobby', { lobbyId, userId: currentUserId, username: currentUsername });
 
-  // Listen for player joining
-  socketIo.on('playerJoined', (newPlayer: PlayerData) => {
-    setPlayers((prev) => {
-      // Check if player already exists by real ID
-      if (prev.some((p) => p.id === newPlayer.id)) return prev;
-      // Fetch real username if needed, or use provided one
-      return [...prev, newPlayer];
-    });
+// Listen for chat messages
+socketIo.on('chatMessage', (message: ChatMessage) => {
+  setMessages((prev) => [...prev, message]);
+});
+
+// Listen for player joining
+socketIo.on('playerJoined', (newPlayer: PlayerData) => {
+  setPlayers((prev) => {
+    const existingPlayer = prev.find((p) => p.id === newPlayer.id);
+    if (existingPlayer) {
+      // Update existing player if username changes (e.g., on reconnect)
+      return prev.map((p) => (p.id === newPlayer.id ? { ...p, username: newPlayer.username } : p));
+    }
+    return [...prev, newPlayer];
   });
+});
 
   // Listen for player leaving
   socketIo.on('playerLeft', (leftPlayer: PlayerData) => {

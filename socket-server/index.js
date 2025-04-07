@@ -16,28 +16,28 @@ const io = new Server(server, {
   },
 });
 
-// Store lobby data: Map<lobbyId, Map<userId, socketId>>
+// Store lobby data: Map<lobbyId, Map<userId, { socketId, username }>>
 const lobbies = new Map();
 
 io.on('connection', (socket) => {
   console.log('Connected:', socket.id);
 
-  // Handle lobby joining with userId
-  socket.on('joinLobby', ({ lobbyId, userId }) => {
+  // Handle lobby joining with userId and username
+  socket.on('joinLobby', ({ lobbyId, userId, username }) => {
     socket.join(lobbyId);
-    console.log(`User ${userId} with socket ${socket.id} joined lobby ${lobbyId}`);
+    console.log(`User ${userId} (${username}) with socket ${socket.id} joined lobby ${lobbyId}`);
 
     // Initialize lobby if it doesn't exist
     if (!lobbies.has(lobbyId)) {
       lobbies.set(lobbyId, new Map());
     }
     const lobbyPlayers = lobbies.get(lobbyId);
-    lobbyPlayers.set(userId, socket.id); // Map userId to socketId
+    lobbyPlayers.set(userId, { socketId: socket.id, username }); // Store socketId and username
 
     // Emit 'playerJoined' event with real player data
     const newPlayer = {
-      id: userId, // Use the real user ID
-      username: `Player_${userId}`, // Temporary username; ideally fetch from API or client
+      id: userId,
+      username: username || `Player_${userId}`, // Fallback if username not provided
     };
     io.to(lobbyId).emit('playerJoined', newPlayer);
 
@@ -56,12 +56,12 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('Disconnected:', socket.id);
     for (const [lobbyId, players] of lobbies) {
-      for (const [userId, socketId] of players) {
-        if (socketId === socket.id) {
+      for (const [userId, playerData] of players) {
+        if (playerData.socketId === socket.id) {
           players.delete(userId);
           io.to(lobbyId).emit('playerLeft', {
             id: userId,
-            username: `Player_${userId}`,
+            username: playerData.username,
           });
           if (players.size === 0) lobbies.delete(lobbyId);
           break;
