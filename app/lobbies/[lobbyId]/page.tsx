@@ -48,7 +48,7 @@ const LobbyPage: React.FC = () => {
   const localAvatarUrl = typeof window !== "undefined" ? localStorage.getItem("avatarUrl") || "/icons/avatar.png" : "/icons/avatar.png";
 
 
-  // Fetch lobby data
+// Fetch lobby data
   useEffect(() => {
     const fetchLobby = async () => {
       setLoading(true);
@@ -76,23 +76,45 @@ const LobbyPage: React.FC = () => {
     }
   }, [lobbyId, apiService]);
 
-  // Initialize Socket.IO
+  //test http://localhost:3001/
   useEffect(() => {
     const socketIo = io('http://localhost:3001/', {
       path: '/api/socket',
     });
     setSocket(socketIo);
+  
+// Get current user's username from players state or fetch it
+const currentUsername = players.find((p) => p.id === Number(currentUserId))?.username ||"unknwon";
 
-    socketIo.emit('joinLobby', lobbyId);
+// Join lobby with userId and username
+socketIo.emit('joinLobby', { lobbyId, userId: currentUserId, username: currentUsername });
 
-    socketIo.on('chatMessage', (message: ChatMessage) => {
-      setMessages((prev) => [...prev, message]);
-    });
+// Listen for chat messages
+socketIo.on('chatMessage', (message: ChatMessage) => {
+  setMessages((prev) => [...prev, message]);
+});
 
-    return () => {
-      socketIo.disconnect();
-    };
-  }, [lobbyId]);
+// Listen for player joining
+socketIo.on('playerJoined', (newPlayer: PlayerData) => {
+  setPlayers((prev) => {
+    const existingPlayer = prev.find((p) => p.id === newPlayer.id);
+    if (existingPlayer) {
+      // Update existing player if username changes (e.g., on reconnect)
+      return prev.map((p) => (p.id === newPlayer.id ? { ...p, username: newPlayer.username } : p));
+    }
+    return [...prev, newPlayer];
+  });
+});
+
+  // Listen for player leaving
+  socketIo.on('playerLeft', (leftPlayer: PlayerData) => {
+    setPlayers((prev) => prev.filter((p) => p.id !== leftPlayer.id));
+  });
+
+  return () => {
+    socketIo.disconnect();
+  };
+}, [lobbyId, currentUserId]);
 
   // Scroll to the latest message
   useEffect(() => {

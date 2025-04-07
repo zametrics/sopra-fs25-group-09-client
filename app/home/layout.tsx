@@ -118,10 +118,10 @@ const saveUsername = async () => {
     // Send a PUT request to update the username for the current editUserId
     await apiService.put(`/users/${editUserId}`, updatedFields);
 
-    // Notify user and update both localStorage and state
-    message.success("Username updated successfully!");
     localStorage.setItem("username", newUsername); // Update in localStorage
     setUsername(newUsername);                      // Update state immediately
+    // Notify user and update both localStorage and state
+    message.success("Username updated successfully!");
   } catch (error) {
     
     // If the username hasn't actually changed, silently ignore
@@ -208,17 +208,22 @@ const saveAvatar = async () => {
   }
 
   try {
+
+
     // Construct the object with the updated avatar URL to send to the server
     const updatedFields = { avatarUrl };
 
     // Send a PUT request to update the user's avatar on the backend
     await apiService.put(`/users/${editUserId}/avatar`, updatedFields);
 
-    // On success, show a success message to the user
-    message.success("Profile picture updated successfully!");
 
     // Update the avatar URL in localStorage so it's persisted between sessions
     localStorage.setItem("avatarUrl", avatarUrl);
+
+    if (avatarUrl == localAvatarUrl){
+      // On success, show a success message to the user
+      message.success("Profile picture updated successfully!");
+    }
 
     // Close the avatar editing menu/modal
     setShowAvatarMenu(false);

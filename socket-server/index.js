@@ -4,40 +4,69 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 
 const app = express();
-app.use(cors()); // Enable cross-origin requests
+app.use(cors());
 
-const server = http.createServer(app); // Create an HTTP server
+const server = http.createServer(app);
 
-// Initialize Socket.IO with the server
 const io = new Server(server, {
-  path: '/api/socket',  // This is important for correct routing of the Socket.IO connection
+  path: '/api/socket',
   cors: {
-    origin: '*',  // Allow connections from any origin (for testing purposes, change in production)
+    origin: '*', // Replace with your Vercel URL in production
     methods: ['GET', 'POST'],
   },
 });
 
-// Socket.IO events
-io.on('connection', (socket) => {
-  console.log('✅ Connected:', socket.id);
+// Store lobby data: Map<lobbyId, Map<userId, { socketId, username }>>
+const lobbies = new Map();
 
-  socket.on('joinLobby', (lobbyId) => {
+io.on('connection', (socket) => {
+  console.log('Connected:', socket.id);
+
+  socket.on('joinLobby', ({ lobbyId, userId, username }) => {
     socket.join(lobbyId);
-    console.log(`🔗 User ${socket.id} joined lobby ${lobbyId}`);
+    console.log(`User ${userId} (${username}) with socket ${socket.id} joined lobby ${lobbyId}`);
+
+    if (!lobbies.has(lobbyId)) {
+      lobbies.set(lobbyId, new Map());
+    }
+    const lobbyPlayers = lobbies.get(lobbyId);
+    lobbyPlayers.set(userId, { socketId: socket.id, username });
+
+    const newPlayer = {
+      id: userId,
+      username: username || `Player_${userId}`,
+    };
+    io.to(lobbyId).emit('playerJoined', newPlayer);
+
+    console.log(`Lobby ${lobbyId} players:`, Array.from(lobbyPlayers.entries()));
   });
 
   socket.on('chatMessage', ({ lobbyId, message, username }) => {
     const timestamp = new Date().toISOString();
-    io.to(lobbyId).emit('chatMessage', { username, message, timestamp });
+    const validatedUsername = username || 'Anonymous';
+    const chatMessage = { username: validatedUsername, message, timestamp };
+    io.to(lobbyId).emit('chatMessage', chatMessage);
   });
 
   socket.on('disconnect', () => {
-    console.log('❌ Disconnected:', socket.id);
+    console.log('Disconnected:', socket.id);
+    for (const [lobbyId, players] of lobbies) {
+      for (const [userId, playerData] of players) {
+        if (playerData.socketId === socket.id) {
+          players.delete(userId);
+          io.to(lobbyId).emit('playerLeft', {
+            id: userId,
+            username: playerData.username,
+          });
+          if (players.size === 0) lobbies.delete(lobbyId);
+          break;
+        }
+      }
+    }
   });
 });
 
-// Start the server on port 3001
-const PORT = 3001;
-server.listen(PORT, () => {
-  console.log(`🚀 Socket.IO server running at http://localhost:${PORT}`);
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Socket.IO server running on port ${PORT}`);
 });
