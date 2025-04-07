@@ -88,8 +88,10 @@ useEffect(() => {
 //    It ensures the right data is shown when editing a profile
 
 useEffect(() => {
+
+  const profilePage = pathname.startsWith("/home/") && pathname !== "/home";
   // If we're on a profile page (e.g., /home/123), extract the user ID from the URL
-  if (isProfilePage) {
+  if (profilePage) {
     const parts = pathname.split("/"); // Split path like ['home', '123']
     const id = parts[parts.length - 1]; // Get the last part => '123'
     setEditUserId(id); // Set it as the current user being edited
@@ -126,7 +128,7 @@ const saveUsername = async () => {
     if (newUsername === localStorage.getItem("username")) {
       console.error("", error);
       return;
-      
+
     } else {
       // Otherwise show a generic error (e.g. username already taken)
       message.error("Error updating username. It might be taken.");
