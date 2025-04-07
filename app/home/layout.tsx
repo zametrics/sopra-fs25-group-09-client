@@ -6,76 +6,139 @@ import { LogoutOutlined } from "@ant-design/icons";
 import { message } from "antd";
 import { useApi } from "@/hooks/useApi";
 import { User } from "@/types/user";
-import { Lobby } from "@/types/lobby";
-import useLocalStorage from "@/hooks/useLocalStorage"; // Hook to manage local storage values
 
+
+// Exporting the HomeLayout component as default so that it can be imported easily in other files
 export default function HomeLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const apiService = useApi();
 
-  const [editUserId, setEditUserId] = useState<string | null>(null);
-  const [newUsername, setNewUsername] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [showAvatarMenu, setShowAvatarMenu] = useState(false);
-
-  const currentUserId = typeof window !== "undefined" ? localStorage.getItem("userId") : "";
-  const username = typeof window !== "undefined" ? localStorage.getItem("username") : "";
-  const localAvatarUrl = typeof window !== "undefined" ? localStorage.getItem("avatarUrl") || "/icons/avatar.png" : "/icons/avatar.png";
-
-  const isProfilePage = pathname.startsWith("/home/") && pathname !== "/home";
+  /* The HomeLayout component receives 'children' as a prop.
+    'children' is a special prop in React that allows passing components or elements
+     inside the HomeLayout component when it is used, making it flexible for rendering dynamic content.
+     React.ReactNode is a type that includes any valid React element (JSX, strings, numbers, fragments, etc.)
+     It ensures that 'children' can be anything React can render. */
 
 
+// Using Next.js's `useRouter` hook to get access to the router object for navigating between pages
+const router = useRouter();
 
-  const {
-    // value: token, // is commented out because we don't need to know the token value for logout
-    // set: setToken, // is commented out because we don't need to set or update the token value    
+// Using `usePathname` to get the current URL path (helps in identifying which page the user is on)
+const pathname = usePathname();
 
-    //clear: clearToken, // all we need in this scenario is a method to clear the token
+// `useApi` is likely a custom hook that provides access to API functions for making network requests
+const apiService = useApi();
 
-  } = useLocalStorage<string>("token", ""); // Fetching and managing the token in local storage
+// State variable to manage the avatar URL of the user
+const [avatarUrl, setAvatarUrl] = useState(""); 
 
+// State variable to control whether the avatar menu (for uploading or deleting an avatar) is visible
+const [showAvatarMenu, setShowAvatarMenu] = useState(false);
 
-  useEffect(() => {
-    if (isProfilePage) {
-      const parts = pathname.split("/");
-      const id = parts[parts.length - 1];
-      setEditUserId(id);
-    } else {
-      setEditUserId(null);
-    }
-  }, [pathname]);
+// Boolean flag to determine if the current page is the user's profile page based on the pathname
+const isProfilePage = pathname.startsWith("/home/") && pathname !== "/home";
 
-    useEffect(() => {
-      const fetchCurrentUser = async () => {
-        try {
-          const userIdStr = localStorage.getItem("userId");
-          const userId = userIdStr ? JSON.parse(userIdStr) : null;
-          if (!userId) return;
-  
-        } catch (error) {
-          console.error("Error fetching current user:", error);
-        }
-      };
-      fetchCurrentUser();
-    }, [apiService]);
+// State variable to hold the URL of the avatar stored in localStorage, with a default value
+const [localAvatarUrl, setLocalAvatarUrl] = useState<string>("/icons/avatar.png");
 
-  useEffect(() => {
-    if (!editUserId) {
-      setNewUsername(username || "");
-      setAvatarUrl(localAvatarUrl);
+// State to store the `editUserId`, which is used when editing a user profile
+const [editUserId, setEditUserId] = useState<string | null>(null);
+
+// State to manage the new username that the user might set while editing their profile
+const [newUsername, setNewUsername] = useState("");
+
+// State to manage the current username, which is fetched from localStorage or initially set to an empty string
+const [username, setUsername] = useState<string>("");
+
+// This line retrieves the current user's ID from localStorage (only runs in the browser, so `typeof window !== "undefined"` is used to avoid SSR issues)
+const currentUserId = typeof window !== "undefined" ? localStorage.getItem("userId") : "";
+
+useEffect(() => {
+  // Check if running in the browser to avoid errors during server-side rendering (SSR)
+  if (typeof window !== "undefined") {
+    // Get the stored username from localStorage (or fallback to an empty string if not found)
+    const storedUsername = localStorage.getItem("username") || "";
+    // Update the state with the stored username
+    setUsername(storedUsername);
+
+    // Get the stored avatar URL from localStorage (or fallback to default avatar if not found)
+    const storedAvatarUrl = localStorage.getItem("avatarUrl") || "/icons/avatar.png";
+    // Update the state with the stored avatar URL
+    setLocalAvatarUrl(storedAvatarUrl);
+  }
+}, []); // Runs only once when the component mounts, to initialize state from localStorage
+
+useEffect(() => {
+  // If there's no editUserId (we're not editing someone), fallback to locally stored values
+  if (!editUserId) {
+    setNewUsername(username || "");  // Pre-fill the username input with the stored username
+    setAvatarUrl(localAvatarUrl);    // Use the locally stored avatar
+    return;
+  }
+
+  // If we do have an editUserId, fetch that user's info from the backend
+  const fetchUser = async () => {
+    const userData = await apiService.get<User>(`/users/${editUserId}`);
+    setNewUsername(userData.username || "");                // Populate input with fetched username
+    setAvatarUrl(userData.avatarUrl || localAvatarUrl);     // Show their avatar, or fallback
+  };
+
+  // Fetch and set the data
+  fetchUser();
+}, [apiService, editUserId, username, localAvatarUrl]);
+//    Runs when editUserId, apiService, username, or localAvatarUrl changes
+//    It ensures the right data is shown when editing a profile
+
+useEffect(() => {
+  // If we're on a profile page (e.g., /home/123), extract the user ID from the URL
+  if (isProfilePage) {
+    const parts = pathname.split("/"); // Split path like ['home', '123']
+    const id = parts[parts.length - 1]; // Get the last part => '123'
+    setEditUserId(id); // Set it as the current user being edited
+  } else {
+    // If not on a profile route, clear the edit user state
+    setEditUserId(null);
+  }
+}, [pathname]);
+//    Runs whenever the URL path changes
+//    Helps determine if we're in "edit profile" mode and who we’re editing
+
+// Function to save the updated username
+const saveUsername = async () => {
+  // Prevent saving an empty username
+  if (!newUsername.trim()) {
+    message.error("Username cannot be empty.");
+    return;
+  }
+
+  try {
+    // Build the object to send to the server
+    const updatedFields = { newUsername };
+
+    // Send a PUT request to update the username for the current editUserId
+    await apiService.put(`/users/${editUserId}`, updatedFields);
+
+    // Notify user and update both localStorage and state
+    message.success("Username updated successfully!");
+    localStorage.setItem("username", newUsername); // Update in localStorage
+    setUsername(newUsername);                      // Update state immediately
+  } catch (error) {
+    // If the username hasn't actually changed, silently ignore
+    if (newUsername === localStorage.getItem("username")) {
       return;
+    } else {
+      // Otherwise show a generic error (e.g. username already taken)
+      message.error("Error updating username. It might be taken.");
     }
+  }
+};
 
-    const fetchUser = async () => {
-        const userData = await apiService.get<User>(`/users/${editUserId}`);
-        setNewUsername(userData.username || "");
-        setAvatarUrl(userData.avatarUrl || localAvatarUrl);
-      
-    };
+// Function that gets called when the user confirms profile changes
+const handleConfirmChanges = async () => {
+  // Run both saveUsername and saveAvatar in parallel
+  await Promise.all([saveUsername(), saveAvatar()]);
 
-    fetchUser();
-  }, [apiService, editUserId, username, localAvatarUrl]);
+  // After saving, navigate the user back to the main home page
+  router.push("/home");
+};
 
   const handleLogout = async () => {
     const storedToken = localStorage.getItem("token");
@@ -102,136 +165,140 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
     router.push("/login");
   };
 
+  // For seamless animation we are pushing the user to a new page
   const handleEditProfile = () => {
     router.push(`/home/${currentUserId}`);
   };
 
-  const handleUploadImage = () => {
-    const url = prompt("Enter new image URL:");
-    if (url && url.trim()) {
-      setAvatarUrl(url);
-    } else if (url !== null) {
-      message.error("Please enter a valid image URL.");
-    }
-  };
-
+  // "Deleting" an image will just replace the image with a default image
   const handleDeleteImage = () => {
     setAvatarUrl("/icons/avatar.png"); // Reset to default avatar
   };
 
-  const saveAvatar = async () => {
-    if (!avatarUrl.trim()) {
-      message.error("Please enter a valid image URL.");
+
+// Function to handle uploading (setting) a new image URL for the avatar
+const handleUploadImage = () => {
+  // Prompt the user to enter a new image URL
+  const url = prompt("Enter new image URL:");
+
+  // If the user provided a non-empty, trimmed URL, update the avatar state
+  if (url && url.trim()) {
+    setAvatarUrl(url); // This sets the new avatar URL into component state
+  } 
+  // If the user entered something (not cancelled), but it's invalid (e.g. empty string), show an error
+  else if (url !== null) {
+    message.error("Please enter a valid image URL.");
+  }
+
+  // Note: If the user presses "Cancel" on the prompt, `url` will be null and nothing happens
+};
+
+
+// Async function to handle saving/updating the user's avatar URL
+const saveAvatar = async () => {
+  // If the avatar URL is empty or only whitespace, show an error message and exit early
+  if (!avatarUrl.trim()) {
+    message.error("Please enter a valid image URL.");
+    return;
+  }
+
+  try {
+    // Construct the object with the updated avatar URL to send to the server
+    const updatedFields = { avatarUrl };
+
+    // Send a PUT request to update the user's avatar on the backend
+    await apiService.put(`/users/${editUserId}/avatar`, updatedFields);
+
+    // On success, show a success message to the user
+    message.success("Profile picture updated successfully!");
+
+    // Update the avatar URL in localStorage so it's persisted between sessions
+    localStorage.setItem("avatarUrl", avatarUrl);
+
+    // Close the avatar editing menu/modal
+    setShowAvatarMenu(false);
+  } catch (error) {
+    // If there's an error, show an error message to the user
+    message.error("Error updating profile picture.");
+    // Also log the error to the console for debugging purposes
+    console.error("Update error:", error);
+    }
+  };
+
+// Async function that handles the creation of a new game lobby
+const handleCreateLobby = async () => {
+  try {
+    // Get the current user's ID from localStorage
+    const userIdStr = localStorage.getItem("userId");
+    const userId = userIdStr ? JSON.parse(userIdStr) : null;
+
+    // If there's no user ID (e.g. user not logged in), show error and stop
+    if (!userId) {
+      message.error("User ID not found. Please log in again.");
       return;
     }
 
-    try {
-      const updatedFields = { avatarUrl };
-      await apiService.put(`/users/${editUserId}/avatar`, updatedFields);
-      message.success("Profile picture updated successfully!");
-      localStorage.setItem("avatarUrl", avatarUrl);
-      setShowAvatarMenu(false);
-    } catch (error) {
-      message.error("Error updating profile picture.");
-      console.error("Update error:", error);
-    }
-  };
+    // Set up default lobby settings
+    const defaultLobbyData = {
+      numOfMaxPlayers: 8,            // Maximum players allowed
+      playerIds: [userId],           // Add the current user as the first player
+      wordset: "english",            // Word set to be used in the game
+      numOfRounds: 3,                // Number of rounds for the game
+      drawTime: 80,                  // Drawing time in seconds per round
+      lobbyOwner: userId             // Set the current user as the lobby owner
+    };
 
-  const saveUsername = async () => {
-    if (!newUsername.trim()) {
-      message.error("Username cannot be empty.");
+    // Send POST request to backend to create the lobby
+    const response = await apiService.post("/lobbies", defaultLobbyData);
+
+    console.log("Lobby creation response:", response);
+
+    // Type guard to check if the response has an `id` directly
+    const hasId = (obj: unknown): obj is { id: string | number } => {
+      return typeof obj === "object" && obj !== null && "id" in (obj as Record<string, unknown>);
+    };
+
+    // Type guard to check if the response has a nested `data.id`
+    const hasDataId = (obj: unknown): obj is { data: { id: string | number } } => {
+      return (
+        typeof obj === "object" &&
+        obj !== null &&
+        "data" in (obj as Record<string, unknown>) &&
+        typeof (obj as { data: unknown }).data === "object" &&
+        (obj as { data: unknown }).data !== null &&
+        "id" in (obj as { data: Record<string, unknown> }).data
+      );
+    };
+
+    // Try to extract the lobby ID using the type guards
+    let lobbyId;
+
+    if (hasId(response)) {
+      lobbyId = response.id;
+    } else if (hasDataId(response)) {
+      lobbyId = response.data.id;
+    } else {
+      // If we can't find the ID, show an error and exit
+      console.error("Could not determine lobby ID from response:", response);
+      message.error("Created lobby but couldn't get ID. Please check lobby list.");
       return;
     }
 
-    try {
-      const updatedFields = { newUsername };
-      await apiService.put(`/users/${editUserId}`, updatedFields);
-      message.success("Username updated successfully!");
-      localStorage.setItem("username", newUsername);
-    } catch (error) {
+    // If we successfully got the lobby ID, show a success message
+    message.success(`Lobby created successfully! ID: ${lobbyId}`);
 
-      if(newUsername == localStorage.getItem("username")){
-        return;
-      }
-      else{
-      message.error("Error updating username. It might be taken.");
-      }
-    }
-  };
+    // Navigate the user to the newly created lobby
+    router.push(`/lobbies/${lobbyId}`);
 
-  const handleConfirmChanges = async () => {
-    await Promise.all([saveUsername(), saveAvatar()]);
-    router.push("/home");
-  };
+  } catch (error) {
+    // Catch any errors during the process and notify the user
+    console.error("Error creating lobby:", error);
+    message.error("Failed to create lobby. Please try again.");
+  } finally {
+    // Optional: you could add cleanup code here if needed
+  }
+};
 
-
-  const handleCreateLobby = async () => {
-
-    
-    try {
-      // Get the current user's ID
-      const userIdStr = localStorage.getItem("userId");
-      const userId = userIdStr ? JSON.parse(userIdStr) : null;
-      
-      if (!userId) {
-        message.error("User ID not found. Please log in again.");
-        return;
-      }
-      
-      // Default values as specified
-      const defaultLobbyData = {
-        numOfMaxPlayers: 8,
-        playerIds: [userId], // Add the creator as the first player
-        wordset: "english",
-        numOfRounds: 3,
-        drawTime: 80,
-        lobbyOwner: userId // Set the lobby owner
-      };
-      
-      // Make the API call to create the lobby
-      const response = await apiService.post("/lobbies", defaultLobbyData);
-      
-      console.log("Lobby creation response:", response);
-      
-      const hasId = (obj: unknown): obj is { id: string | number } => {
-        return typeof obj === "object" && obj !== null && "id" in (obj as Record<string, unknown>);
-      };
-      
-      const hasDataId = (obj: unknown): obj is { data: { id: string | number } } => {
-        return (
-          typeof obj === "object" &&
-          obj !== null &&
-          "data" in (obj as Record<string, unknown>) &&
-          typeof (obj as { data: unknown }).data === "object" &&
-          (obj as { data: unknown }).data !== null &&
-          "id" in (obj as { data: Record<string, unknown> }).data
-        );
-      };
-      
-      let lobbyId;
-      
-      if (hasId(response)) {
-        lobbyId = response.id;
-      } else if (hasDataId(response)) {
-        lobbyId = response.data.id;
-      } else {
-        console.error("Could not determine lobby ID from response:", response);
-        message.error("Created lobby but couldn't get ID. Please check lobby list.");
-        return;
-      }
-      
-      // Show success message and redirect to the lobby
-      message.success(`Lobby created successfully! ID: ${lobbyId}`);
-      
-      // Redirect to the lobby page
-      router.push(`/lobbies/${lobbyId}`);
-      
-    } catch (error) {
-      console.error("Error creating lobby:", error);
-      message.error("Failed to create lobby. Please try again.");
-    } finally {
-    }
-  };
 
   
   return (
