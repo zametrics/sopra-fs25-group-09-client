@@ -164,7 +164,7 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
     router.push("/home");
   };
 
-/*
+
   const handleCreateLobby = async () => {
 
     
@@ -232,7 +232,7 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
     } finally {
     }
   };
-*/
+
   
   return (
     <div className="page-background">
@@ -242,26 +242,11 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
           <h1 className="drawzone-logo-3-7rem">DRAWZONE</h1>
           <p className="drawzone-subtitle-1-5rem">ART BATTLE ROYALE</p>
           <button className="green-button" onClick={() => router.push("/join-lobby")}>JOIN LOBBY</button>
-          <button className="green-button" onClick={async () => {
-            try {
-              const userIdStr = localStorage.getItem("userId");
-              const userId = userIdStr ? JSON.parse(userIdStr) : null;
-              const response = await apiService.post<Lobby>("/lobbies", {
-                numOfMaxPlayers: 8,
-                playerIds: [userId],
-                wordset: "english",
-                numOfRounds: 3,
-                drawTime: 80,
-                lobbyOwner: userId,
-              });
-              const lobbyId = response.id;
-              router.push(`/lobbies/${lobbyId}`);
-            } catch {
-              message.error("Failed to create lobby.");
-            }
-          }}>HOST GAME</button>
+          <button className="green-button" onClick={handleCreateLobby}>
+          HOST GAME
+          </button>
         </div>
-
+          
         <div className="right-side">
           <div className="profile-box">
             {isProfilePage ? (
