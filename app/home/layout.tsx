@@ -121,9 +121,12 @@ const saveUsername = async () => {
     localStorage.setItem("username", newUsername); // Update in localStorage
     setUsername(newUsername);                      // Update state immediately
   } catch (error) {
+    
     // If the username hasn't actually changed, silently ignore
     if (newUsername === localStorage.getItem("username")) {
+      console.error("", error);
       return;
+      
     } else {
       // Otherwise show a generic error (e.g. username already taken)
       message.error("Error updating username. It might be taken.");
