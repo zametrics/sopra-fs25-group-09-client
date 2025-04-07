@@ -3,13 +3,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useApi } from '@/hooks/useApi';
-import { Card, Typography, Button, Spin, List, Divider, message, Space, Input } from 'antd';
-import { CopyOutlined, ArrowLeftOutlined, SendOutlined } from '@ant-design/icons';
+import { Card, Typography, Button, Spin, List, message, Input } from 'antd';
+import { CopyOutlined} from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import withAuth from '@/hooks/withAuth';
 import io, { Socket } from 'socket.io-client';
 
-const { Title, Text } = Typography;
+const {Text } = Typography;
 
 interface LobbyData {
   id: number;
