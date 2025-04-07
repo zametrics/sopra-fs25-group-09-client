@@ -16,39 +16,38 @@ const io = new Server(server, {
   },
 });
 
-// Store lobby data
-const lobbies = new Map(); // Map<lobbyId, Set<socketId>>
+// Store lobby data: Map<lobbyId, Map<userId, socketId>>
+const lobbies = new Map();
 
 io.on('connection', (socket) => {
   console.log('Connected:', socket.id);
 
-  // Handle lobby joining
-  socket.on('joinLobby', (lobbyId) => {
+  // Handle lobby joining with userId
+  socket.on('joinLobby', ({ lobbyId, userId }) => {
     socket.join(lobbyId);
-    console.log(`User ${socket.id} joined lobby ${lobbyId}`);
+    console.log(`User ${userId} with socket ${socket.id} joined lobby ${lobbyId}`);
 
-    // Add player to lobby tracking
+    // Initialize lobby if it doesn't exist
     if (!lobbies.has(lobbyId)) {
-      lobbies.set(lobbyId, new Set());
+      lobbies.set(lobbyId, new Map());
     }
     const lobbyPlayers = lobbies.get(lobbyId);
-    lobbyPlayers.add(socket.id);
+    lobbyPlayers.set(userId, socket.id); // Map userId to socketId
 
-    // Emit 'playerJoined' event with new player data
+    // Emit 'playerJoined' event with real player data
     const newPlayer = {
-      id: socket.id, // Using socket.id as a temporary ID
-      username: `Player_${socket.id.slice(0, 4)}`, // Temporary username
+      id: userId, // Use the real user ID
+      username: `Player_${userId}`, // Temporary username; ideally fetch from API or client
     };
     io.to(lobbyId).emit('playerJoined', newPlayer);
 
-
-    console.log(`Lobby ${lobbyId} players:`, Array.from(lobbyPlayers));
+    console.log(`Lobby ${lobbyId} players:`, Array.from(lobbyPlayers.entries()));
   });
 
   // Handle chat messages
   socket.on('chatMessage', ({ lobbyId, message, username }) => {
     const timestamp = new Date().toISOString();
-    const validatedUsername = username || `Player_${socket.id.slice(0, 4)}`;
+    const validatedUsername = username || 'Anonymous';
     const chatMessage = { username: validatedUsername, message, timestamp };
     io.to(lobbyId).emit('chatMessage', chatMessage);
   });
@@ -57,13 +56,16 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('Disconnected:', socket.id);
     for (const [lobbyId, players] of lobbies) {
-      if (players.has(socket.id)) {
-        players.delete(socket.id);
-        io.to(lobbyId).emit('playerLeft', {
-          id: socket.id,
-          username: `Player_${socket.id.slice(0, 4)}`,
-        });
-        if (players.size === 0) lobbies.delete(lobbyId);
+      for (const [userId, socketId] of players) {
+        if (socketId === socket.id) {
+          players.delete(userId);
+          io.to(lobbyId).emit('playerLeft', {
+            id: userId,
+            username: `Player_${userId}`,
+          });
+          if (players.size === 0) lobbies.delete(lobbyId);
+          break;
+        }
       }
     }
   });

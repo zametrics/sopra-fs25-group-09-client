@@ -76,48 +76,42 @@ const LobbyPage: React.FC = () => {
       fetchLobby();
     }
   }, [lobbyId, apiService]);
-  
-  // for testing use: 'http://localhost:3001/
+
+  //test https://socket-server-826256454260.europe-west1.run.app
   useEffect(() => {
-    const socketIo = io('https://socket-server-826256454260.europe-west1.run.app', {
+    const socketIo = io('http://localhost:3001/', {
       path: '/api/socket',
     });
     setSocket(socketIo);
   
-    socketIo.emit('joinLobby', lobbyId);
-  
-    // Listen for chat messages
-    socketIo.on('chatMessage', (message: ChatMessage) => {
-      setMessages((prev) => [...prev, message]);
+    // Join lobby with userId
+  socketIo.emit('joinLobby', { lobbyId, userId: currentUserId });
+
+  // Listen for chat messages
+  socketIo.on('chatMessage', (message: ChatMessage) => {
+    setMessages((prev) => [...prev, message]);
+  });
+
+  // Listen for player joining
+  socketIo.on('playerJoined', (newPlayer: PlayerData) => {
+    setPlayers((prev) => {
+      // Check if player already exists by real ID
+      if (prev.some((p) => p.id === newPlayer.id)) return prev;
+      // Fetch real username if needed, or use provided one
+      return [...prev, newPlayer];
     });
-  
-    // Listen for player joining (adjust event name based on your server)
-    socketIo.on('playerJoined', (newPlayer: PlayerData) => {
-      setPlayers((prev) => {
-        // Avoid duplicates by checking if the player already exists
-        if (prev.some((p) => p.id === newPlayer.id)) return prev;
-        return [...prev, newPlayer];
-      });
-    });
-  
-    // Optional: Listen for full lobby update if your server supports it
-    socketIo.on('lobbyUpdate', (updatedLobby: LobbyData) => {
-      setLobby(updatedLobby);
-      // Fetch player data if playerIds changed
-      const fetchPlayers = async () => {
-        const playerPromises = updatedLobby.playerIds.map((id: number) =>
-          apiService.get<PlayerData>(`/users/${id}`).catch(() => ({ id, username: 'Unknown Player' } as PlayerData))
-        );
-        const playerData = await Promise.all(playerPromises);
-        setPlayers(playerData as PlayerData[]);
-      };
-      fetchPlayers();
-    });
-  
-    return () => {
-      socketIo.disconnect();
-    };
-  }, [lobbyId, apiService]); // Add apiService to dependencies since it's used inside
+  });
+
+  // Listen for player leaving
+  socketIo.on('playerLeft', (leftPlayer: PlayerData) => {
+    setPlayers((prev) => prev.filter((p) => p.id !== leftPlayer.id));
+  });
+
+  return () => {
+    socketIo.disconnect();
+  };
+}, [lobbyId, currentUserId]);
+
   // Scroll to the latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
