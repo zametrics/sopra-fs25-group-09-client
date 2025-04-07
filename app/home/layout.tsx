@@ -149,8 +149,13 @@ export default function HomeLayout({ children }: { children: React.ReactNode }) 
       message.success("Username updated successfully!");
       localStorage.setItem("username", newUsername);
     } catch (error) {
+
+      if(newUsername == localStorage.getItem("username")){
+        return;
+      }
+      else{
       message.error("Error updating username. It might be taken.");
-      console.error("Update error:", error);
+      }
     }
   };
 
