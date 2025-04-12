@@ -44,7 +44,7 @@ const LobbyPage: React.FC = () => {
   const [chatInput, setChatInput] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [lobbyFetched, setLobbyFetched] = useState<boolean>(false);
+
 
   // State for lobby settings
   const [maxPlayers, setMaxPlayers] = useState<number>(8);
