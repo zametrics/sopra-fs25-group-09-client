@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import withAuth from '@/hooks/withAuth';
 import io, { Socket } from 'socket.io-client';
 
+
 interface LobbyData {
   id: number;
   numOfMaxPlayers: number;
@@ -43,6 +44,7 @@ const LobbyPage: React.FC = () => {
   const [chatInput, setChatInput] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [lobbyFetched, setLobbyFetched] = useState<boolean>(false);
 
   // State for lobby settings
   const [maxPlayers, setMaxPlayers] = useState<number>(8);
@@ -63,89 +65,86 @@ const LobbyPage: React.FC = () => {
       try {
         const response = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
         setLobby(response as LobbyData);
-
-        // Update local state with lobby settings
-        setMaxPlayers(response.numOfMaxPlayers || 8);
-        setDrawTime(response.drawTime || 80);
-        setRounds(response.numOfRounds || 3);
-        setLanguage(response.language || "english");
-        setType(response.type || "standard");
-
+  
         if (response.playerIds && response.playerIds.length > 0) {
           const playerPromises = response.playerIds.map((id: number) =>
-            apiService.get<PlayerData>(`/users/${id}`).catch(() => ({ id, username: 'Unknown Player' } as PlayerData))
+            apiService.get<PlayerData>(`/users/${id}`).catch(() => ({ id, username: 'Guest' } as PlayerData))
           );
           const playerData = await Promise.all(playerPromises);
           setPlayers(playerData as PlayerData[]);
         }
       } catch (error) {
-        console.error("Error fetching lobby:", error);
-        message.error("Failed to load lobby information");
+        console.error('Error fetching lobby:', error);
+        message.error('Failed to load lobby information');
       } finally {
         setLoading(false);
       }
     };
-
+  
     if (lobbyId) {
       fetchLobby();
     }
   }, [lobbyId, apiService]);
 
-  useEffect(() => {
-    const socketIo = io('https://socket-server-826256454260.europe-west1.run.app/', {
-      path: '/api/socket',
-    });
-    setSocket(socketIo);
-  
-    // Get current user's username from players state or fetch it
-    const currentUsername = players.find((p) => p.id === Number(currentUserId))?.username || "unknown";
+  //http://localhost:3001/
+useEffect(() => {
+  const socketIo = io('https://socket-server-826256454260.europe-west1.run.app/', {
+    path: '/api/socket',
+  });
+  setSocket(socketIo);
 
-    // Join lobby with userId and username
-    socketIo.emit('joinLobby', { lobbyId, userId: currentUserId, username: currentUsername });
+  const fetchCurrentUsername = async () => {
+    try {
+      const userData = await apiService.get<PlayerData>(`/users/${currentUserId}`);
+      return userData.username || 'Guest';
+    } catch (error) {
+      console.error('Error fetching username:', error);
+      return 'Guest';
+    }
+  };
 
-    // Listen for chat messages
-    socketIo.on('chatMessage', (message: ChatMessage) => {
-      setMessages((prev) => [...prev, message]);
-    });
+  const joinLobby = async () => {
+    const username = await fetchCurrentUsername();
+    socketIo.emit('joinLobby', { lobbyId, userId: currentUserId, username });
+    console.log('Emitted joinLobby:', { lobbyId, userId: currentUserId, username });
+  };
 
-    // Listen for player joining
-    socketIo.on('playerJoined', (newPlayer: PlayerData) => {
-      setPlayers((prev) => {
+  joinLobby();
+
+  socketIo.on('chatMessage', (message: ChatMessage) => {
+    setMessages((prev) => [...prev, message]);
+  });
+
+  socketIo.on('playerJoined', (newPlayer: PlayerData) => {
+    setPlayers((prev) => {
+      // Special handling for current user to prevent duplicates
+      if (newPlayer.id.toString() === currentUserId) {
         const existingPlayer = prev.find((p) => p.id === newPlayer.id);
         if (existingPlayer) {
-          // Update existing player if username changes (e.g., on reconnect)
-          return prev.map((p) => (p.id === newPlayer.id ? { ...p, username: newPlayer.username } : p));
+          return prev.map((p) =>
+            p.id === newPlayer.id ? { ...p, username: newPlayer.username || 'Guest' } : p
+          );
         }
-        return [...prev, newPlayer];
-      });
-    });
-
-    // Listen for player leaving
-    socketIo.on('playerLeft', (leftPlayer: PlayerData) => {
-      setPlayers((prev) => prev.filter((p) => p.id !== leftPlayer.id));
-    });
-
-    // Listen for game starting
-    socketIo.on('gameStarting', (data: { 
-      lobbyId: string, 
-      settings: {
-        numOfRounds: number,
-        drawTime: number,
-        language: string,
-        type: string,
-        customWords?: string | null
-      } 
-    }) => {
-      if (data.lobbyId === lobbyId) {
-        // Redirect non-host players to the game page
-        router.push(`/game/${lobbyId}`);
       }
+      // Normal handling for all players
+      const existingPlayer = prev.find((p) => p.id === newPlayer.id);
+      if (existingPlayer) {
+        return prev.map((p) =>
+          p.id === newPlayer.id ? { ...p, username: newPlayer.username || 'Guest' } : p
+        );
+      }
+      return [...prev, { ...newPlayer, username: newPlayer.username || 'Guest' }];
     });
+  });
 
-    return () => {
-      socketIo.disconnect();
-    };
-  }, [lobbyId, currentUserId]);
+  socketIo.on('playerLeft', (leftPlayer: PlayerData) => {
+    setPlayers((prev) => prev.filter((p) => p.id !== leftPlayer.id));
+  });
+
+  return () => {
+    socketIo.disconnect();
+  };
+}, [lobbyId, currentUserId, apiService]);
 
   // Scroll to the latest message
   useEffect(() => {
@@ -310,23 +309,23 @@ const LobbyPage: React.FC = () => {
         <h1 className="players-chat-title">
           PLAYERS ({players.length}/{lobby.numOfMaxPlayers})
         </h1>
-        <div className="player-list">
-          {players.map((player) => (
-            <div
-              key={player.id}
-              className={`player-entry ${player.id.toString() === currentUserId ? 'player-entry-own' : ''}`}
-            >
-              <div className="player-info">
-                <img
-                  src={player.id.toString() === currentUserId ? localAvatarUrl : '/icons/avatar.png'}
-                  alt="Avatar"
-                  className="player-avatar"
-                />
-                <span>{player.username || 'Unknown Player'}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+<div className="player-list">
+  {players.map((player) => (
+    <div
+      key={player.id}
+      className={`player-entry ${player.id.toString() === currentUserId ? 'player-entry-own' : ''}`}
+    >
+      <div className="player-info">
+        <img
+          src={player.id.toString() === currentUserId ? localAvatarUrl : '/icons/avatar.png'}
+          alt="Avatar"
+          className="player-avatar"
+        />
+        <span>{player.username}</span>
+      </div>
+    </div>
+  ))}
+</div>
       </div>
 
       {/* Settings Box */}
