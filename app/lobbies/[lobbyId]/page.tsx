@@ -8,15 +8,15 @@ import { useRouter } from 'next/navigation';
 import withAuth from '@/hooks/withAuth';
 import io, { Socket } from 'socket.io-client';
 
-
 interface LobbyData {
   id: number;
   numOfMaxPlayers: number;
   playerIds: number[];
-  wordset: string;
+  language: string;
   numOfRounds: number;
   drawTime: number;
   lobbyOwner: number;
+  type: string;
 }
 
 interface PlayerData {
@@ -44,17 +44,32 @@ const LobbyPage: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // State for lobby settings
+  const [maxPlayers, setMaxPlayers] = useState<number>(8);
+  const [drawTime, setDrawTime] = useState<number>(80);
+  const [rounds, setRounds] = useState<number>(3);
+  const [language, setLanguage] = useState<string>("english");
+  const [type, setType] = useState<string>("standard");
+  const [customWords, setCustomWords] = useState<string>("");
+  const [useCustomWordsOnly, setUseCustomWordsOnly] = useState<boolean>(false);
+
   const currentUserId = typeof window !== "undefined" ? localStorage.getItem("userId") : "";
   const localAvatarUrl = typeof window !== "undefined" ? localStorage.getItem("avatarUrl") || "/icons/avatar.png" : "/icons/avatar.png";
 
-
-// Fetch lobby data
+  // Fetch lobby data
   useEffect(() => {
     const fetchLobby = async () => {
       setLoading(true);
       try {
         const response = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
         setLobby(response as LobbyData);
+
+        // Update local state with lobby settings
+        setMaxPlayers(response.numOfMaxPlayers || 8);
+        setDrawTime(response.drawTime || 80);
+        setRounds(response.numOfRounds || 3);
+        setLanguage(response.language || "english");
+        setType(response.type || "standard");
 
         if (response.playerIds && response.playerIds.length > 0) {
           const playerPromises = response.playerIds.map((id: number) =>
@@ -76,45 +91,61 @@ const LobbyPage: React.FC = () => {
     }
   }, [lobbyId, apiService]);
 
-  //test http://localhost:3001/
   useEffect(() => {
     const socketIo = io('https://socket-server-826256454260.europe-west1.run.app/', {
       path: '/api/socket',
     });
     setSocket(socketIo);
   
-// Get current user's username from players state or fetch it
-const currentUsername = players.find((p) => p.id === Number(currentUserId))?.username ||"unknwon";
+    // Get current user's username from players state or fetch it
+    const currentUsername = players.find((p) => p.id === Number(currentUserId))?.username || "unknown";
 
-// Join lobby with userId and username
-socketIo.emit('joinLobby', { lobbyId, userId: currentUserId, username: currentUsername });
+    // Join lobby with userId and username
+    socketIo.emit('joinLobby', { lobbyId, userId: currentUserId, username: currentUsername });
 
-// Listen for chat messages
-socketIo.on('chatMessage', (message: ChatMessage) => {
-  setMessages((prev) => [...prev, message]);
-});
+    // Listen for chat messages
+    socketIo.on('chatMessage', (message: ChatMessage) => {
+      setMessages((prev) => [...prev, message]);
+    });
 
-// Listen for player joining
-socketIo.on('playerJoined', (newPlayer: PlayerData) => {
-  setPlayers((prev) => {
-    const existingPlayer = prev.find((p) => p.id === newPlayer.id);
-    if (existingPlayer) {
-      // Update existing player if username changes (e.g., on reconnect)
-      return prev.map((p) => (p.id === newPlayer.id ? { ...p, username: newPlayer.username } : p));
-    }
-    return [...prev, newPlayer];
-  });
-});
+    // Listen for player joining
+    socketIo.on('playerJoined', (newPlayer: PlayerData) => {
+      setPlayers((prev) => {
+        const existingPlayer = prev.find((p) => p.id === newPlayer.id);
+        if (existingPlayer) {
+          // Update existing player if username changes (e.g., on reconnect)
+          return prev.map((p) => (p.id === newPlayer.id ? { ...p, username: newPlayer.username } : p));
+        }
+        return [...prev, newPlayer];
+      });
+    });
 
-  // Listen for player leaving
-  socketIo.on('playerLeft', (leftPlayer: PlayerData) => {
-    setPlayers((prev) => prev.filter((p) => p.id !== leftPlayer.id));
-  });
+    // Listen for player leaving
+    socketIo.on('playerLeft', (leftPlayer: PlayerData) => {
+      setPlayers((prev) => prev.filter((p) => p.id !== leftPlayer.id));
+    });
 
-  return () => {
-    socketIo.disconnect();
-  };
-}, [lobbyId, currentUserId]);
+    // Listen for game starting
+    socketIo.on('gameStarting', (data: { 
+      lobbyId: string, 
+      settings: {
+        numOfRounds: number,
+        drawTime: number,
+        language: string,
+        type: string,
+        customWords?: string | null
+      } 
+    }) => {
+      if (data.lobbyId === lobbyId) {
+        // Redirect non-host players to the game page
+        router.push(`/game/${lobbyId}`);
+      }
+    });
+
+    return () => {
+      socketIo.disconnect();
+    };
+  }, [lobbyId, currentUserId]);
 
   // Scroll to the latest message
   useEffect(() => {
@@ -127,15 +158,89 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
       setTimeout(() => setCopied(false), 1000);
     });
   }
+  
   const goBack = () => {
     router.push('/home');
   };
 
   const sendMessage = () => {
     if (chatInput.trim() && socket) {
-      const username = players.find((p) => p.id === lobby?.lobbyOwner)?.username || 'You';
+      const username = players.find((p) => p.id === Number(currentUserId))?.username || 'You';
       socket.emit('chatMessage', { lobbyId, message: chatInput, username });
       setChatInput('');
+    }
+  };
+
+  const startGame = async () => {
+    if (!lobby || !currentUserId) return;
+    
+    // Check if the current user is the lobby owner
+    if (Number(currentUserId) !== lobby.lobbyOwner) {
+      message.error("Only the lobby owner can start the game");
+      return;
+    }
+    
+    // Validate settings
+    if (customWords && type === "custom") {
+      const words = customWords.split(",").map(word => word.trim()).filter(word => word);
+      if (words.length < 10) {
+        message.error("Please provide at least 10 custom words");
+        return;
+      }
+      
+      if (words.some(word => word.length > 32)) {
+        message.error("Words must be 32 characters or less");
+        return;
+      }
+    }
+    
+    // Make sure we have at least 2 players
+    if (players.length < 2) {
+      message.error("At least 2 players are required to start the game");
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // Prepare the updated lobby data
+      const gameSettings = {
+        id: Number(lobbyId),
+        lobbyOwner: lobby.lobbyOwner,
+        numOfMaxPlayers: maxPlayers,
+        playerIds: players.map(p => p.id),
+        language: language,
+        type: type === "custom" && customWords ? "custom" : type,
+        numOfRounds: rounds,
+        drawTime: drawTime
+      };
+      
+      // Update lobby in the database
+      await apiService.put(`/lobbies/${lobbyId}`, gameSettings);
+      
+      // Notify all players through socket that the game is starting
+      if (socket) {
+        socket.emit('gameStarting', { 
+          lobbyId, 
+          settings: {
+            numOfRounds: rounds,
+            drawTime: drawTime,
+            language: language,
+            type: type,
+            customWords: type === "custom" ? customWords : null,
+            useCustomWordsOnly: useCustomWordsOnly
+          }
+        });
+      }
+      
+      // Redirect to the game page
+      router.push(`/game/${lobbyId}`);
+      
+    } catch (error) {
+      console.error("Error starting game:", error);
+      message.error("Failed to start the game");
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -151,34 +256,29 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
     '#008080', // Teal
   ];
   
-  
-
   const usernameColorsRef = useRef<{ [key: string]: string }>({});
   
   function getUsernameColor(username: string): string {
-  const usernameColors = usernameColorsRef.current;
+    const usernameColors = usernameColorsRef.current;
 
-  if (!username || typeof username !== 'string') return 'black';
+    if (!username || typeof username !== 'string') return 'black';
 
-  if (usernameColors[username]) {
-    return usernameColors[username];
+    if (usernameColors[username]) {
+      return usernameColors[username];
+    }
+
+    const availableColors = colorPool.filter(
+      (color) => !Object.values(usernameColors).includes(color)
+    );
+
+    const newColor =
+      availableColors.length > 0
+        ? availableColors[Math.floor(Math.random() * availableColors.length)]
+        : '#' + Math.floor(Math.random() * 16777215).toString(16);
+
+    usernameColors[username] = newColor;
+    return newColor;
   }
-
-  const availableColors = colorPool.filter(
-    (color) => !Object.values(usernameColors).includes(color)
-  );
-
-  const newColor =
-    availableColors.length > 0
-      ? availableColors[Math.floor(Math.random() * availableColors.length)]
-      : '#' + Math.floor(Math.random() * 16777215).toString(16);
-
-  usernameColors[username] = newColor;
-  return newColor;
-}
-
-  
-  
 
   //Loading screen
   if (loading) {
@@ -206,32 +306,28 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
 
   return (
     <div className="page-background">
-            <div className="player-box">
-  <h1 className="players-chat-title">
-    PLAYERS ({players.length}/{lobby.numOfMaxPlayers})
-  </h1>
-  <div className="player-list">
-    {players.map((player) => (
-      <div
-        key={player.id}
-        className={`player-entry ${player.id.toString() === currentUserId ? 'player-entry-own' : ''}`}
-      >
-        <div className="player-info">
-        <img
-          src={player.id.toString() === currentUserId ? localAvatarUrl : '/icons/avatar.png'}
-          alt="Avatar"
-          className="player-avatar"
-        />
-          <span>{player.username || 'Unknown Player'}</span>
+      <div className="player-box">
+        <h1 className="players-chat-title">
+          PLAYERS ({players.length}/{lobby.numOfMaxPlayers})
+        </h1>
+        <div className="player-list">
+          {players.map((player) => (
+            <div
+              key={player.id}
+              className={`player-entry ${player.id.toString() === currentUserId ? 'player-entry-own' : ''}`}
+            >
+              <div className="player-info">
+                <img
+                  src={player.id.toString() === currentUserId ? localAvatarUrl : '/icons/avatar.png'}
+                  alt="Avatar"
+                  className="player-avatar"
+                />
+                <span>{player.username || 'Unknown Player'}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-    ))}
-  </div>
-</div>
-
-
-
-      
 
       {/* Settings Box */}
       <div className="settings-box">
@@ -245,92 +341,147 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
         
         <div className="lobby-setting-group">
           <label className="lobby-label">PLAYERS:</label>
-          <input type="range" min={2} max={8} value={lobby.numOfMaxPlayers}/>
-          <span className="slider-value">{lobby.numOfMaxPlayers}</span>
+          <input 
+            type="range" 
+            min={2} 
+            max={8} 
+            value={maxPlayers}
+            onChange={(e) => setMaxPlayers(Number(e.target.value))}
+            disabled={Number(currentUserId) !== lobby.lobbyOwner}
+          />
+          <span className="slider-value">{maxPlayers}</span>
         </div>
         
         <div className="lobby-setting-group">
           <label className="lobby-label">DRAWTIME:</label>
-          <input type="range" min={15} max={120} step={5} value={lobby.drawTime}/>
-          <span className="slider-value">{lobby.drawTime}s</span>
+          <input 
+            type="range" 
+            min={15} 
+            max={120} 
+            step={5} 
+            value={drawTime}
+            onChange={(e) => setDrawTime(Number(e.target.value))}
+            disabled={Number(currentUserId) !== lobby.lobbyOwner}
+          />
+          <span className="slider-value">{drawTime}s</span>
         </div>
         
         <div className="lobby-setting-group">
           <label className="lobby-label">ROUNDS:</label>
-          <input type="range" min={1} max={10} value={lobby.numOfRounds}/>
-          <span className="slider-value">{lobby.numOfRounds}</span>
+          <input 
+            type="range" 
+            min={1} 
+            max={10} 
+            value={rounds}
+            onChange={(e) => setRounds(Number(e.target.value))}
+            disabled={Number(currentUserId) !== lobby.lobbyOwner}
+          />
+          <span className="slider-value">{rounds}</span>
         </div>
         
         <div className="lobby-setting-group">
-          <label className="lobby-label">CUSTOM WORDS:</label>
+          <label className="lobby-label">LANGUAGE:</label>
           <div className="wordset-controls">
-            <select>
-              <option value="english">Choose wordlist</option>
-              <option value="animals">Animals</option>
-              <option value="custom">Custom</option>
+            <select 
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              disabled={Number(currentUserId) !== lobby.lobbyOwner}
+            >
+              <option value="english">English</option>
+              <option value="german">German</option>
+              <option value="swissgerman">Schwitzerdütsch</option>
             </select>
-            <label>
-              <input type="checkbox" />
-              Use custom words only
-            </label>
-        </div>
-        <textarea
-          placeholder="Minimum of 10 words. 1–32 characters per word! Separated by a , (comma)"
-        />
-      </div>
-      
-
-
-      <div className="lobby-actions">
-        <button className="green-button" style={{width: 300, marginLeft: 10}}>START</button>
-
-        <div className="roomcode-box">
-          <div className="roomcode-label">ROOMCODE:</div>
-          <div
-            className="roomcode-value"
-            onClick={copyLobbyCode}
-            title="Click to copy"
-          >
-            {copied ? 'Copied!' : lobbyId}
           </div>
         </div>
-
-      </div>
         
+        <div className="lobby-setting-group">
+          <label className="lobby-label">WORD TYPE:</label>
+          <div className="wordset-controls">
+            <select 
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              disabled={Number(currentUserId) !== lobby.lobbyOwner}
+            >
+              <option value="standard">Standard</option>
+              <option value="animals">Animals</option>
+              <option value="food">Food</option>
+              <option value="jobs">Jobs</option>
+              <option value="custom">Custom</option>
+            </select>
+            {type === "custom" && (
+              <label>
+                <input 
+                  type="checkbox"
+                  checked={useCustomWordsOnly}
+                  onChange={(e) => setUseCustomWordsOnly(e.target.checked)}
+                  disabled={Number(currentUserId) !== lobby.lobbyOwner}
+                />
+                Use custom words only
+              </label>
+            )}
+          </div>
+          {type === "custom" && (
+            <textarea
+              placeholder="Minimum of 10 words. 1–32 characters per word! Separated by a , (comma)"
+              value={customWords}
+              onChange={(e) => setCustomWords(e.target.value)}
+              disabled={Number(currentUserId) !== lobby.lobbyOwner}
+            />
+          )}
+        </div>
+
+        <div className="lobby-actions">
+          <button 
+            className="green-button" 
+            style={{width: 300, marginLeft: 10}}
+            onClick={startGame}
+            disabled={loading || Number(currentUserId) !== lobby.lobbyOwner}
+          >
+            {loading ? 'STARTING...' : 'START'}
+          </button>
+
+          <div className="roomcode-box">
+            <div className="roomcode-label">ROOMCODE:</div>
+            <div
+              className="roomcode-value"
+              onClick={copyLobbyCode}
+              title="Click to copy"
+            >
+              {copied ? 'Copied!' : lobbyId}
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Chat Box */}
+      <div className="chat-box">
+        <h1 className="players-chat-title">CHAT</h1>
 
+        <div className="chat-messages">
+          {messages.map((msg, index) => (
+            <div key={index} className="chat-message">
+              <span style={{ color: getUsernameColor(msg.username) }} className="chat-username">
+                {msg.username}:
+              </span>
+              <span className="chat-text"> {msg.message}</span>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
 
-     {/* Chat Box */}
-     <div className="chat-box">
-  <h1 className="players-chat-title">CHAT</h1>
-
-  <div className="chat-messages">
-    {messages.map((msg, index) => (
-      <div key={index} className="chat-message">
-        <span style={{ color: getUsernameColor(msg.username) }} className="chat-username">
-          {msg.username}:
-        </span>
-        <span className="chat-text"> {msg.message}</span>
+        <div className="chat-input-area">
+          <Input
+            className="chat-input"
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onPressEnter={sendMessage}
+            placeholder="Type your message here!"
+          />
+          <Button className="chat-send-button" onClick={sendMessage}>
+            <span role="img" aria-label="send">📨</span>
+          </Button>
+        </div>
       </div>
-    ))}
-    <div ref={messagesEndRef} />
-  </div>
-
-  <div className="chat-input-area">
-    <Input
-      className="chat-input"
-      value={chatInput}
-      onChange={(e) => setChatInput(e.target.value)}
-      onPressEnter={sendMessage}
-      placeholder="Type your message here!"
-    />
-    <Button className="chat-send-button" onClick={sendMessage}>
-      <span role="img" aria-label="send">📨</span>
-    </Button>
-  </div>
-</div>
-
     </div>
   );
 };
