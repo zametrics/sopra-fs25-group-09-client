@@ -715,8 +715,9 @@ a {
   margin-bottom: 8px;
   word-break: break-word;
   text-align: left;
+  color: rgb(0, 0, 0)
 }
-
+ 
 .chat-username {
   font-weight: bold;
   margin-right: 5px;
@@ -900,4 +901,5 @@ textarea {
   content: \"*\";
   visibility: hidden;
 }
+
 
