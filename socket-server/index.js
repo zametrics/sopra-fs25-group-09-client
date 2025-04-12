@@ -19,22 +19,38 @@ const io = new Server(server, {
 // Store lobby data: Map<lobbyId, Map<userId, { socketId, username }>>
 const lobbies = new Map();
 
+// Mock function to fetch username from a database (replace with actual implementation)
+const fetchUsernameFromDB = async (userId) => {
+  // Example: Query your database or authentication system
+  // For demo purposes, return a mock username
+  return `User_${userId}`; // Replace with actual DB query, e.g., await db.users.findById(userId).username
+};
+
 io.on('connection', (socket) => {
   console.log('Connected:', socket.id);
 
-  socket.on('joinLobby', ({ lobbyId, userId, username }) => {
+  socket.on('joinLobby', async ({ lobbyId, userId, username }) => {
     socket.join(lobbyId);
     console.log(`User ${userId} (${username}) with socket ${socket.id} joined lobby ${lobbyId}`);
+
+    // Validate username
+    let validatedUsername = username;
+    if (!username || username === 'unknown' || username.trim() === '') {
+      // Fetch username from database or use fallback
+      validatedUsername = await fetchUsernameFromDB(userId).catch(() => `Guest_${userId}`);
+    }
 
     if (!lobbies.has(lobbyId)) {
       lobbies.set(lobbyId, new Map());
     }
     const lobbyPlayers = lobbies.get(lobbyId);
-    lobbyPlayers.set(userId, { socketId: socket.id, username });
+
+    // Update or add player
+    lobbyPlayers.set(userId, { socketId: socket.id, username: validatedUsername });
 
     const newPlayer = {
       id: userId,
-      username: username || `Player_${userId}`,
+      username: validatedUsername,
     };
     io.to(lobbyId).emit('playerJoined', newPlayer);
 
@@ -43,7 +59,7 @@ io.on('connection', (socket) => {
 
   socket.on('chatMessage', ({ lobbyId, message, username }) => {
     const timestamp = new Date().toISOString();
-    const validatedUsername = username || 'Anonymous';
+    const validatedUsername = username && username !== 'unknown' ? username : 'Guest';
     const chatMessage = { username: validatedUsername, message, timestamp };
     io.to(lobbyId).emit('chatMessage', chatMessage);
   });
