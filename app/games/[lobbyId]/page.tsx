@@ -32,9 +32,9 @@ interface ChatMessage {
   timestamp: string;
 }
 
-interface pageProps {}
 
-const LobbyPage: FC<pageProps> = ({}) => {
+
+const LobbyPage: FC = ({}) => {
   const { canvasRef, onMouseDown } = useDraw(drawLine);
   const params = useParams();
   const lobbyId = params.lobbyId as string;
@@ -227,7 +227,7 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
     const lineColor = '#ff0000'
     const lineWidth = 5
 
-    let startPoint = prevPoint ?? currentPoint
+    const startPoint = prevPoint ?? currentPoint
     ctx.beginPath()
     ctx.lineWidth = lineWidth
     ctx.strokeStyle = lineColor
