@@ -1,0 +1,267 @@
+/* styles/JoinLobbyPage.css */
+
+.join-lobby-container {
+    /* Adjust padding if the default settings-box padding isn't right */
+     padding: 25px 30px; /* Example adjustment */
+     display: flex;
+     flex-direction: column;
+     /* Maybe limit height if content overflows */
+     /* height: 750px; */
+     /* overflow-y: auto; */ /* Add scroll if content exceeds height */
+  }
+  
+  .lobby-list-area {
+    flex-grow: 1; /* Allows this area to take up available space */
+    margin-bottom: 20px; /* Space below the list */
+    min-height: 200px; /* Prevent collapsing when empty/loading */
+    display: flex; /* Center loading/empty messages */
+    flex-direction: column;
+    justify-content: center; /* Center vertically if no lobbies */
+    align-items: center; /* Center horizontally if no lobbies */
+  }
+  
+  .loading-lobbies, .no-lobbies-found {
+      text-align: center;
+      color: #555; /* Adjust color */
+  }
+  .loading-lobbies .ant-spin-dot {
+      /* Customize spinner color if needed */
+  }
+  .loading-lobbies .ant-typography, .no-lobbies-found .ant-typography {
+      margin-top: 10px;
+      display: block;
+      font-size: 1.1rem;
+      font-family: 'Digitalt', sans-serif;
+      color: #444;
+  }
+  .no-lobbies-found .ant-typography:last-child {
+      font-size: 0.9rem;
+      margin-top: 5px;
+  }
+  
+  
+  .lobby-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Spacing between lobby entries */
+  }
+  
+  .lobby-list-entry {
+    background-color: #00aaff; /* Light blue background */
+    border-radius: 15px;
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.7), 0 3px 6px rgba(0, 0, 0, 0.15);
+    color: white;
+    font-family: 'Nunito', sans-serif; /* Or another clean font */
+  }
+  
+  .lobby-list-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  
+  .lobby-host-name {
+    font-weight: bold;
+    font-size: 1.1rem;
+  }
+  
+  .lobby-status-text {
+    font-size: 0.8rem;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .lobby-list-details {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .lobby-player-count {
+    font-weight: bold;
+    font-size: 1.3rem;
+    background-color: rgba(0, 0, 0, 0.15);
+    padding: 3px 10px;
+    border-radius: 8px;
+    min-width: 50px; /* Ensure consistent width */
+    text-align: center;
+  }
+  
+  /* --- Button Styles within the list --- */
+  .lobby-list-entry .ant-btn {
+    border-radius: 50% !important; /* Make buttons circular */
+    width: 42px !important;
+    height: 42px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    border: 2px solid white !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.1s ease, background-color 0.2s ease;
+  }
+  .lobby-list-entry .ant-btn:hover {
+      transform: scale(1.05);
+  }
+  .lobby-list-entry .ant-btn:active {
+      transform: scale(0.98);
+  }
+  
+  
+  .lobby-list-entry .ant-btn .ant-btn-icon {
+      margin: 0 !important; /* Remove default icon margin if any */
+  }
+  
+  .lobby-list-entry .ant-btn span:not(.ant-btn-icon) {
+      display: none; /* Hide button text (JOIN) */
+  }
+  
+  
+  .lobby-join-button {
+    background-color: #ff9800 !important; /* Orange */
+  }
+  .lobby-join-button:hover {
+     background-color: #ffa726 !important;
+  }
+  .lobby-join-button img { /* Style the icon image */
+     filter: brightness(0) invert(1); /* Make icon white */
+  }
+  
+  
+  .lobby-spectate-button {
+    background-color: #e91e63 !important; /* Pink */
+  }
+  .lobby-spectate-button:hover {
+     background-color: #ec407a !important;
+  }
+  .lobby-spectate-button img { /* Style the icon image */
+    filter: brightness(0) invert(1); /* Make icon white */
+  }
+  .lobby-spectate-button:disabled {
+     background-color: #a1a1a1 !important;
+     opacity: 0.6;
+     cursor: not-allowed;
+  }
+  
+  /* --- Alert Styling --- */
+  .join-lobby-alert {
+      margin-top: 15px; /* Space above alerts */
+      margin-bottom: 5px; /* Space below alerts */
+      border-radius: 8px !important;
+  }
+  /* Customize alert text colors if needed */
+  .join-lobby-alert .ant-alert-message > span,
+  .join-lobby-alert .ant-alert-description > span {
+      font-family: 'Nunito', sans-serif; /* Consistent font */
+  }
+  
+  
+  /* --- Pagination Styles --- */
+  .pagination-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-top: 15px; /* Space above pagination */
+    margin-bottom: 25px; /* Space below pagination */
+  }
+  
+  .pagination-button {
+    background-color: #f0f0f0 !important;
+    border: 1px solid #ccc !important;
+    color: #333 !important;
+    font-family: 'Digitalt', sans-serif !important;
+    font-size: 1rem !important;
+    letter-spacing: 0.8px !important;
+    border-radius: 10px !important;
+    padding: 5px 15px !important;
+    height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: background-color 0.2s ease;
+  }
+  
+  .pagination-button:hover:not(:disabled) {
+      background-color: #e0e0e0 !important;
+  }
+  
+  .pagination-button:disabled {
+      background-color: #e8e8e8 !important;
+      color: #999 !important;
+      opacity: 0.7;
+      cursor: not-allowed;
+  }
+  
+  .pagination-button.next .ant-btn-icon { order: 1; margin-left: 5px;} /* Icon after text */
+  .pagination-button.prev .ant-btn-icon { order: -1; margin-right: 5px;} /* Icon before text */
+  
+  
+  .page-info {
+    font-family: 'Digitalt', sans-serif;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #444;
+  }
+  
+  /* --- Room Code Join Area at Bottom --- */
+  .roomcode-join-area {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    margin-top: auto; /* Push to bottom if container has flex column */
+    padding-top: 10px; /* Add some space if needed */
+    border-top: 1px solid rgba(0, 0, 0, 0.1); /* Optional separator */
+  }
+  
+  .roomcode-input-bottom {
+    flex-grow: 1; /* Take available space */
+    height: 50px !important;
+    border-radius: 12px !important;
+    background-color: #f0f0f0 !important;
+    border: 1px solid #b0b0b0 !important;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1) !important;
+    font-family: 'Digitalt', sans-serif !important;
+    font-size: 1.5rem !important;
+    letter-spacing: 2px !important;
+    text-align: center !important;
+    color: #333 !important;
+  }
+  .roomcode-input-bottom::placeholder {
+     color: #888 !important;
+     font-size: 1.3rem; /* Slightly smaller placeholder */
+  }
+  
+  
+  .roomcode-join-button-bottom {
+    height: 50px !important;
+    width: 100px !important; /* Fixed width or adjust as needed */
+    background-color: #cccccc !important; /* Grey background */
+    border: 1px solid #999999 !important;
+    color: #333 !important;
+    font-family: 'Digitalt', sans-serif !important;
+    font-size: 1.6rem !important;
+    font-weight: bold !important;
+    border-radius: 12px !important;
+    letter-spacing: 1px !important;
+     box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+     transition: background-color 0.2s ease;
+  }
+  
+  .roomcode-join-button-bottom:hover:not(:disabled) {
+      background-color: #bbbbbb !important;
+  }
+  
+  .roomcode-join-button-bottom:disabled {
+       background-color: #d8d8d8 !important;
+       color: #999 !important;
+       opacity: 0.7;
+  }
