@@ -94,12 +94,9 @@ socket.on('joinLobby', ({ lobbyId, userId, username }) => {
     if (playerInfo) {
       const { lobbyId, userId } = playerInfo;
       const lobby = lobbies.get(lobbyId);
-      
-      // --- MODIFICATION START ---
       if (lobby && lobby.has(userId)) {
         const currentPlayerData = lobby.get(userId);
 
-        // *** IMPORTANT CHECK ***
         // Only act if the socket that disconnected is the *currently active* socket for this user
         if (currentPlayerData.socketId === socket.id) {
           console.log(`Player ${userId} (${currentPlayerData.username}) truly disconnected with socket ${socket.id}. Removing.`);
@@ -122,7 +119,6 @@ socket.on('joinLobby', ({ lobbyId, userId, username }) => {
           console.log(`Player ${userId} disconnected with old socket ${socket.id}, but has already reconnected with socket ${currentPlayerData.socketId}. Ignoring.`);
         }
       }
-      // --- MODIFICATION END ---
 
       // Always remove the disconnected socket ID from the lookup map
       socketToLobby.delete(socket.id);
