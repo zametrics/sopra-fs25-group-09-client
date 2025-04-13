@@ -211,6 +211,18 @@ useEffect(() => {
       setIsLeaveModalVisible(false);
     }
   };
+
+  useEffect(() => {
+    const handleBeforeUnload = async () => {
+      if (!currentUserId || !lobbyId) return;
+  
+      handleLeaveLobby()
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [socket, currentUserId, lobbyId]);
   
   const handleCancelLeave = () => {
     setIsLeaveModalVisible(false);
