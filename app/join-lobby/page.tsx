@@ -3,129 +3,151 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApi } from '@/hooks/useApi';
-import { Typography, Button, Input, Alert, Spin } from 'antd'; // Added Spin for loading
+import { Typography, Button, Input, Spin, Modal} from 'antd'; // Removed Space as we use custom layout
 import withAuth from '@/hooks/withAuth';
-import Image from 'next/image'; // Import Image component
+import Image from 'next/image';
 
 // --- Import necessary CSS ---
-import './JoinLobbyPage.css'; // Create this new CSS file
+import './JoinLobbyPage.css'; // Styles for this component
 
-const { Text } = Typography;
+const { Text } = Typography; // Only Text needed
 
 // Define an interface for the Lobby data structure based on your backend DTO
+// Adjust based on your ACTUAL API response structure
 interface Lobby {
-  id: string;
-  lobbyOwner: number;
+  id: string; // Assuming 'id' is the 6-digit lobby code here
+  lobbyOwner: number; // Or potentially an object with owner info
   numOfMaxPlayers: number;
-  playerIds: Int32Array;
+  playerIds: number[]; // Assuming it's an array of player IDs
   language: string;
   numOfRounds: number;
   drawTime: number;
   type: string;
-  // Add other relevant fields if needed
+  // Add hostUsername if available from backend, otherwise derive it
+  hostUsername?: string; // optionaler Hostname aus User-Endpoint
 }
 
-const LOBBIES_PER_PAGE = 6; // Number of lobbies to show per page
+const LOBBIES_PER_PAGE = 6;
 
 const JoinLobbyPage: React.FC = () => {
-  const [lobbyCodeInput, setLobbyCodeInput] = useState(''); // Renamed from lobbyCode
+  const [lobbyCodeInput, setLobbyCodeInput] = useState('');
   const [isJoining, setIsJoining] = useState(false);
+  const [joiningLobbyCode, setJoiningLobbyCode] = useState<string | null>(null); // Track which join is active
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isErrorModalVisible, setIsErrorModalVisible] = useState(false); // New state for modal
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [isLoadingLobbies, setIsLoadingLobbies] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  
   const router = useRouter();
   const apiService = useApi();
 
-  // --- Fetch Lobbies ---
   useEffect(() => {
     const fetchLobbies = async () => {
       setIsLoadingLobbies(true);
-      setErrorMessage(null); // Clear previous errors
+      setErrorMessage(null);
       try {
-        // Assuming your API endpoint is /lobbies and returns Lobby[]
-        // Adjust the endpoint and expected structure if needed
         const response = await apiService.get<Lobby[]>('/lobbies');
-        // Filter out potentially full or inactive lobbies if necessary on the frontend,
-        // though ideally the backend should provide only joinable lobbies.
+        // **Important**: Ensure the response structure matches the Lobby interface
+        // You might need to map the response if names differ
         setLobbies(response || []);
       } catch (error) {
         console.error("Failed to fetch lobbies:", error);
         setErrorMessage("Could not load active lobbies. Please try again later.");
-        setLobbies([]); // Clear lobbies on error
+        setLobbies([]);
       } finally {
         setIsLoadingLobbies(false);
       }
     };
 
     fetchLobbies();
-  }, [apiService]); // Dependency array ensures this runs once on mount
+  }, [apiService]);
 
-  // --- Join Logic (Generalized) ---
+  useEffect(() => {
+    const fetchOwnerUsernames = async () => {
+      const uniqueOwnerIds = [...new Set(lobbies.map(l => l.lobbyOwner))];
+      const ownerMap: Record<number, string> = {};
+  
+      await Promise.all(uniqueOwnerIds.map(async (ownerId) => {
+        try {
+          const userRes = await apiService.get<{ username: string }>(`/users/${ownerId}`);
+          ownerMap[ownerId] = userRes.username;
+        } catch (err) {
+          console.warn(err || "Could not fetch user with ID", ownerId);
+          ownerMap[ownerId] = "Unknown";
+        }
+      }));
+  
+      setLobbies(prev =>
+        prev.map(lobby => ({
+          ...lobby,
+          hostUsername: ownerMap[lobby.lobbyOwner] || "Unknown"
+        }))
+      );
+    };
+  
+    if (lobbies.length > 0) {
+      fetchOwnerUsernames();
+    }
+  }, [lobbies]);
+  
+
   const joinLobby = async (codeToJoin: string) => {
-    setErrorMessage(null);
-    setSuccessMessage(null);
+    setErrorMessage(null); // Clear previous errors first
+    setIsErrorModalVisible(false); // Hide any existing modal
 
     if (!codeToJoin || codeToJoin.trim() === '' || !/^\d{6}$/.test(codeToJoin)) {
       setErrorMessage('Invalid lobby code format (must be 6 digits)');
+      setIsErrorModalVisible(true); // Show modal for format error
       return;
     }
 
-    setIsJoining(true); // Use a specific state if needed, or reuse isJoining
+    setIsJoining(true);
+    setJoiningLobbyCode(codeToJoin);
 
     try {
       const userIdStr = localStorage.getItem("userId");
-      const userId = userIdStr ? JSON.parse(userIdStr) : null;
+      const userId = userIdStr ? parseInt(JSON.parse(userIdStr), 10) : null;
 
       if (!userId) {
         setErrorMessage("User ID not found. Please log in again.");
+        setIsErrorModalVisible(true); // Show modal
         setIsJoining(false);
-        return;
-      }
-
-      // Check if lobby exists (optional, join call might handle this)
-      // You might skip this explicit check if the join endpoint handles "not found" gracefully.
-      try {
-        await apiService.get(`/lobbies/${codeToJoin}`);
-      } catch (fetchError) {
-        console.error("Debug - Fetch error during join check:", fetchError);
-        setErrorMessage(`Lobby with code ${codeToJoin} was not found.`);
-        setIsJoining(false);
+        setJoiningLobbyCode(null);
         return;
       }
 
       // Attempt to join
       try {
         await apiService.put(`/lobbies/${codeToJoin}/join?playerId=${userId}`, {});
-        setSuccessMessage(`Successfully joined lobby ${codeToJoin}`);
         setTimeout(() => {
           router.push(`/lobbies/${codeToJoin}`);
-        }, 1000); // Redirect after success
-      } catch (joinError) { // Catch specific errors if possible
+        }, 1000);
+      } catch (joinError) { // Explicitly type joinError if possible
          console.error("Debug - Join error:", joinError);
-         // Provide more specific feedback if the API returns details
+         // More specific error messages based on potential API responses
          const errorDetail = "Failed to join the lobby. It might be full, already started, or you might already be in it.";
+
          setErrorMessage(errorDetail);
+         setIsErrorModalVisible(true); // Show modal
          setIsJoining(false);
+         setJoiningLobbyCode(null);
       }
 
     } catch (outerError) {
       console.error("Unexpected error during join:", outerError);
       setErrorMessage("An unexpected error occurred. Please try again.");
+      setIsErrorModalVisible(true); // Show modal
       setIsJoining(false);
-    } finally {
-       // Potentially set a specific loading state for joining back to false
-       // setIsJoining(false); // Keep it true until redirect or final error
+      setJoiningLobbyCode(null);
     }
+    // Removed finally block's state resets as they are handled within error/success paths
   };
 
-  // --- Handler for the bottom input field join ---
   const handleJoinByInput = () => {
     joinLobby(lobbyCodeInput);
   };
 
-  // --- Handler for the join buttons in the list ---
   const handleJoinFromList = (lobbyCode: string) => {
     joinLobby(lobbyCode);
   };
@@ -134,7 +156,6 @@ const JoinLobbyPage: React.FC = () => {
     router.push('/home');
   };
 
-  // --- Pagination Logic ---
   const totalPages = Math.ceil(lobbies.length / LOBBIES_PER_PAGE);
   const startIndex = (currentPage - 1) * LOBBIES_PER_PAGE;
   const endIndex = startIndex + LOBBIES_PER_PAGE;
@@ -148,11 +169,13 @@ const JoinLobbyPage: React.FC = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
 
+  const isRoomCodeValid = /^\d{6}$/.test(lobbyCodeInput);
+  const canGoPrev = currentPage > 1;
+  const canGoNext = currentPage < totalPages;
 
   return (
     <div className='page-background'>
-      {/* Use settings-box or a potentially wider container if needed */}
-      <div className='settings-box join-lobby-container'> {/* Added join-lobby-container class */}
+      <div className='settings-box join-lobby-container'>
 
         <h1 className="drawzone-logo-2-8rem">DRAWZONE</h1>
         <p className="drawzone-subtitle-1-1rem">ART BATTLE ROYALE</p>
@@ -162,129 +185,133 @@ const JoinLobbyPage: React.FC = () => {
           <button className="close-button" onClick={goBack}>✕</button>
         </div>
 
-        {/* --- Lobby List --- */}
+        {/* --- Lobby List Area --- */}
         <div className="lobby-list-area">
           {isLoadingLobbies ? (
-            <div className="loading-lobbies">
-              <Spin size="large" />
-              <Text>Loading lobbies...</Text>
-            </div>
+            <div className="loading-lobbies"><Spin size="large" /><Text>Loading lobbies...</Text></div>
           ) : lobbies.length === 0 && !errorMessage ? (
-             <div className="no-lobbies-found">
-                 <Text>No active lobbies found.</Text>
-                 <Text>Why not create one?</Text>
-             </div>
+             <div className="no-lobbies-found"><Text>No active lobbies found.</Text><Text>Why not create one?</Text></div>
           ) : (
             <div className="lobby-list">
-              {currentLobbies.map((lobby) => (
-                <div key={lobby.id} className="lobby-list-entry">
-                  <div className="lobby-list-info">
-                    <span className="lobby-host-name">{`${lobby.id}`}</span> {/* Fallback name */}
-                    <span className="lobby-status-text">WAITING FOR PLAYERS..</span>
-                  </div>
-                  <div className="lobby-list-details">
-                    <span className="lobby-player-count">{`${lobby.playerIds.length}/${lobby.numOfMaxPlayers}`}</span>
-                    {/* Use Button components for better consistency and accessibility */}
+              {currentLobbies.map((lobby) => {
+                 // Derive host username (replace with actual data if available)
+                 const hostUsername = lobby.hostUsername || "Loading...";
+                 const currentPlayers = lobby.playerIds?.length || 0; // Safely get player count
+                 const lobbyCode = lobby.id; // Assuming lobby.id is the code
+
+                 return (
+                    <div key={lobbyCode} className='lobby-entry-container'>
+                    <div className="lobby-list-entry">
+                      {/* Info Section (Left) */}
+                      <div className="lobby-list-info">
+                        <span className="lobby-host-name">{hostUsername}</span>
+                        <span className="lobby-status-text">WAITING FOR PLAYERS..</span>
+                        <span className="lobby-player-count">{`${currentPlayers}/${lobby.numOfMaxPlayers}`}</span>
+                      </div>
+                    </div>
+                    <div className="lobby-list-actions">
                     <Button
-                      className="lobby-join-button"
-                      onClick={() => handleJoinFromList(lobby.id.toString())}
-                      disabled={isJoining} // Disable while any join is in progress
-                      icon={<Image src="/icons/play_arrow.svg" alt="Join" width={18} height={18} />} // Add play icon
-                     >
+                       className="list-join-button" // Specific class for list JOIN
+                       onClick={() => handleJoinFromList(lobbyCode.toString())}
+                       loading={isJoining && joiningLobbyCode === lobbyCode} // Show loading only on this button
+                       disabled={isJoining} // Disable all joins while one is in progress
+                    >
                        JOIN
+                       <img src="/icons/play_arrow_orange.svg" alt="" width={20} height={20} className="list-join-icon"/>
                     </Button>
                     <Button
-                      className="lobby-spectate-button"
-                      // onClick={() => handleSpectate(lobby.lobbyCode)} // Add spectate handler if needed
-                       disabled={true} // Disable if spectate isn't implemented
-                       icon={<Image src="/icons/visibility.svg" alt="Spectate" width={20} height={20}/>} // Add eye icon
-                     >
-                        {/* Optionally add text or keep it icon-only */}
+                       className="list-spectate-button" // Specific class for list SPECTATE
+                       disabled={true} // Spectate not implemented
+                       // onClick={() => handleSpectate(lobbyCode)}
+                       aria-label="Spectate" // For accessibility
+                    >
+                       <img src="/icons/visibility_pink.svg" alt="" width={20} height={20} className="list-spectate-icon"/>
                     </Button>
-                  </div>
-                </div>
-              ))}
+                 </div>
+                 </div>
+                 );
+              })}
             </div>
           )}
         </div>
 
-         {/* --- Error/Success Messages --- */}
-         {errorMessage && (
-          <Alert
-            className="join-lobby-alert"
-            message={<span style={{ color: '#a81010' }}>Error</span>} // Darker red for contrast
-            description={<span style={{ color: '#000000' }}>{errorMessage}</span>}
-            type="error"
-            showIcon
-            closable
-            onClose={() => setErrorMessage(null)}
-          />
-        )}
-        {successMessage && (
-          <Alert
-            className="join-lobby-alert"
-            message={<span style={{ color: '#0d6316' }}>Success</span>} // Darker green
-            description={<span style={{ color: '#000000' }}>{successMessage}</span>}
-            type="success"
-            showIcon
-            // No need for closable on success, it disappears on redirect
-          />
-        )}
 
-
-        {/* --- Pagination --- */}
-        {totalPages > 1 && (
-          <div className="pagination-controls">
-            <Button
-              className="pagination-button prev"
-              onClick={handlePreviousPage}
-              disabled={currentPage === 1}
-              icon={<Image src="/icons/arrow_back.svg" alt="Previous" width={20} height={20} />}
-            >
-              PREVIOUS
-            </Button>
-            <span className="page-info">{`${currentPage}/${totalPages}`}</span>
-            <Button
-              className="pagination-button next"
-              onClick={handleNextPage}
-              disabled={currentPage === totalPages}
-              icon={<Image src="/icons/arrow_forward.svg" alt="Next" width={20} height={20} />}
-            >
-              NEXT
-            </Button>
-          </div>
-        )}
-
-        {/* --- Room Code Input --- */}
+        {/* --- Room Code Input (Always Visible) --- */}
         <div className="roomcode-join-area">
           <Input
-            className="roomcode-input-bottom"
+            className="roomcode-input-bottom" // Use specific class
             placeholder="ENTER ROOMCODE"
             value={lobbyCodeInput}
-            onChange={(e) => setLobbyCodeInput(e.target.value.replace(/\D/g, ''))} // Allow only digits
+            onChange={(e) => setLobbyCodeInput(e.target.value.replace(/\D/g, ''))}
             onPressEnter={handleJoinByInput}
             maxLength={6}
             disabled={isJoining}
           />
           <Button
-            className="roomcode-join-button-bottom"
-            loading={isJoining && lobbyCodeInput !== ''} // Show loading only if this specific join is attempted
+            // Conditionally apply classes for grey/green state
+            className={`roomcode-join-button-bottom ${isRoomCodeValid ? 'join-button-active' : 'join-button-inactive'}`}
+            loading={isJoining && joiningLobbyCode === lobbyCodeInput} // Show loading only on this button
             onClick={handleJoinByInput}
-            disabled={isJoining}
+            disabled={isJoining || !isRoomCodeValid} // Disable if joining or code is invalid
           >
             JOIN
           </Button>
         </div>
+
+        {/* --- Pagination (Always Visible Below Input) --- */}
+        {/* Render pagination even if totalPages <= 1 to show the controls, but disable buttons */}
+        <div className="pagination-controls">
+            <Button
+              className={`pagination-button ${canGoPrev ? 'pagination-button-active' : 'pagination-button-inactive'}`}
+              onClick={handlePreviousPage}
+              disabled={!canGoPrev || isJoining} // Also disable while joining
+            >
+               <Image src={canGoPrev ? "/icons/arrow_back_white.svg" : "/icons/arrow_back_grey.svg"} alt="Previous" width={20} height={20} />
+               PREVIOUS
+            </Button>
+            <span className="page-info">{totalPages > 0 ? `${currentPage}/${totalPages}` : '0/0'}</span>
+            <Button
+              className={`pagination-button ${canGoNext ? 'pagination-button-active' : 'pagination-button-inactive'}`}
+              onClick={handleNextPage}
+              disabled={!canGoNext || isJoining} // Also disable while joining
+            >
+               NEXT
+               <Image src={canGoNext ? "/icons/arrow_forward_white.svg" : "/icons/arrow_forward_grey.svg"} alt="Next" width={20} height={20} />
+            </Button>
+          </div>
+
+          {/* --- Error Modal --- */}
+        <Modal
+          title={<span style={{ fontWeight: 'bold', color: '#D32F2F' }}>Error Joining Lobby</span>} // Example styling
+          open={isErrorModalVisible}
+          onOk={() => setIsErrorModalVisible(false)} // Close modal on OK
+          onCancel={() => setIsErrorModalVisible(false)} // Close modal on X or Esc
+          centered // Display modal in the center
+          footer={[ // Customize footer button
+            <Button
+              key="ok"
+              type="primary" // Or default
+              onClick={() => setIsErrorModalVisible(false)}
+              style={{ backgroundColor: '#D32F2F', borderColor: '#D32F2F' }} // Example button styling
+            >
+              OK
+            </Button>,
+          ]}
+        >
+          <p style={{ fontSize: '1rem', color: '#333' }}>{errorMessage}</p>
+        </Modal>
 
       </div>
     </div>
   );
 };
 
-// Create dummy icon files in public/icons/ if you don't have them
-// public/icons/play_arrow.svg (orange play icon)
-// public/icons/visibility.svg (pink eye icon)
-// public/icons/arrow_back.svg (back arrow)
-// public/icons/arrow_forward.svg (forward arrow)
+// --- Create necessary icon files in public/icons/ ---
+// play_arrow_orange.svg (Orange play icon from template)
+// visibility_pink.svg (Pink eye icon from template)
+// arrow_back_white.svg (White left arrow)
+// arrow_back_grey.svg (Grey left arrow)
+// arrow_forward_white.svg (White right arrow)
+// arrow_forward_grey.svg (Grey right arrow)
 
 export default withAuth(JoinLobbyPage);
