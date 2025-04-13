@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useApi } from '@/hooks/useApi';
-import { Button, Spin, message, Input } from 'antd';
+import { Button, Spin, message, Input, Modal } from 'antd';
 import { useRouter } from 'next/navigation';
 import withAuth from '@/hooks/withAuth';
 import io, { Socket } from 'socket.io-client';
@@ -42,9 +42,10 @@ const LobbyPage: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isLeaveModalVisible, setIsLeaveModalVisible] = useState<boolean>(false);
 
   //PLACEHOLDER WORD
-  const wordToGuess = "Dániel";
+  const wordToGuess = "daniel";
 
   const currentUserId = typeof window !== "undefined" ? localStorage.getItem("userId") : "";
   const localAvatarUrl = typeof window !== "undefined" ? localStorage.getItem("avatarUrl") || "/icons/avatar.png" : "/icons/avatar.png";
@@ -127,6 +128,47 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
   const goBack = () => {
     router.push('/home');
   };
+
+  const showLeaveConfirmation = () => {
+      setIsLeaveModalVisible(true);
+    };
+  
+    const handleLeaveLobby = async () => {
+      if (!currentUserId || !lobbyId) {
+        router.push('/home');
+        return;
+      }
+  
+      try {
+        setLoading(true);
+        
+        // Remove player from lobby in database
+        // Adding an empty object as the second parameter to satisfy the put method signature
+        await apiService.put(`/lobbies/${lobbyId}/leave?playerId=${currentUserId}`, {});
+        
+        // Notify other players via socket
+        if (socket) {
+          socket.emit('leaveLobby', { 
+            lobbyId, 
+            userId: currentUserId 
+          });
+        }
+        
+        message.success('You have left the lobby');
+        router.push('/home');
+      } catch (error) {
+        console.error('Error leaving lobby:', error);
+        message.error('Failed to leave lobby properly, redirecting anyway');
+        router.push('/home');
+      } finally {
+        setLoading(false);
+        setIsLeaveModalVisible(false);
+      }
+    };
+    
+    const handleCancelLeave = () => {
+      setIsLeaveModalVisible(false);
+    };
 
   const sendMessage = () => {
     if (chatInput.trim() && socket) {
@@ -231,6 +273,8 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
       <h1 className="drawzone-logo-2-8rem">DRAWZONE</h1>
       <h2 className="drawzone-subtitle-1-1rem">ART BATTLE ROYALE</h2>
 
+      <button onClick={showLeaveConfirmation}>LEAVE GAME</button>
+
       {/* Word Display Area */}
       <div className="word-display-area">
         <span className="word-to-guess">
@@ -293,33 +337,58 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
 
      {/* Chat Box */}
      <div className="chat-box">
-  <h1 className="players-chat-title">CHAT</h1>
+      <h1 className="players-chat-title">CHAT</h1>
 
-  <div className="chat-messages">
-    {messages.map((msg, index) => (
-      <div key={index} className="chat-message">
-        <span style={{ color: getUsernameColor(msg.username) }} className="chat-username">
-          {msg.username}:
-        </span>
-        <span className="chat-text"> {msg.message}</span>
+      <div className="chat-messages">
+        {messages.map((msg, index) => (
+          <div key={index} className="chat-message">
+            <span style={{ color: getUsernameColor(msg.username) }} className="chat-username">
+              {msg.username}:
+            </span>
+            <span className="chat-text"> {msg.message}</span>
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
       </div>
-    ))}
-    <div ref={messagesEndRef} />
-  </div>
 
-  <div className="chat-input-area">
-    <Input
-      className="chat-input"
-      value={chatInput}
-      onChange={(e) => setChatInput(e.target.value)}
-      onPressEnter={sendMessage}
-      placeholder="Type your message here!"
-    />
-    <Button className="chat-send-button" onClick={sendMessage}>
-      <span role="img" aria-label="send">📨</span>
-    </Button>
-  </div>
-</div>
+      <div className="chat-input-area">
+        <Input
+          className="chat-input"
+          value={chatInput}
+          onChange={(e) => setChatInput(e.target.value)}
+          onPressEnter={sendMessage}
+          placeholder="Type your message here!"
+        />
+        <Button className="chat-send-button" onClick={sendMessage}>
+          <span role="img" aria-label="send">📨</span>
+        </Button>
+      </div>
+    </div>
+
+    {/* Leave Confirmation Modal */}
+    <Modal
+        title={<div className="leave-modal-title">Leave Lobby</div>}
+        open={isLeaveModalVisible}
+        onOk={handleLeaveLobby}
+        onCancel={handleCancelLeave}
+        okText="Yes, Leave"
+        cancelText="Cancel"
+        centered
+        closeIcon={<div className="leave-modal-close">✕</div>}
+        className="leave-modal-container"
+        okButtonProps={{ 
+          className: "leave-modal-confirm-button",
+          style: { background: '#ff3b30', borderColor: '#e02d22', color: 'white' }
+        }}
+        cancelButtonProps={{ 
+          className: "leave-modal-cancel-button",
+          style: { backgroundColor: '#f5f5f5', borderColor: '#d9d9d9', color: '#333' }
+        }}
+      >
+        <p className="leave-modal-message">
+          Are you sure you want to leave this lobby?
+        </p>
+      </Modal>
 
     </div>
   );

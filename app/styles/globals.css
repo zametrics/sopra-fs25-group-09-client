@@ -1138,4 +1138,69 @@ textarea {
   visibility: hidden;
 }
 
+/* Leave lobby modal styling */
+.ant-modal-content .leave-modal-title {
+  font-size: 22px;
+  font-weight: normal;
+  text-align: center;
+  color: #212121;
+  font-family: 'Digitalt', serif;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
 
+.ant-modal-body .leave-modal-message {
+  font-size: 16px;
+  margin: 10px 0;
+  text-align: center;
+  font-family: Arial, sans-serif;
+  color: #333;
+}
+
+/* Increase specificity for the confirm button */
+.ant-modal-footer .ant-btn-primary.leave-modal-confirm-button {
+  background: #ff3b30 !important;
+  border-color: #e02d22 !important;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.1);
+  font-weight: bold;
+  font-size: 16px;
+  height: 40px;
+  padding: 0 20px;
+  color: white !important;
+}
+
+/* Hover state for the confirm button */
+.ant-modal-footer .ant-btn-primary.leave-modal-confirm-button:hover {
+  background: #ff544b !important;
+  border-color: #e02d22 !important;
+}
+
+/* Cancel button */
+.ant-modal-footer .ant-btn.leave-modal-cancel-button {
+  font-size: 16px;
+  height: 40px;
+  padding: 0 20px;
+  border-color: #d9d9d9;
+  background-color: #f5f5f5 !important;
+  color: #333 !important;
+}
+
+/* Hover state for cancel button */
+.ant-modal-footer .ant-btn.leave-modal-cancel-button:hover {
+  background-color: #f5f5f5 !important;
+  border-color: brown !important;
+  color: brown !important;
+}
+
+.leave-modal-container {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.leave-modal-mask {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.leave-modal-close {
+  font-size: 18px;
+}
