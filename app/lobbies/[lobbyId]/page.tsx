@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useApi } from '@/hooks/useApi';
-import { Button, message, Input } from 'antd';
+import { Button, message, Input, Modal } from 'antd';
 import { useRouter } from 'next/navigation';
 import withAuth from '@/hooks/withAuth';
 import io, { Socket } from 'socket.io-client';
@@ -44,6 +44,7 @@ const LobbyPage: React.FC = () => {
   const [chatInput, setChatInput] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isLeaveModalVisible, setIsLeaveModalVisible] = useState<boolean>(false);
 
 
   // State for lobby settings
@@ -158,8 +159,45 @@ useEffect(() => {
     });
   }
   
-  const goBack = () => {
-    router.push('/home');
+  const showLeaveConfirmation = () => {
+    setIsLeaveModalVisible(true);
+  };
+
+  const handleLeaveLobby = async () => {
+    if (!currentUserId || !lobbyId) {
+      router.push('/home');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Remove player from lobby in database
+      // Adding an empty object as the second parameter to satisfy the put method signature
+      await apiService.put(`/lobbies/${lobbyId}/leave?playerId=${currentUserId}`, {});
+      
+      // Notify other players via socket
+      if (socket) {
+        socket.emit('leaveLobby', { 
+          lobbyId, 
+          userId: currentUserId 
+        });
+      }
+      
+      message.success('You have left the lobby');
+      router.push('/home');
+    } catch (error) {
+      console.error('Error leaving lobby:', error);
+      message.error('Failed to leave lobby properly, redirecting anyway');
+      router.push('/home');
+    } finally {
+      setLoading(false);
+      setIsLeaveModalVisible(false);
+    }
+  };
+  
+  const handleCancelLeave = () => {
+    setIsLeaveModalVisible(false);
   };
 
   const sendMessage = () => {
@@ -303,7 +341,7 @@ useEffect(() => {
         <div className='login-register-box'>
           <h1 className='players-chat-title' style={{marginTop: -10, marginBottom: 30, fontSize: 50}}>Lobby Not Found</h1>
           <h2 className='players-chat-title'>Lobby {`#${lobbyId}`}</h2>
-          <Button className= "green-button" onClick={goBack}>
+          <Button className= "green-button" onClick={() => router.push('/home')}>
             Back to home
           </Button>
         </div>
@@ -317,23 +355,23 @@ useEffect(() => {
         <h1 className="players-chat-title">
           PLAYERS ({players.length}/{lobby.numOfMaxPlayers})
         </h1>
-<div className="player-list">
-  {players.map((player) => (
-    <div
-      key={player.id}
-      className={`player-entry ${player.id.toString() === currentUserId ? 'player-entry-own' : ''}`}
-    >
-      <div className="player-info">
-        <img
-          src={player.id.toString() === currentUserId ? localAvatarUrl : '/icons/avatar.png'}
-          alt="Avatar"
-          className="player-avatar"
-        />
-        <span>{player.username}</span>
+      <div className="player-list">
+        {players.map((player) => (
+          <div
+            key={player.id}
+            className={`player-entry ${player.id.toString() === currentUserId ? 'player-entry-own' : ''}`}
+          >
+            <div className="player-info">
+              <img
+                src={player.id.toString() === currentUserId ? localAvatarUrl : '/icons/avatar.png'}
+                alt="Avatar"
+                className="player-avatar"
+              />
+              <span>{player.username}</span>
+            </div>
+          </div>
+        ))}
       </div>
-    </div>
-  ))}
-</div>
       </div>
 
       {/* Settings Box */}
@@ -343,7 +381,7 @@ useEffect(() => {
         
         <div className="lobby-header">
           <h2 className="lobby-banner">HOST A LOBBY</h2>
-          <button className="close-button" onClick={goBack}>✕</button>
+          <button className="close-button" onClick={showLeaveConfirmation}>✕</button>
         </div>
         
         <div className="lobby-setting-group">
@@ -409,7 +447,7 @@ useEffect(() => {
               onChange={(e) => setType(e.target.value)}
               disabled={Number(currentUserId) !== lobby.lobbyOwner}
             >
-              <option value="standard">Standard</option>
+              <option value="anything">Anything</option>
               <option value="animals">Animals</option>
               <option value="food">Food</option>
               <option value="jobs">Jobs</option>
@@ -489,6 +527,31 @@ useEffect(() => {
           </Button>
         </div>
       </div>
+
+      {/* Leave Confirmation Modal */}
+      <Modal
+        title={<div className="leave-modal-title">Leave Lobby</div>}
+        open={isLeaveModalVisible}
+        onOk={handleLeaveLobby}
+        onCancel={handleCancelLeave}
+        okText="Yes, Leave"
+        cancelText="Cancel"
+        centered
+        closeIcon={<div className="leave-modal-close">✕</div>}
+        className="leave-modal-container"
+        okButtonProps={{ 
+          className: "leave-modal-confirm-button",
+          style: { background: '#ff3b30', borderColor: '#e02d22', color: 'white' }
+        }}
+        cancelButtonProps={{ 
+          className: "leave-modal-cancel-button",
+          style: { backgroundColor: '#f5f5f5', borderColor: '#d9d9d9', color: '#333' }
+        }}
+      >
+        <p className="leave-modal-message">
+          Are you sure you want to leave this lobby?
+        </p>
+      </Modal>
     </div>
   );
 };
