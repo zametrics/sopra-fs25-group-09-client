@@ -233,7 +233,7 @@ useEffect(() => {
       }
       
       // Redirect to the game page
-      router.push(`/game/${lobbyId}`);
+      router.push(`/games/${lobbyId}`);
       
     } catch (error) {
       console.error("Error starting game:", error);
@@ -283,7 +283,15 @@ useEffect(() => {
   if (loading) {
     return (
       <div className='page-background'>
-        <Spin size="large" tip="Loading lobby information..." />
+        <div className="player-box">
+          Loading...
+          </div>
+          <div className="game-box">
+          Loading...
+          </div>
+          <div className="chat-box">
+          Loading...
+          </div>
       </div>
     );
   }
@@ -432,7 +440,7 @@ useEffect(() => {
         <div className="lobby-actions">
           <button 
             className="green-button" 
-            style={{width: 300, marginLeft: 10}}
+            style={{width: 300}}
             onClick={startGame}
             disabled={loading || Number(currentUserId) !== lobby.lobbyOwner}
           >
