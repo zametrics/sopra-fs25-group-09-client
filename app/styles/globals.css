@@ -980,14 +980,18 @@ textarea {
                                /* Adjust 0.4em to control the gap */
 }
 
+.test {
+  border: 1px solid black;
+}
+
 /* Drawing Canvas */
 .drawing-canvas {
-  width: 100%;
+  width: 650px;
   /* flex-grow: 1; /* Allow canvas to take up remaining vertical space */
   height: 500px; /* Or a fixed height that works */
   background-color: #ffffff;
   border-radius: 15px;
-  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.15);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3);
   cursor: crosshair; /* Indicate drawing capability */
   margin-bottom: 20px; /* Space below canvas */
 }

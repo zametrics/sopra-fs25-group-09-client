@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { FC, useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useApi } from '@/hooks/useApi';
 import { Button, Spin, message, Input, Modal } from 'antd';
 import { useRouter } from 'next/navigation';
 import withAuth from '@/hooks/withAuth';
 import io, { Socket } from 'socket.io-client';
+import { useDraw } from '@/hooks/useDraw';
+
 
 
 interface LobbyData {
@@ -30,7 +32,10 @@ interface ChatMessage {
   timestamp: string;
 }
 
-const LobbyPage: React.FC = () => {
+interface pageProps {}
+
+const LobbyPage: FC<pageProps> = ({}) => {
+  const { canvasRef, onMouseDown } = useDraw(drawLine);
   const params = useParams();
   const lobbyId = params.lobbyId as string;
   const apiService = useApi();
@@ -216,7 +221,26 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
   return newColor;
 }
 
-  
+  function drawLine({prevPoint, currentPoint, ctx}: Draw) {
+    const {x:currX, y: currY} = currentPoint
+    //color of line
+    const lineColor = '#ff0000'
+    const lineWidth = 5
+
+    let startPoint = prevPoint ?? currentPoint
+    ctx.beginPath()
+    ctx.lineWidth = lineWidth
+    ctx.strokeStyle = lineColor
+    ctx.moveTo(startPoint.x, startPoint.y)
+    ctx.lineTo(currX, currY)
+    ctx.stroke()
+
+    ctx.fillStyle = lineColor
+    ctx.beginPath()
+    ctx.arc(startPoint.x, startPoint.y, 2, 0, 2* Math.PI)
+    ctx.fill()
+  }
+
   
 
   //Loading screen
@@ -226,8 +250,8 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
         <Spin size="large" tip="Loading lobby information..." />
       </div>
     );
-  }
-
+  } 
+  
   //No loading screen
   if (!lobby) {
     return (
@@ -285,7 +309,13 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
         </span>
       </div>
 
-      <canvas id="drawingCanvas" className="drawing-canvas"></canvas>
+      <canvas 
+        onMouseDown={onMouseDown} 
+        ref={canvasRef} 
+        className='drawing-canvas'
+        width={650}  // <-- ADD THIS attribute
+        height={500} // <-- ADD THIS attribute
+      ></canvas>
 
       {/* Updated Drawing Tools */}
     <div className='drawing-tools-arrangement'>
