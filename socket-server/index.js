@@ -16,68 +16,114 @@ const io = new Server(server, {
   },
 });
 
-// Store lobby data: Map<lobbyId, Map<userId, { socketId, username }>>
-const lobbies = new Map();
-
-// Mock function to fetch username from a database (replace with actual implementation)
-const fetchUsernameFromDB = async (userId) => {
-  // Example: Query your database or authentication system
-  // For demo purposes, return a mock username
-  return `User_${userId}`; // Replace with actual DB query, e.g., await db.users.findById(userId).username
-};
+const lobbies = new Map(); // Map<lobbyId, Map<userId, { socketId, username }>>
+const socketToLobby = new Map(); // Map<socketId, { lobbyId, userId }>
 
 io.on('connection', (socket) => {
-  console.log('Connected:', socket.id);
+  console.log(`Connected: ${socket.id}`);
 
-  socket.on('joinLobby', async ({ lobbyId, userId, username }) => {
-    socket.join(lobbyId);
-    console.log(`User ${userId} (${username}) with socket ${socket.id} joined lobby ${lobbyId}`);
+socket.on('joinLobby', ({ lobbyId, userId, username }) => {
+  if (!lobbies.has(lobbyId)) {
+    lobbies.set(lobbyId, new Map());
+  }
+  const lobby = lobbies.get(lobbyId);
 
-    // Validate username
-    let validatedUsername = username;
-    if (!username || username === 'unknown' || username.trim() === '') {
-      // Fetch username from database or use fallback
-      validatedUsername = await fetchUsernameFromDB(userId).catch(() => `Guest_${userId}`);
-    }
+  // Check if player was already in the lobby
+  const wasPlayerPresent = lobby.has(userId);
 
-    if (!lobbies.has(lobbyId)) {
-      lobbies.set(lobbyId, new Map());
-    }
-    const lobbyPlayers = lobbies.get(lobbyId);
+  // Remove existing player (deduplicate)
+  lobby.delete(userId);
 
-    // Update or add player
-    lobbyPlayers.set(userId, { socketId: socket.id, username: validatedUsername });
+  // Add player to lobby
+  lobby.set(userId, { socketId: socket.id, username });
 
-    const newPlayer = {
+  // Update socket-to-lobby mapping
+  socketToLobby.set(socket.id, { lobbyId, userId });
+
+  // Join socket to lobby room
+  socket.join(lobbyId);
+
+  console.log(`User ${userId} (${username}) with socket ${socket.id} joined lobby ${lobbyId}`);
+  console.log(`Lobby ${lobbyId} players:`, Array.from(lobby.entries()));
+
+  // Only emit playerJoined if the player wasn't already in the lobby
+  if (!wasPlayerPresent) {
+    io.to(lobbyId).emit('playerJoined', {
       id: userId,
-      username: validatedUsername,
-    };
-    io.to(lobbyId).emit('playerJoined', newPlayer);
+      username,
+    });
+  }
 
-    console.log(`Lobby ${lobbyId} players:`, Array.from(lobbyPlayers.entries()));
+  // Always send full lobby state to the joining client
+  socket.emit('lobbyState', {
+    players: Array.from(lobby.entries()).map(([id, data]) => ({
+      id,
+      username: data.username,
+    })),
+  });
+});
+
+  socket.on('leaveLobby', ({ lobbyId, userId }) => {
+    const lobby = lobbies.get(lobbyId);
+    if (lobby && lobby.has(userId)) {
+      const playerData = lobby.get(userId);
+      lobby.delete(userId);
+      io.to(lobbyId).emit('playerLeft', {
+        id: userId,
+        username: playerData.username,
+      });
+      if (lobby.size === 0) lobbies.delete(lobbyId);
+      socketToLobby.delete(socket.id); // Clear mapping
+      socket.leave(lobbyId);
+      console.log(`User ${userId} left lobby ${lobbyId}`);
+    }
   });
 
   socket.on('chatMessage', ({ lobbyId, message, username }) => {
-    const timestamp = new Date().toISOString();
-    const validatedUsername = username && username !== 'unknown' ? username : 'Guest';
-    const chatMessage = { username: validatedUsername, message, timestamp };
-    io.to(lobbyId).emit('chatMessage', chatMessage);
+    io.to(lobbyId).emit('chatMessage', {
+      username,
+      message,
+      timestamp: new Date().toISOString(),
+    });
   });
 
   socket.on('disconnect', () => {
-    console.log('Disconnected:', socket.id);
-    for (const [lobbyId, players] of lobbies) {
-      for (const [userId, playerData] of players) {
-        if (playerData.socketId === socket.id) {
-          players.delete(userId);
+    console.log(`Disconnected: ${socket.id}`);
+    const playerInfo = socketToLobby.get(socket.id);
+
+    if (playerInfo) {
+      const { lobbyId, userId } = playerInfo;
+      const lobby = lobbies.get(lobbyId);
+      if (lobby && lobby.has(userId)) {
+        const currentPlayerData = lobby.get(userId);
+
+        // Only act if the socket that disconnected is the *currently active* socket for this user
+        if (currentPlayerData.socketId === socket.id) {
+          console.log(`Player ${userId} (${currentPlayerData.username}) truly disconnected with socket ${socket.id}. Removing.`);
+          lobby.delete(userId); // Remove the user from the lobby map
+
+          // Notify others
           io.to(lobbyId).emit('playerLeft', {
             id: userId,
-            username: playerData.username,
+            username: currentPlayerData.username, // Use the username we just retrieved
           });
-          if (players.size === 0) lobbies.delete(lobbyId);
-          break;
+
+          // Clean up lobby if empty
+          if (lobby.size === 0) {
+            console.log(`Lobby ${lobbyId} is now empty. Deleting.`);
+            lobbies.delete(lobbyId);
+          }
+        } else {
+          // This socket disconnected, but the user has already reconnected with a different socket.
+          // Do not remove the user from the lobby or emit playerLeft.
+          console.log(`Player ${userId} disconnected with old socket ${socket.id}, but has already reconnected with socket ${currentPlayerData.socketId}. Ignoring.`);
         }
       }
+
+      // Always remove the disconnected socket ID from the lookup map
+      socketToLobby.delete(socket.id);
+    } else {
+        console.log(`Socket ${socket.id} disconnected but had no lobby/user info.`);
     }
   });
 });

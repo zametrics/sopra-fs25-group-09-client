@@ -97,7 +97,7 @@ useEffect(() => {
   const fetchCurrentUsername = async () => {
     try {
       const userData = await apiService.get<PlayerData>(`/users/${currentUserId}`);
-      return userData.username || 'Guest';
+      return userData.username;
     } catch (error) {
       console.error('Error fetching username:', error);
       return 'Guest';
@@ -112,30 +112,46 @@ useEffect(() => {
 
   joinLobby();
 
+  socketIo.on('lobbyState', ({ players }) => {
+    console.log('lobbyState received:', players);
+    setPlayers(
+      players.map((p: { id: string; username: string }) => ({
+        id: p.id,
+        username: p.username,
+      }))
+    );
+  });
+
   socketIo.on('chatMessage', (message: ChatMessage) => {
     setMessages((prev) => [...prev, message]);
   });
 
-  socketIo.on('playerJoined', (newPlayer: PlayerData) => {
-    setPlayers((prev) => {
-      // Special handling for current user to prevent duplicates
-      if (newPlayer.id.toString() === currentUserId) {
-        const existingPlayer = prev.find((p) => p.id === newPlayer.id);
-        if (existingPlayer) {
-          return prev.map((p) =>
-            p.id === newPlayer.id ? { ...p, username: newPlayer.username || 'Guest' } : p
+  socketIo.on('playerJoined', () => {
+
+    const fetchLobby = async () => {
+      setLoading(true);
+      try {
+        const response = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+        setLobby(response as LobbyData);
+  
+        if (response.playerIds && response.playerIds.length > 0) {
+          const playerPromises = response.playerIds.map((id: number) =>
+            apiService.get<PlayerData>(`/users/${id}`).catch(() => ({ id, username: 'Guest' } as PlayerData))
           );
+          const playerData = await Promise.all(playerPromises);
+          setPlayers(playerData as PlayerData[]);
         }
+      } catch (error) {
+        console.error('Error fetching lobby:', error);
+        message.error('Failed to load lobby information');
+      } finally {
+        setLoading(false);
       }
-      // Normal handling for all players
-      const existingPlayer = prev.find((p) => p.id === newPlayer.id);
-      if (existingPlayer) {
-        return prev.map((p) =>
-          p.id === newPlayer.id ? { ...p, username: newPlayer.username || 'Guest' } : p
-        );
-      }
-      return [...prev, { ...newPlayer, username: newPlayer.username || 'Guest' }];
-    });
+    };
+
+    fetchLobby();
+    
+
   });
 
   socketIo.on('playerLeft', (leftPlayer: PlayerData) => {
@@ -195,6 +211,18 @@ useEffect(() => {
       setIsLeaveModalVisible(false);
     }
   };
+
+  useEffect(() => {
+    const handleBeforeUnload = async () => {
+      if (!currentUserId || !lobbyId) return;
+  
+      handleLeaveLobby()
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [socket, currentUserId, lobbyId]);
   
   const handleCancelLeave = () => {
     setIsLeaveModalVisible(false);
@@ -202,7 +230,7 @@ useEffect(() => {
 
   const sendMessage = () => {
     if (chatInput.trim() && socket) {
-      const username = players.find((p) => p.id === Number(currentUserId))?.username || 'You';
+      const username = players.find((p) => p.id.toString() === currentUserId)?.username;
       socket.emit('chatMessage', { lobbyId, message: chatInput, username });
       setChatInput('');
     }
