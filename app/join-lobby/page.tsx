@@ -3,11 +3,9 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApi } from '@/hooks/useApi';
-import { Card, Typography, Button, Input, Alert, Space } from 'antd'; // Use Alert instead of message
-import { ArrowLeftOutlined, EnterOutlined } from '@ant-design/icons';
+import { Button, Input, Alert, Space } from 'antd'; // Use Alert instead of message
 import withAuth from '@/hooks/withAuth';
 
-const { Title, Text } = Typography;
 
 const JoinLobbyPage: React.FC = () => {
   const [lobbyCode, setLobbyCode] = useState('');
@@ -87,32 +85,17 @@ const JoinLobbyPage: React.FC = () => {
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '100vh',
-      padding: '2rem',
-      background: `url(/images/background.jpg) no-repeat center center/cover`,
-    }}>
-      <Card 
-        style={{ 
-          width: '80%', 
-          maxWidth: '500px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          borderRadius: '10px',
-          padding: '20px'
-        }}
-      >
-        <Button 
-          icon={<ArrowLeftOutlined />} 
-          onClick={goBack}
-          style={{ marginBottom: '16px' }}
-        >
-          Back to Dashboard
-        </Button>
+    <div className='page-background'>
+      <div className='settings-box'>
 
-        <Title level={2} style={{ textAlign: 'center' }}>Join a Lobby</Title>
+        <h1 className="drawzone-logo-2-8rem">DRAWZONE</h1>
+        <p className="drawzone-subtitle-1-1rem">ART BATTLE ROYALE</p>
+
+        <div className="lobby-header" style= {{marginTop: 4}}>
+          <h2 className="lobby-banner">JOIN AN ACTIVE LOBBY</h2>
+          <button className="close-button" onClick={goBack}>✕</button>
+        </div>
+
         
         {/* Display error message if present */}
         {errorMessage && (
@@ -121,7 +104,6 @@ const JoinLobbyPage: React.FC = () => {
             description={<span style={{ color: '#000000' }}>{errorMessage}</span>}
             type="error"
             showIcon
-            style={{ marginBottom: '16px', color:'black'}}
             closable
             onClose={() => setErrorMessage(null)}
           />
@@ -130,40 +112,33 @@ const JoinLobbyPage: React.FC = () => {
         {/* Display success message if present */}
         {successMessage && (
           <Alert
-            message={<span style={{ color: '#000000' }}>Success</span>}
-            description={<span style={{ color: '#000000' }}>{successMessage}</span>}
+            message={<span>Success</span>}
+            description={<span>{successMessage}</span>}
             type="success"
             showIcon
-            style={{ marginBottom: '16px', color:'black'}}
           />
         )}
         
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <Space>
           <div>
-            <Text>Enter the 6-digit lobby code:</Text>
             <Input
-              size="large"
-              placeholder="Enter lobby code"
+              placeholder="ENTER ROOMCODE"
               value={lobbyCode}
               onChange={(e) => setLobbyCode(e.target.value)}
-              style={{ marginTop: '8px'}}
               onPressEnter={handleJoinLobby}
               maxLength={6}
             />
           </div>
           
           <Button 
-            type="primary" 
-            icon={<EnterOutlined />}
             loading={isJoining}
             onClick={handleJoinLobby}
-            size="large"
             block
           >
-            Join Lobby
+            JOIN
           </Button>
         </Space>
-      </Card>
+      </div>
     </div>
   );
 };
