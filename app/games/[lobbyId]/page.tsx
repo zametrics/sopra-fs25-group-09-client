@@ -32,6 +32,8 @@ interface ChatMessage {
   timestamp: string;
 }
 
+interface RGB { r: number; g: number; b: number; }
+
 const colorPalette = [
   '#FFFFFF', '#C0C0C0', '#FF0000', '#FFA500', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#A0522D', // Row 1
   '#000000', '#808080', '#8B0000', '#D2691E', '#008000', '#00008B', '#4B0082', '#800080', '#8B4513', '#4D2600'  // Row 2 (adjusted some for contrast/variety)
@@ -39,10 +41,10 @@ const colorPalette = [
 
 // --- Define Brush Sizes ---
 const brushSizes = {
-  size1: 2, // Smallest
-  size2: 6, // Small-Medium (Default)
+  size1: 4, // Smallest
+  size2: 8, // Small-Medium (Default)
   size3: 12, // Medium-Large
-  size4: 20, // Largest
+  size4: 24, // Largest
 };
 
 type Tool = 'brush' | 'fill'; // Add more tools later if needed
@@ -74,7 +76,32 @@ const LobbyPage: FC = ({}) => {
   const wordToGuess = "daniel"; //PLACEHOLDER WORD
   const currentUserId = typeof window !== "undefined" ? localStorage.getItem("userId") : "";
   const localAvatarUrl = typeof window !== "undefined" ? localStorage.getItem("avatarUrl") || "/icons/avatar.png" : "/icons/avatar.png";
+  const [cursorStyle, setCursorStyle] = useState<string>('crosshair');
+  const [customCursorPos, setCustomCursorPos] = useState({ x: 0, y: 0 });
+  const [isCustomCursorVisible, setIsCustomCursorVisible] = useState(false);
+  const [useCustomElementCursor, setUseCustomElementCursor] = useState(false); // Flag to control which cursor system to use
   // --- Combine refs: One for direct access, one for the hook ---
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Get mouse position relative to the page
+    setCustomCursorPos({ x: e.pageX, y: e.pageY });
+
+    // If the custom element should be active but isn't visible yet, make it visible
+    if (useCustomElementCursor && !isCustomCursorVisible) {
+         setIsCustomCursorVisible(true);
+    }
+  };
+
+  const handleCanvasMouseEnter = () => {
+    // Show custom cursor only if the fill tool is active
+    if (useCustomElementCursor) {
+      setIsCustomCursorVisible(true);
+    }
+  };
+
+  const handleCanvasMouseLeave = () => {
+    // Always hide custom cursor when leaving the canvas
+    setIsCustomCursorVisible(false);
+  };
   const combinedCanvasRef = useCallback((node: HTMLCanvasElement | null) => {
     // Set the ref for direct access
     canvasElementRef.current = node;
@@ -138,6 +165,53 @@ const handleFillMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
   // Execute the flood fill
   floodFill(ctx, x, y, color);
 };
+
+useEffect(() => {
+  const canvas = canvasElementRef.current;
+  if (!canvas) return;
+
+  let newCursorStyle = 'crosshair'; // Default if no tool active or custom element used
+  let useCustomElement = false; // Reset flag
+
+  if (activeTool === 'fill') {
+    // --- Enable Custom DOM Element Cursor for Fill ---
+    newCursorStyle = 'none'; // Hide the default cursor
+    useCustomElement = true; // Signal to use the custom element
+    console.log("Cursor Effect: Enabling custom DOM element cursor for Fill.");
+
+  } else if (activeTool === 'brush') {
+    // --- Use SVG Data URL for Brush (Assuming this works) ---
+    // ... (Keep the existing brush SVG generation logic) ...
+    const size = Math.max(brushSize, 2);
+    const radius = size / 2;
+    const strokeWidth = 1;
+    const svgSize = size + strokeWidth * 2;
+    const center = svgSize / 2;
+    const originalRgb = hexToRgb(color);
+    let finalFillColor = 'rgba(0,0,0,0.5)';
+    if (originalRgb) {
+      const darkerRgb = darkenRgb(originalRgb, 0.2);
+      const alpha = Math.max(0, Math.min(1, 0.6));
+      finalFillColor = rgbToRgbaString(darkerRgb, alpha);
+    }
+    const brushSvg = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" xmlns="http://www.w3.org/2000/svg"><circle cx="${center}" cy="${center}" r="${radius}" fill="${finalFillColor}" stroke="grey" stroke-width="${strokeWidth}"/></svg>`;
+    const brushDataUrl = `data:image/svg+xml;base64,${btoa(brushSvg)}`;
+    const hotspot = Math.floor(center);
+    newCursorStyle = `url(${brushDataUrl}) ${hotspot} ${hotspot}, crosshair`; // Set the brush cursor
+    useCustomElement = false; // Don't use custom element for brush
+    console.log("Cursor Effect: Setting SVG data URL cursor for Brush.");
+  } else {
+      // Default cursor if no specific tool is active
+       useCustomElement = false;
+       newCursorStyle = 'crosshair'; // Or 'default'
+  }
+
+  // Apply the basic cursor style (e.g., 'none' or the brush SVG)
+  setCursorStyle(newCursorStyle);
+  // Set the flag to control the custom DOM element's visibility/behavior
+  setUseCustomElementCursor(useCustomElement);
+
+}, [activeTool, brushSize, color]);
 
 
 // Fetch lobby data
@@ -335,6 +409,9 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+       ctx.imageSmoothingEnabled = false;
+
+
     // 1. Get the last saved state (the state *before* the action we want to undo)
     const prevState = historyStack[historyStack.length - 1]; // Don't pop yet
 
@@ -367,6 +444,34 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
         ]
       : null;
   };
+
+  function hexToRgb(hex: string): RGB | null {
+    const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+    hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+      ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        }
+      : null;
+  }
+
+    // Darkens an RGB color by a percentage (0-1)
+    function darkenRgb(rgb: RGB, percent: number): RGB {
+      const factor = 1 - percent;
+      return {
+        r: Math.max(0, Math.floor(rgb.r * factor)),
+        g: Math.max(0, Math.floor(rgb.g * factor)),
+        b: Math.max(0, Math.floor(rgb.b * factor)),
+      };
+    }
+
+    // Converts an RGB object and alpha value to an RGBA string
+    function rgbToRgbaString(rgb: RGB, alpha: number): string {
+      return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+    }
 
     // --- Flood Fill Implementation ---
   const floodFill = (
@@ -456,42 +561,67 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
   return newColor;
 }
 
-  function drawLine({prevPoint, currentPoint, ctx}: Draw) {
-    const {x:currX, y: currY} = currentPoint
-    //color of line
-    const lineColor = color
-    const lineWidth = brushSize
-    const startPoint = prevPoint ?? currentPoint
-    ctx.beginPath()
-    ctx.lineWidth = lineWidth
-    ctx.strokeStyle = lineColor
-    ctx.fillStyle = lineColor; // Use same color for fill
-    ctx.lineCap = 'round'; // Make line ends round
-    ctx.lineJoin = 'round'; // Make line corners round
+ function drawLine({ prevPoint, currentPoint, ctx }: Draw) {
+  if (!currentPoint) return;
+
+  const lineColor = color;
+  const size = brushSize;
+  ctx.imageSmoothingEnabled = false;
+
+  ctx.fillStyle = lineColor;
+
+  const drawPixel = (centerX: number, centerY: number) => {
+    const radius = Math.floor(size / 2); // immer ganzzahlig
+    const radiusSq = radius * radius;
+  
+    for (let y = -radius; y <= radius; y++) {
+      for (let x = -radius; x <= radius; x++) {
+        if (x * x + y * y <= radiusSq) {
+          ctx.fillRect(
+            Math.floor(centerX + x),
+            Math.floor(centerY + y),
+            1,
+            1
+          );
+        }
+      }
+    }
+  };
+
+  const p0 = prevPoint ?? currentPoint;
+  const p1 = currentPoint;
+
+  const dx = Math.abs(p1.x - p0.x);
+  const dy = Math.abs(p1.y - p0.y);
+  const sx = p0.x < p1.x ? 1 : -1;
+  const sy = p0.y < p1.y ? 1 : -1;
+  let err = dx - dy;
+
+  let x = Math.floor(p0.x);
+  let y = Math.floor(p0.y);
+  const endX = Math.floor(p1.x);
+  const endY = Math.floor(p1.y);
+
+  while (true) {
+    drawPixel(x, y); // nicht mehr x - size / 2!
 
 
-    ctx.moveTo(startPoint.x, startPoint.y)
-    ctx.lineTo(currX, currY)
-    // Smooth the line slightly using quadratic curve
-    // Calculate midpoint for control point
-    const midPointX = (startPoint.x + currX) / 2;
-    const midPointY = (startPoint.y + currY) / 2;
-    // Using quadraticCurveTo for smoother lines
-    ctx.quadraticCurveTo(startPoint.x, startPoint.y, midPointX, midPointY);
-    ctx.lineTo(currX, currY); // Ensure the line reaches the current point
-
-    ctx.stroke()
-
-    ctx.fillStyle = lineColor
-    ctx.beginPath()
-    ctx.arc(startPoint.x, startPoint.y, 2, 0, 2* Math.PI)
-
-    //Optional: Draw a small circle at the end point for a rounded cap effect
-    ctx.fillStyle = lineColor;
-    ctx.beginPath();
-    ctx.arc(currX, currY, lineWidth / 2, 0, 2 * Math.PI);
-    ctx.fill();
+    if (x === endX && y === endY) break;
+    const e2 = 2 * err;
+    if (e2 > -dy) {
+      err -= dy;
+      x += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      y += sy;
+    }
+    
   }
+
+  
+}
+
 
   
 
@@ -519,7 +649,28 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
     );
   }
 
+  const fillCursorStyle: React.CSSProperties = {
+    position: 'absolute',
+    // Adjust width/height to match your image dimensions
+    width: '24px',
+    height: '24px',
+    backgroundImage: 'url(/icons/fill-tool-cursor.svg)', // Your image path
+    backgroundSize: 'contain', // Or 'cover' or specific dimensions
+    backgroundRepeat: 'no-repeat',
+    // IMPORTANT: Offset based on your desired hotspot (adjust these)
+    // Moves the image so the hotspot aligns with the actual mouse position (customCursorPos)
+    transform: 'translate(-5px, -20px)', // Example: move left 5px, up 20px
+    pointerEvents: 'none', // Crucial: prevents the div from blocking canvas events
+    zIndex: 9999, // Ensure it's above other elements
+    display: useCustomElementCursor && isCustomCursorVisible ? 'block' : 'none', // Toggle visibility
+    left: `${customCursorPos.x}px`,
+    top: `${customCursorPos.y}px`,
+};
+
   return (
+    <> {/* <-- START React Fragment */}
+    <div style={fillCursorStyle} />
+
     <div className="page-background">
             <div className="player-box">
   <h1 className="players-chat-title">
@@ -562,13 +713,18 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
 
         {/* Drawing Canvas */}
         <canvas
-          ref={combinedCanvasRef}
-          // Use the combined MouseDown handler
-          onMouseDown={handleCanvasMouseDown}
-          className={`drawing-canvas ${activeTool === 'fill' ? 'fill-cursor' : ''}`} // Add fill cursor class
-          width={650}
-          height={500}
-        ></canvas>
+             ref={combinedCanvasRef}
+             onMouseDown={handleCanvasMouseDown} // Your existing drawing logic
+             // Apply the basic cursor style ('none' or the brush SVG)
+             style={{ cursor: cursorStyle }}
+             // Add mouse tracking handlers
+             onMouseMove={handleCanvasMouseMove}
+             onMouseEnter={handleCanvasMouseEnter}
+             onMouseLeave={handleCanvasMouseLeave}
+             className="drawing-canvas"
+             width={650}
+             height={500}
+           ></canvas>
 
 
         {/* Drawing Tools */}
@@ -729,6 +885,7 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
       </Modal>
 
     </div>
+    </>
   );
 };
 

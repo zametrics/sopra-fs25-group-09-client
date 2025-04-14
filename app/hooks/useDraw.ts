@@ -8,6 +8,7 @@ export const useDraw = (onDraw: ({ctx, currentPoint, prevPoint}: Draw) => void) 
     const canvasRef = useCallback((node: HTMLCanvasElement | null) => {
         // This callback ref ensures we get the node instance when it's mounted
         setCanvasElement(node);
+        if (node) { node.width = 650; node.height = 500; }
     }, []); // Empty dependency array, ref callback itself doesn't change
 
     const prevPoint = useRef<Point | null>(null); // Use Point | null type
@@ -18,10 +19,9 @@ export const useDraw = (onDraw: ({ctx, currentPoint, prevPoint}: Draw) => void) 
         if (!canvasElement) return null;
 
         const rect = canvasElement.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        return { x, y };
+        const x = Math.round(e.clientX - rect.left);
+        const y = Math.round(e.clientY - rect.top);
+        return {x,y };
     }, [canvasElement]); // Depends on canvasElement state
 
     // --- MODIFIED: The mousedown handler returned by the hook ---
@@ -35,6 +35,8 @@ export const useDraw = (onDraw: ({ctx, currentPoint, prevPoint}: Draw) => void) 
         const ctx = canvasElement.getContext('2d');
 
         if (!ctx || !currentPoint) return; // Guard against null context or point
+
+        ctx.imageSmoothingEnabled = false;
 
         // --- Draw the initial dot immediately on mousedown ---
         // Pass currentPoint as prevPoint. Your drawLine function's logic
@@ -52,6 +54,9 @@ export const useDraw = (onDraw: ({ctx, currentPoint, prevPoint}: Draw) => void) 
         if (!canvasElement) return;
         const ctx = canvasElement.getContext('2d');
         if (!ctx) return;
+
+        ctx.imageSmoothingEnabled = false;
+
         ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     }, [canvasElement]); // Dependency
 
@@ -69,6 +74,8 @@ export const useDraw = (onDraw: ({ctx, currentPoint, prevPoint}: Draw) => void) 
             const currentPoint = computePointInCanvas(e);
             const ctx = canvasElement.getContext('2d');
             if (!ctx || !currentPoint) return;
+            
+            ctx.imageSmoothingEnabled = false;
 
             // Call the draw function passed from the component
             onDraw({ ctx, currentPoint, prevPoint: prevPoint.current });
