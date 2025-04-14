@@ -6,6 +6,8 @@ import { LogoutOutlined } from "@ant-design/icons";
 import { message } from "antd";
 import { useApi } from "@/hooks/useApi";
 import { User } from "@/types/user";
+import { useBackgroundMusic } from '@/hooks/useBackgroundMusic';
+
 
 
 // Exporting the HomeLayout component as default so that it can be imported easily in other files
@@ -50,6 +52,9 @@ const [username, setUsername] = useState<string>("");
 
 // This line retrieves the current user's ID from localStorage (only runs in the browser, so `typeof window !== "undefined"` is used to avoid SSR issues)
 const currentUserId = typeof window !== "undefined" ? localStorage.getItem("userId") : "";
+
+const { isPlaying, toggle, volume, setVolume } = useBackgroundMusic(); //used oor accessing the background music hook
+
 
 useEffect(() => {
   // Check if running in the browser to avoid errors during server-side rendering (SSR)
@@ -313,6 +318,40 @@ const handleCreateLobby = async () => {
   
   return (
     <div className="page-background">
+      {/* MUSIC CONTROLS */}
+    <div style={{
+      position: 'absolute',
+      top: '20px',
+      right: '20px',
+      backgroundColor: 'rgba(255, 255, 255, 0.85)',
+      borderRadius: '10px',
+      padding: '10px 14px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+      zIndex: 9999,
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px'
+    }}>
+      <button onClick={toggle} style={{
+        background: 'none',
+        border: 'none',
+        fontSize: '1.2rem',
+        cursor: 'pointer'
+      }}>
+        {isPlaying ? '🔊' : '🔇'}
+      </button>
+
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.01}
+        value={volume}
+        onChange={(e) => setVolume(parseFloat(e.target.value))}
+        style={{ width: '80px' }}
+      />
+    </div>
+
       <div className="home-wrapper">
         <div className="left-box">
           <img src="/icons/settings_icon.png" alt="Settings" className="settings-icon" />
