@@ -996,6 +996,13 @@ textarea {
   margin-bottom: 20px; /* Space below canvas */
 }
 
+/* Cursor when fill tool is active */
+.drawing-canvas.fill-cursor {
+  /* Use a standard bucket cursor or a custom one */
+  cursor: url('/icons/bucket-cursor.svg') 8 8, auto; /* Example: provide bucket-cursor.svg */
+  /* Or fallback: cursor: copy; */
+}
+
 /* Drawing Tools Container */
 .drawing-tools-arrangement {
   display: flex;
