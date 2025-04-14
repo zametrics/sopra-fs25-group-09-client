@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FC, useEffect, useState, useRef } from 'react';
+import React, { FC, useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useApi } from '@/hooks/useApi';
 import { Button, Spin, message, Input, Modal } from 'antd';
@@ -32,10 +32,25 @@ interface ChatMessage {
   timestamp: string;
 }
 
+const colorPalette = [
+  '#FFFFFF', '#C0C0C0', '#FF0000', '#FFA500', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF', '#A0522D', // Row 1
+  '#000000', '#808080', '#8B0000', '#D2691E', '#008000', '#00008B', '#4B0082', '#800080', '#8B4513', '#4D2600'  // Row 2 (adjusted some for contrast/variety)
+];
 
+// --- Define Brush Sizes ---
+const brushSizes = {
+  size1: 2, // Smallest
+  size2: 6, // Small-Medium (Default)
+  size3: 12, // Medium-Large
+  size4: 20, // Largest
+};
+
+const MAX_HISTORY_SIZE = 20; // Limit undo steps to prevent memory issues
 
 const LobbyPage: FC = ({}) => {
-  const { canvasRef, onMouseDown } = useDraw(drawLine);
+  // --- NEW STATE for brush size ---
+  const [brushSize, setBrushSize] = useState<number>(brushSizes.size2); // Default size
+  const { canvasRef: hookCanvasRef, onMouseDown: handleDrawMouseDown, clear: clearCanvas } = useDraw(drawLine);
   const params = useParams();
   const lobbyId = params.lobbyId as string;
   const apiService = useApi();
@@ -48,12 +63,57 @@ const LobbyPage: FC = ({}) => {
   const [chatInput, setChatInput] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isLeaveModalVisible, setIsLeaveModalVisible] = useState<boolean>(false);
-
+  const [color,setColor] = useState<string>('#00000')
+  const [isColorPickerVisible, setIsColorPickerVisible] = useState<boolean>(false);
+  const colorPickerRef = useRef<HTMLDivElement>(null); // Ref for click outside detection
+  const colorButtonRef = useRef<HTMLButtonElement>(null); // Ref for the trigger button
+  // --- State for Undo History ---
+  const [historyStack, setHistoryStack] = useState<ImageData[]>([]);
+  // Ref to access the canvas element directly for ImageData
+  const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
   //PLACEHOLDER WORD
   const wordToGuess = "daniel";
 
   const currentUserId = typeof window !== "undefined" ? localStorage.getItem("userId") : "";
   const localAvatarUrl = typeof window !== "undefined" ? localStorage.getItem("avatarUrl") || "/icons/avatar.png" : "/icons/avatar.png";
+
+  // --- Combine refs: One for direct access, one for the hook ---
+  const combinedCanvasRef = useCallback((node: HTMLCanvasElement | null) => {
+    // Set the ref for direct access
+    canvasElementRef.current = node;
+    // Call the ref callback from the useDraw hook
+    hookCanvasRef(node);
+  }, [hookCanvasRef]);
+
+
+// --- Save Canvas State Function ---
+const saveCanvasState = useCallback(() => {
+  const canvas = canvasElementRef.current;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  setHistoryStack(prev => {
+      const newHistory = [...prev, currentImageData];
+      // Limit history size
+      if (newHistory.length > MAX_HISTORY_SIZE) {
+          return newHistory.slice(newHistory.length - MAX_HISTORY_SIZE);
+      }
+      return newHistory;
+  });
+}, []); // No dependencies needed as it reads current refs/state implicitly
+
+
+// --- Modified MouseDown Handler to Save State FIRST ---
+const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // 1. Save the current state *before* the new stroke begins
+  saveCanvasState();
+
+  // 2. Call the drawing logic from the hook
+  handleDrawMouseDown(e);
+};
 
 
 // Fetch lobby data
@@ -129,7 +189,26 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+   // --- NEW useEffect for Click Outside Color Picker ---
+   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isColorPickerVisible &&
+        colorPickerRef.current &&
+        !colorPickerRef.current.contains(event.target as Node) &&
+        colorButtonRef.current && // Check if the button ref exists
+        !colorButtonRef.current.contains(event.target as Node) // Check if the click was on the button itself
+      ) {
+        setIsColorPickerVisible(false);
+      }
+    };
 
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isColorPickerVisible]); // Re-run when visibility changes
+  
   const goBack = () => {
     router.push('/home');
   };
@@ -195,7 +274,51 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
     '#008080', // Teal
   ];
   
+    // --- Color Picker Toggle Handler ---
+    const toggleColorPicker = () => {
+      setIsColorPickerVisible(prev => !prev);
+    };
   
+    // --- Color Select Handler ---
+    const handleColorSelect = (selectedColor: string) => {
+      setColor(selectedColor);
+      setIsColorPickerVisible(false); // Close picker after selection
+    };
+
+
+      // --- Brush Size Change Handler ---
+  const handleBrushSizeChange = (newSize: number) => {
+    setBrushSize(newSize);
+    // Optional: Add logic here if changing size should deselect other tools
+  };
+
+   // --- Undo Handler ---
+   const handleUndo = () => {
+    if (historyStack.length === 0) {
+      console.log("History empty, cannot undo.");
+      return; // Nothing to undo
+    }
+
+    const canvas = canvasElementRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // 1. Get the last saved state (the state *before* the action we want to undo)
+    const prevState = historyStack[historyStack.length - 1]; // Don't pop yet
+
+    // 2. Restore this previous state onto the canvas
+    ctx.putImageData(prevState, 0, 0);
+
+    // 3. Remove the restored state from the stack (effectively removing the undone action's *result*)
+    setHistoryStack(prev => prev.slice(0, -1)); // Create new array without the last element
+  };
+
+  // --- Clear function that also clears history ---
+  const handleClearCanvas = () => {
+    clearCanvas(); // Call the clear function from the hook
+    setHistoryStack([]); // Clear the undo history
+  }
 
   const usernameColorsRef = useRef<{ [key: string]: string }>({});
   
@@ -224,21 +347,38 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
   function drawLine({prevPoint, currentPoint, ctx}: Draw) {
     const {x:currX, y: currY} = currentPoint
     //color of line
-    const lineColor = '#ff0000'
-    const lineWidth = 5
-
+    const lineColor = color
+    const lineWidth = brushSize
     const startPoint = prevPoint ?? currentPoint
     ctx.beginPath()
     ctx.lineWidth = lineWidth
     ctx.strokeStyle = lineColor
+    ctx.fillStyle = lineColor; // Use same color for fill
+    ctx.lineCap = 'round'; // Make line ends round
+    ctx.lineJoin = 'round'; // Make line corners round
+
+
     ctx.moveTo(startPoint.x, startPoint.y)
     ctx.lineTo(currX, currY)
+    // Smooth the line slightly using quadratic curve
+    // Calculate midpoint for control point
+    const midPointX = (startPoint.x + currX) / 2;
+    const midPointY = (startPoint.y + currY) / 2;
+    // Using quadraticCurveTo for smoother lines
+    ctx.quadraticCurveTo(startPoint.x, startPoint.y, midPointX, midPointY);
+    ctx.lineTo(currX, currY); // Ensure the line reaches the current point
+
     ctx.stroke()
 
     ctx.fillStyle = lineColor
     ctx.beginPath()
     ctx.arc(startPoint.x, startPoint.y, 2, 0, 2* Math.PI)
-    ctx.fill()
+
+    //Optional: Draw a small circle at the end point for a rounded cap effect
+    ctx.fillStyle = lineColor;
+    ctx.beginPath();
+    ctx.arc(currX, currY, lineWidth / 2, 0, 2 * Math.PI);
+    ctx.fill();
   }
 
   
@@ -294,73 +434,125 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
       
       {/* Game Box */}
       <div className="game-box">
-      <h1 className="drawzone-logo-2-8rem">DRAWZONE</h1>
-      <h2 className="drawzone-subtitle-1-1rem">ART BATTLE ROYALE</h2>
+        <h1 className="drawzone-logo-2-8rem">DRAWZONE</h1>
+        <h2 className="drawzone-subtitle-1-1rem">ART BATTLE ROYALE</h2>
 
-      <button onClick={showLeaveConfirmation}>LEAVE GAME</button>
+        <button onClick={showLeaveConfirmation} className="leave-game-button">LEAVE GAME</button> {/* Added a class */}
 
-      {/* Word Display Area */}
-      <div className="word-display-area">
-        <span className="word-to-guess">
-          {/* Ensure uppercase before mapping */}
-          {wordToGuess.toLowerCase().split('').map((letter, index) => (
-            <span key={index} className="word-letter">{letter}</span>
-          ))}
-        </span>
-      </div>
-
-      <canvas 
-        onMouseDown={onMouseDown} 
-        ref={canvasRef} 
-        className='drawing-canvas'
-        width={650}  // <-- ADD THIS attribute
-        height={500} // <-- ADD THIS attribute
-      ></canvas>
-
-      {/* Updated Drawing Tools */}
-    <div className='drawing-tools-arrangement'>
-      <div className="drawing-tools">
-        {/* Color Picker - Use an image now */}
-        <button className="tool-button color-picker-btn" aria-label="Choose Color">
-          <img src="/icons/color-wheel.svg" alt="Color Picker" className="tool-icon-image" /> {/* <--- USE IMAGE */}
-        </button>
-
-        {/* Brush Sizes - Four distinct buttons/divs */}
-        <button className="tool-button brush-size brush-size-1 active-tool" aria-label="Brush Size 1"> {/* <--- Added active-tool for example */}
-           <div className="brush-dot"></div>
-        </button>
-        <button className="tool-button brush-size brush-size-2" aria-label="Brush Size 2">
-           <div className="brush-dot"></div>
-        </button>
-        <button className="tool-button brush-size brush-size-3" aria-label="Brush Size 3">
-           <div className="brush-dot"></div>
-        </button>
-        <button className="tool-button brush-size brush-size-4" aria-label="Brush Size 4">
-           <div className="brush-dot"></div>
-        </button>
-
-        {/* Fill Tool */}
-        <button className="tool-button tool-icon" aria-label="Fill Tool">
-          <img src="/icons/fill-tool-black.svg" alt="Fill" className="tool-icon-image"/> {/* <--- Ensure black icon */}
-          {/* Or use icon library: <FaFillDrip size={24} color="#000" /> */}
-        </button>
+        {/* Word Display Area */}
+        <div className="word-display-area">
+          <span className="word-to-guess">
+            {wordToGuess.toLowerCase().split('').map((letter, index) => (
+              <span key={index} className="word-letter">{letter === ' ' ? '\u00A0' : letter}</span> // Handle spaces
+            ))}
+          </span>
         </div>
-        <div className="drawing-tools">
 
-        {/* Undo Tool */}
-        <button className="tool-button tool-icon" aria-label="Undo">
-           <img src="/icons/undo-tool-black.svg" alt="Undo" className="tool-icon-image"/> {/* <--- Ensure black icon */}
-           {/* Or use icon library: <FaUndo size={24} color="#000" /> */}
-        </button>
+        {/* Drawing Canvas */}
+        <canvas
+          // Use the combined ref
+          ref={combinedCanvasRef}
+          // Use the wrapper MouseDown handler
+          onMouseDown={handleCanvasMouseDown}
+          className='drawing-canvas'
+          width={650}
+          height={500}
+        ></canvas>
 
-        {/* Clear Tool (Trash Can) */}
-        <button className="tool-button tool-icon" aria-label="Clear Canvas">
-           <img src="/icons/trash-tool-black.svg" alt="Clear" className="tool-icon-image"/> {/* <--- Ensure black icon */}
-           {/* Or use icon library: <FaTrashAlt size={24} color="#000" /> */}
-        </button>
-        </div>
-      </div>
-    </div>
+
+        {/* Drawing Tools */}
+        <div className='drawing-tools-arrangement'>
+           {/* --- Left Tool Group --- */}
+          <div className="drawing-tools">
+            {/* Color Picker Button */}
+            <div style={{ position: 'relative' }}> {/* Wrapper for positioning popup */}
+              <button
+                ref={colorButtonRef} // Add ref to the button
+                className="tool-button color-picker-btn"
+                aria-label="Choose Color"
+                onClick={toggleColorPicker} // Attach toggle handler
+              >
+                {/* Display current color */}
+                
+                <img src="/icons/color-wheel.svg" alt="Color Picker" className="tool-icon-image" /> 
+              </button>
+
+              {/* --- NEW: Color Picker Popup --- */}
+              {isColorPickerVisible && (
+                <div ref={colorPickerRef} className="color-picker-popup">
+                  {colorPalette.map((paletteColor) => (
+                    <button
+                      key={paletteColor}
+                      className="color-swatch"
+                      style={{ backgroundColor: paletteColor }}
+                      onClick={() => handleColorSelect(paletteColor)}
+                      aria-label={`Select color ${paletteColor}`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div> {/* End relative wrapper */}
+
+
+            {/* --- UPDATED Brush Size Buttons --- */}
+            <button
+              className={`tool-button brush-size brush-size-1 ${brushSize === brushSizes.size1 ? 'active-tool' : ''}`} // Add active class based on state
+              aria-label="Brush Size 1"
+              onClick={() => handleBrushSizeChange(brushSizes.size1)} // Set size on click
+            >
+               <div className="brush-dot" style={{ backgroundColor: color }}></div>
+            </button>
+            <button
+              className={`tool-button brush-size brush-size-2 ${brushSize === brushSizes.size2 ? 'active-tool' : ''}`}
+              aria-label="Brush Size 2"
+              onClick={() => handleBrushSizeChange(brushSizes.size2)}
+            >
+               <div className="brush-dot" style={{ backgroundColor: color }}></div>
+            </button>
+            <button
+              className={`tool-button brush-size brush-size-3 ${brushSize === brushSizes.size3 ? 'active-tool' : ''}`}
+              aria-label="Brush Size 3"
+              onClick={() => handleBrushSizeChange(brushSizes.size3)}
+            >
+               <div className="brush-dot" style={{ backgroundColor: color }}></div>
+            </button>
+            <button
+               className={`tool-button brush-size brush-size-4 ${brushSize === brushSizes.size4 ? 'active-tool' : ''}`}
+               aria-label="Brush Size 4"
+               onClick={() => handleBrushSizeChange(brushSizes.size4)}
+            >
+               <div className="brush-dot" style={{ backgroundColor: color }}></div>
+            </button>
+
+            {/* Fill Tool */}
+            <button className="tool-button tool-icon" aria-label="Fill Tool">
+              <img src="/icons/fill-tool-black.svg" alt="Fill" className="tool-icon-image"/>
+            </button>
+          </div>
+
+          {/* --- Right Tool Group --- */}
+          <div className="drawing-tools">
+            {/* --- UPDATED Undo Tool Button --- */}
+            <button
+                className="tool-button tool-icon"
+                aria-label="Undo"
+                onClick={handleUndo} // Attach the undo handler
+                disabled={historyStack.length === 0} // Disable if nothing to undo
+             >
+               <img src="/icons/undo-tool-black.svg" alt="Undo" className="tool-icon-image"/>
+            </button>
+
+            {/* --- UPDATED Clear Tool (Trash Can) Button --- */}
+            <button
+                className="tool-button tool-icon"
+                aria-label="Clear Canvas"
+                onClick={handleClearCanvas} // Attach the new clear handler
+            >
+               <img src="/icons/trash-tool-black.svg" alt="Clear" className="tool-icon-image"/>
+            </button>
+          </div>
+        </div> {/* End drawing-tools-arrangement */}
+      </div> {/* End game-box */}
 
 
 

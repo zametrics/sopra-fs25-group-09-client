@@ -1060,10 +1060,15 @@ textarea {
 /* Active Tool Indicator */
 .tool-button.active-tool {
   background-color: #e0e0e0; /* Example: Grey background for active tool */
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
-}
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15); /* Inset shadow for pressed look */
+  border-color: #adadad; /* Optional: slightly darker border */
+} 
 
-/* Specific Tool Styling */
+/* Specific styling for active brush dot if needed (though background color change might be enough) */
+.tool-button.active-tool .brush-dot {
+  /* Maybe add a slightly stronger border or effect */
+  /* border: 1px solid rgba(0, 0, 0, 0.3); */
+}
 
 /* Color Picker */
 .color-picker-btn {
@@ -1080,8 +1085,8 @@ textarea {
 }
 
 .tool-icon-image {
-  width: 28px;  /* Adjust size as needed */
-  height: 28px;
+  width: 22px;  /* Adjust size as needed */
+  height: 22px;
   object-fit: contain;
   display: block; /* Prevents extra space below image */
 }
@@ -1092,17 +1097,13 @@ textarea {
   height: 100%;
 }
 
-/* Brush Sizes & Eraser (Black Circles) */
-/* Brush Size Buttons */
-.brush-size {
-  /* Base style for brush buttons if needed */
-}
-
 /* The black dot inside brush buttons */
 .brush-dot {
-  background-color: #000000;
+  background-color: black;
   border-radius: 50%;
   display: block; /* Ensure it behaves like a block element */
+  /* Add a subtle border for very light colors like white */
+  border: 1px solid rgba(0, 0, 0, 0.25);
 }
 
 /* Specific Brush Dot Sizes */
@@ -1119,17 +1120,6 @@ textarea {
 /* Adjust active border for color picker */
 .color-picker-btn.active-tool {
    border-color: #007bff;
-}
-
-
-/* Icon Tool Buttons */
-/* Icon Tool Buttons */
-.tool-icon {
-  /* Base style for icon buttons */
-}
-.tool-icon .tool-icon-image {
-   width: 26px; /* Slightly smaller size for standard icons */
-   height: 26px;
 }
 
 .tool-icon:hover {
@@ -1207,4 +1197,52 @@ textarea {
 
 .leave-modal-close {
   font-size: 18px;
+}
+
+.color-picker-popup {
+  position: absolute;
+  bottom: calc(100% + 10px); /* Position above the button with 10px gap */
+  left: 50%;
+  transform: translateX(-50%); /* Center horizontally */
+  background-color: #ffffff;
+  border: 1px solid #cccccc;
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100; /* Ensure it's above other elements */
+  display: grid; /* Use grid for easy layout */
+  grid-template-columns: repeat(10, 1fr); /* 10 columns */
+  gap: 5px; /* Spacing between swatches */
+  width: 280px; /* Fixed width to fit 10x2 swatches */
+}
+
+.color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px; /* Slightly rounded corners */
+  border: 1px solid rgba(0, 0, 0, 0.2); /* Subtle border */
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  padding: 0; /* Remove default button padding */
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+}
+
+/* Style for the color display inside the main button */
+.color-picker-btn .color-picker-display {
+  width: 30px; /* Match the size in the original CSS */
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  display: inline-block; /* Or block if needed */
+  vertical-align: middle; /* Align nicely if text is next to it */
+}
+
+/* Ensure tools arrangement has space for popup */
+.drawing-tools-arrangement {
+  position: relative; /* Needed for absolute positioning of popup if wrapper isn't relative */
+  padding-bottom: 5px; /* Add a little space below tools */
 }
