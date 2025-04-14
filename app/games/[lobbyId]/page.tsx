@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FC, useEffect, useState, useRef } from 'react';
+import React, { FC, useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useApi } from '@/hooks/useApi';
 import { Button, Spin, message, Input, Modal } from 'antd';
@@ -45,10 +45,12 @@ const brushSizes = {
   size4: 20, // Largest
 };
 
+const MAX_HISTORY_SIZE = 20; // Limit undo steps to prevent memory issues
+
 const LobbyPage: FC = ({}) => {
   // --- NEW STATE for brush size ---
   const [brushSize, setBrushSize] = useState<number>(brushSizes.size2); // Default size
-  const { canvasRef, onMouseDown, clear } = useDraw(drawLine);
+  const { canvasRef: hookCanvasRef, onMouseDown: handleDrawMouseDown, clear: clearCanvas } = useDraw(drawLine);
   const params = useParams();
   const lobbyId = params.lobbyId as string;
   const apiService = useApi();
@@ -65,12 +67,53 @@ const LobbyPage: FC = ({}) => {
   const [isColorPickerVisible, setIsColorPickerVisible] = useState<boolean>(false);
   const colorPickerRef = useRef<HTMLDivElement>(null); // Ref for click outside detection
   const colorButtonRef = useRef<HTMLButtonElement>(null); // Ref for the trigger button
-
+  // --- State for Undo History ---
+  const [historyStack, setHistoryStack] = useState<ImageData[]>([]);
+  // Ref to access the canvas element directly for ImageData
+  const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
   //PLACEHOLDER WORD
   const wordToGuess = "daniel";
 
   const currentUserId = typeof window !== "undefined" ? localStorage.getItem("userId") : "";
   const localAvatarUrl = typeof window !== "undefined" ? localStorage.getItem("avatarUrl") || "/icons/avatar.png" : "/icons/avatar.png";
+
+  // --- Combine refs: One for direct access, one for the hook ---
+  const combinedCanvasRef = useCallback((node: HTMLCanvasElement | null) => {
+    // Set the ref for direct access
+    canvasElementRef.current = node;
+    // Call the ref callback from the useDraw hook
+    hookCanvasRef(node);
+  }, [hookCanvasRef]);
+
+
+// --- Save Canvas State Function ---
+const saveCanvasState = useCallback(() => {
+  const canvas = canvasElementRef.current;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  setHistoryStack(prev => {
+      const newHistory = [...prev, currentImageData];
+      // Limit history size
+      if (newHistory.length > MAX_HISTORY_SIZE) {
+          return newHistory.slice(newHistory.length - MAX_HISTORY_SIZE);
+      }
+      return newHistory;
+  });
+}, []); // No dependencies needed as it reads current refs/state implicitly
+
+
+// --- Modified MouseDown Handler to Save State FIRST ---
+const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // 1. Save the current state *before* the new stroke begins
+  saveCanvasState();
+
+  // 2. Call the drawing logic from the hook
+  handleDrawMouseDown(e);
+};
 
 
 // Fetch lobby data
@@ -249,6 +292,34 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
     // Optional: Add logic here if changing size should deselect other tools
   };
 
+   // --- Undo Handler ---
+   const handleUndo = () => {
+    if (historyStack.length === 0) {
+      console.log("History empty, cannot undo.");
+      return; // Nothing to undo
+    }
+
+    const canvas = canvasElementRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // 1. Get the last saved state (the state *before* the action we want to undo)
+    const prevState = historyStack[historyStack.length - 1]; // Don't pop yet
+
+    // 2. Restore this previous state onto the canvas
+    ctx.putImageData(prevState, 0, 0);
+
+    // 3. Remove the restored state from the stack (effectively removing the undone action's *result*)
+    setHistoryStack(prev => prev.slice(0, -1)); // Create new array without the last element
+  };
+
+  // --- Clear function that also clears history ---
+  const handleClearCanvas = () => {
+    clearCanvas(); // Call the clear function from the hook
+    setHistoryStack([]); // Clear the undo history
+  }
+
   const usernameColorsRef = useRef<{ [key: string]: string }>({});
   
   function getUsernameColor(username: string): string {
@@ -379,12 +450,15 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
 
         {/* Drawing Canvas */}
         <canvas
-          onMouseDown={onMouseDown}
-          ref={canvasRef}
+          // Use the combined ref
+          ref={combinedCanvasRef}
+          // Use the wrapper MouseDown handler
+          onMouseDown={handleCanvasMouseDown}
           className='drawing-canvas'
           width={650}
           height={500}
         ></canvas>
+
 
         {/* Drawing Tools */}
         <div className='drawing-tools-arrangement'>
@@ -458,13 +532,22 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
 
           {/* --- Right Tool Group --- */}
           <div className="drawing-tools">
-            {/* Undo Tool */}
-            <button className="tool-button tool-icon" aria-label="Undo">
+            {/* --- UPDATED Undo Tool Button --- */}
+            <button
+                className="tool-button tool-icon"
+                aria-label="Undo"
+                onClick={handleUndo} // Attach the undo handler
+                disabled={historyStack.length === 0} // Disable if nothing to undo
+             >
                <img src="/icons/undo-tool-black.svg" alt="Undo" className="tool-icon-image"/>
             </button>
 
-            {/* Clear Tool (Trash Can) */}
-            <button className="tool-button tool-icon" aria-label="Clear Canvas" onClick={clear}>
+            {/* --- UPDATED Clear Tool (Trash Can) Button --- */}
+            <button
+                className="tool-button tool-icon"
+                aria-label="Clear Canvas"
+                onClick={handleClearCanvas} // Attach the new clear handler
+            >
                <img src="/icons/trash-tool-black.svg" alt="Clear" className="tool-icon-image"/>
             </button>
           </div>
