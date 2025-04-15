@@ -60,8 +60,8 @@ Note: If a team member fails to show continuous progress after using their Joker
 |-------------------|-----------|-----------------------------|-------------------------------------|-----------------------------------------|
 | **[@githubUser1]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
 |                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
-| **[@githubUser2]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
-|                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+| **@Ortakyakuza** | 12.04.2025 | https://github.com/zametrics/sopra-fs25-group-09-server/commit/c619eb4933e9e4106c60fdde5a626170334d432b          | in GPTWordControllerTest wrote tests for updating lobby with newly defined values.     | Ensures that user-selected language and type are stored in the lobby and used for correct ChatGPT word retrieval    |
+|                   | 12.04.2025    | https://github.com/zametrics/sopra-fs25-group-09-server/commit/d7b670797a7f29eacb5c6f77ef096ce204c29d49          | Created unit tests for GPTWordController     | Verifies that the word generation endpoint behaves correctly for valid input, API failures, and missing parameters     |
 | **[@githubUser3]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
 |                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
 | **[@githubUser4]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
