@@ -56,19 +56,17 @@ Note: If a team member fails to show continuous progress after using their Joker
 
 ## Contributions Week 3 - 09.03.2025 to 15.04.2025
 
-| **Student**      | **Date**  | **Link to Commit**          | **Description**                     | **Relevance**                          |
-|-------------------|-----------|-----------------------------|-------------------------------------|-----------------------------------------|
-| **[@githubUser1]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
-|                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
-| **@Ortakyakuza** | 12.04.2025 | https://github.com/zametrics/sopra-fs25-group-09-server/commit/c619eb4933e9e4106c60fdde5a626170334d432b          | in GPTWordControllerTest wrote tests for updating lobby with newly defined values.     | Ensures that user-selected language and type are stored in the lobby and used for correct ChatGPT word retrieval    |
-|                   | 12.04.2025    | https://github.com/zametrics/sopra-fs25-group-09-server/commit/d7b670797a7f29eacb5c6f77ef096ce204c29d49          | Created unit tests for GPTWordController     | Verifies that the word generation endpoint behaves correctly for valid input, API failures, and missing parameters     |
-
-| 14.04.2025    | https://github.com/zametrics/sopra-fs25-group-09-client/commit/c159180b9ca107e113d130efeaa3c3ac04e83a49        | Implemented background music playback logic (custom hook + UI in home/layout.tsx). Custom Hook is reusable, while play and mute buttons(UI) needs to be implemented every time(but can just be copy pasted)  |  Enables music control in frontend via toggle & volume slider, stored per session.   |
-| **[@githubUser3]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
-|                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
-| **[@githubUser4]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
-|                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
-
+| **Student**       | **Date**     | **Link to Commit**                                                                 | **Description**                                                                                          | **Relevance**                                                                                   |
+|-------------------|--------------|-------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| **[@githubUser1]** | [date]       | [Link to Commit 1]                                                                  | [Brief description of the task]                                                                          | [Why this contribution is relevant]                                                              |
+|                   | [date]       | [Link to Commit 2]                                                                  | [Brief description of the task]                                                                          | [Why this contribution is relevant]                                                              |
+| **[@OrtakYakuza]** | 12.04.2025   | https://github.com/zametrics/sopra-fs25-group-09-server/commit/c619eb4933e9e4106c60fdde5a626170334d432b | In `LobbyControllerTest` wrote tests for updating lobby with newly defined values                       | Ensures selected language and type are stored and used for ChatGPT word retrieval                |
+|                   | 12.04.2025   | https://github.com/zametrics/sopra-fs25-group-09-server/commit/d7b670797a7f29eacb5c6f77ef096ce204c29d49 | Created unit tests for `GPTWordController`                                                              | Verifies that word generation endpoint handles valid input, API fallback, and missing params     |
+|                   | 14.04.2025   | https://github.com/zametrics/sopra-fs25-group-09-client/commit/c159180b9ca107e113d130efeaa3c3ac04e83a49 | Implemented background music playback logic (custom hook + UI in `home/layout.tsx`)                      | Enables music control (toggle + volume slider); session-persistent; UI code reusable across pages |
+| **[@githubUser3]** | [date]       | [Link to Commit 1]                                                                  | [Brief description of the task]                                                                          | [Why this contribution is relevant]                                                              |
+|                   | [date]       | [Link to Commit 2]                                                                  | [Brief description of the task]                                                                          | [Why this contribution is relevant]                                                              |
+| **[@githubUser4]** | [date]       | [Link to Commit 1]                                                                  | [Brief description of the task]                                                                          | [Why this contribution is relevant]                                                              |
+|                   | [date]       | [Link to Commit 2]                                                                  | [Brief description of the task]                                                                          | [Why this contribution is relevant]                                                              |
 ---
 
 ## Contributions Week 4 - 16.04.2025 to 22.04.2025
