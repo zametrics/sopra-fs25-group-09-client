@@ -213,6 +213,31 @@ socket.on('joinLobby', ({ lobbyId, userId, username }) => {
     socket.to(lobbyId).emit('fill-area', dataToSend);
   });
 
+  // --- NEW: Handler for Sync Request after Undo ---
+  socket.on('sync-request', (data) => { // Expects { dataUrl: string }
+    const playerInfo = socketToLobby.get(socket.id);
+    if (!playerInfo) {
+        console.warn(`Received sync-request from socket ${socket.id} not in a lobby.`);
+        return;
+    }
+    const { lobbyId, userId } = playerInfo;
+
+    // Basic Validation
+    if (!data || typeof data.dataUrl !== 'string' || !data.dataUrl.startsWith('data:image/')) {
+        console.error(`Received invalid sync-request data from ${userId}:`, data);
+        return;
+    }
+
+    // Relay the sync command (with userId and dataUrl) to OTHERS in the lobby
+    const dataToSend = {
+        userId: userId,
+        dataUrl: data.dataUrl
+    };
+
+    // console.log(`Relaying sync-canvas from ${userId} to lobby ${lobbyId}`); // Debug
+    socket.to(lobbyId).emit('sync-canvas', dataToSend);
+  });
+
 });
 
 const PORT = process.env.PORT || 3001;

@@ -85,6 +85,11 @@ type Tool = 'brush' | 'fill'; // Add more tools later if needed
 
 const MAX_HISTORY_SIZE = 20; // Limit undo steps to prevent memory issues
 
+interface SyncCanvasData {
+  userId: string;
+  dataUrl: string; // Send canvas state as Data URL
+}
+
 const LobbyPage: FC = ({}) => {
   const [activeTool, setActiveTool] = useState<Tool>('brush'); // Default to brush
   const [brushSize, setBrushSize] = useState<number>(brushSizes.size2); // Default size
@@ -150,26 +155,26 @@ const LobbyPage: FC = ({}) => {
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
-    const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  
-    
-    
-    setHistoryStack(prev => {
-      // Avoid saving identical consecutive states (e.g., multiple clicks without drawing)
-      if (prev.length > 0 && prev[prev.length - 1].data.byteLength === currentImageData.data.byteLength) {
-           // Basic check; a more robust check would compare data arrays, but that's slow.
-           // This simple check prevents saving after non-drawing actions like tool switches.
-          // You might need a more sophisticated check if needed.
-          // For now, let's assume any action that *might* change the canvas saves state.
-      }
-  
-      const newHistory = [...prev, currentImageData];
-      if (newHistory.length > MAX_HISTORY_SIZE) {
-          return newHistory.slice(newHistory.length - MAX_HISTORY_SIZE);
-      }
-      return newHistory;
-  });
-  }, []);
+      const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      setHistoryStack(prev => {
+          // Optimization: Avoid saving if identical to the last state
+          // This helps prevent duplicates from rapid events but is less critical now
+          // if (prev.length > 0) {
+          //     const lastData = prev[prev.length - 1].data;
+          //     if (lastData.byteLength === currentImageData.data.byteLength &&
+          //         lastData.every((value, index) => value === currentImageData.data[index])) {
+          //          console.log("Skipping save, state identical."); // Debug
+          //         return prev;
+          //     }
+          // }
+          const newHistory = [...prev, currentImageData];
+          if (newHistory.length > MAX_HISTORY_SIZE) {
+              return newHistory.slice(newHistory.length - MAX_HISTORY_SIZE);
+          }
+           // console.log("Canvas state saved. History size:", newHistory.length); // Debug
+          return newHistory;
+      });
+  }, []); // Should have empty dependencies
 
   // --- Draw End Emit Callback ---
   const handleDrawEndEmit = useCallback(() => {
@@ -282,47 +287,40 @@ const LobbyPage: FC = ({}) => {
     ctx.putImageData(imageData, 0, 0);
   };
 
-// --- Fill Tool MouseDown Handler ---
+// --- Fill Tool MouseDown Handler (Saves state AFTER fill) ---
 const handleFillMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+  // ... (get context, coords, etc.) ...
   const canvas = canvasElementRef.current;
   if (!canvas || !socket) return;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return;
-
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width;
   const scaleY = canvas.height / rect.height;
   const x = Math.round((e.clientX - rect.left) * scaleX);
   const y = Math.round((e.clientY - rect.top) * scaleY);
-
   const currentFillColor = color;
-  // --- Perform local flood fill ---
+
+  // Perform local flood fill
   floodFill(ctx, x, y, currentFillColor);
-
-  // --- Emit the fill event ---
+  // Emit the fill event
   socket.emit('fill-area', { x, y, color: currentFillColor });
-
-  // --- Save state AFTER local action for undo ---
-  // console.log("Saving state AFTER local fill"); // Debug
+  // Save state AFTER local action
   saveCanvasState();
+}, [socket, color, floodFill, saveCanvasState]);
 
-}, [socket, color, floodFill, saveCanvasState]); // Dependencies remain the same
 
-  // --- Combined MouseDown Handler (Conditional Save State) ---
+  // --- Combined MouseDown Handler (REMOVED saveCanvasState) ---
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    // Only save state before action if it's the BRUSH tool.
-    // Fill tool saves state *after* the action within its own handler.
-    if (activeTool === 'brush') {
-         // console.log("Saving state BEFORE brush stroke"); // Debug
-         saveCanvasState(); // Save initial state before brush stroke begins
-         onMouseDown(e); // Use the hook's mousedown handler for brush
-    } else if (activeTool === 'fill') {
-         // console.log("Deferring save state for fill tool"); // Debug
-         // DO NOT save state here for fill. handleFillMouseDown will do it AFTER.
-         handleFillMouseDown(e); // Use the specific fill handler
-    }
-    // Add handling for other tools here if they need pre-action state saving
-}, [activeTool, onMouseDown, handleFillMouseDown, saveCanvasState]); // Keep saveCanvasState dependency
+   // NO saveCanvasState here. State is saved on action completion.
+   if (activeTool === 'brush') {
+        // Just initiate the drawing process via the hook
+        onMouseDown(e);
+   } else if (activeTool === 'fill') {
+        // Fill handler will save state after completion
+        handleFillMouseDown(e);
+   }
+  }, [activeTool, onMouseDown, handleFillMouseDown]); // Removed saveCanvasState dependency
 
 useEffect(() => {
   const canvas = canvasElementRef.current;
@@ -557,37 +555,23 @@ useEffect(() => {
       setActiveTool('brush'); // Select brush tool when a size is clicked
       setBrushSize(newSize);
     };
-    // --- Undo Handler (No change needed) ---
-    const handleUndo = () => {
-      if (historyStack.length === 0) {
-         console.log("History empty, cannot undo.");
-         return;
-      }
-
-      const canvas = canvasElementRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      // Remove the *current* state from the stack
-      const newHistory = historyStack.slice(0, -1);
-      setHistoryStack(newHistory);
-
-      // Get the *previous* state (which is now the last on the shortened stack)
-      const prevState = newHistory.length > 0 ? newHistory[newHistory.length - 1] : null;
-
-       // console.log("Undo: Restoring state. New history size:", newHistory.length); // Debug
-
-      // Clear the canvas first
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // If there's a previous state, restore it
-      if (prevState) {
-          ctx.putImageData(prevState, 0, 0);
-      }
-      // If newHistory is empty, the canvas remains clear (correctly undoing the very first action)
-
-   };
+    // --- Undo Handler  ---
+    const handleUndo = useCallback(() => {
+       if (historyStack.length === 0 || !socket) return;
+       const canvas = canvasElementRef.current;
+       if (!canvas) return;
+       const ctx = canvas.getContext('2d');
+       if (!ctx) return;
+       const newHistory = historyStack.slice(0, -1);
+       setHistoryStack(newHistory); // Update state first
+       const prevState = newHistory.length > 0 ? newHistory[newHistory.length - 1] : null;
+       ctx.clearRect(0, 0, canvas.width, canvas.height);
+       if (prevState) {
+           ctx.putImageData(prevState, 0, 0);
+       }
+       const restoredDataUrl = canvas.toDataURL('image/png');
+       socket.emit('sync-request', { dataUrl: restoredDataUrl });
+   }, [historyStack, socket]);
 
   
   // --- Helper: Hex to RGBA ---
@@ -739,25 +723,17 @@ useEffect(() => {
   });
 
 
-    // --- Listener for INCOMING clear events ----
-    socketIo.on('clear', (data: ClearEmitData) => {
-      const clearerUserId = data.userId;
-      console.log(`Received clear instruction from user ${clearerUserId}`);
-
-      // Clear the entire canvas locally
-      clear(); // Call the clear function from the useDraw hook
-      setHistoryStack([]); // Also clear local undo history
-
-      // --- CRUCIAL: Reset the last known point for the user who cleared ---
-      // This prevents incorrect connections if they start drawing immediately after clearing.
-      // Also reset for ALL users, as the canvas is blank for everyone.
-      console.log("Clearing all remote user last points due to canvas clear.");
-      remoteUsersLastPointRef.current.clear(); // Clear the entire map
-
-      // If you only wanted to reset the clearer's last point:
-      // remoteUsersLastPointRef.current.set(clearerUserId, null);
-      // console.log(`Reset last point state for clearer ${clearerUserId}`);
-  });
+        // --- Listener for Clear (Save the cleared state locally) ---
+        socketIo.on('clear', (data: ClearEmitData) => {
+          console.log(`Received clear instruction from user ${data.userId}`);
+          const canvas = canvasElementRef.current;
+          const ctx = canvas?.getContext('2d');
+          if (!ctx || !canvas) return;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          remoteUsersLastPointRef.current.clear();
+          // Save the cleared state triggered by remote user
+          saveCanvasState();
+      });
 
   // --- NEW: Listener for INCOMING Draw End ---
   socketIo.on('draw-end', (data: DrawEndData) => {
@@ -768,19 +744,33 @@ useEffect(() => {
      // console.log(`Reset last point for ${enderUserId} to null`); // Debug
 });
 
-     // --- Listener for INCOMING Fill Area (Still needs to save state) ---
-     socketIo.on('fill-area', (data: FillAreaDataWithUser) => {
-      const canvas = canvasElementRef.current;
-      const ctx = canvas?.getContext('2d', { willReadFrequently: true });
-      if (!ctx) return;
+       // --- Listener for Fill Area (Saves state after applying remote fill) ---
+       socketIo.on('fill-area', (data: FillAreaDataWithUser) => {
+        const canvas = canvasElementRef.current;
+        const ctx = canvas?.getContext('2d', { willReadFrequently: true });
+        if (!ctx) return;
+        floodFill(ctx, data.x, data.y, data.color);
+        // Save state AFTER remote fill
+        saveCanvasState();
+    });
 
-      // console.log(`Received fill-area from ${data.userId}`); // Debug
-      floodFill(ctx, data.x, data.y, data.color);
-
-      // Save canvas state AFTER remote fill for local undo
-      // console.log("Saving state AFTER remote fill"); // Debug
-      saveCanvasState();
-  });
+       // --- Listener for Sync Canvas (Resets history with synced state) ---
+       socketIo.on('sync-canvas', (data: SyncCanvasData) => {
+        console.log(`Received sync-canvas request from ${data.userId}`);
+        const canvas = canvasElementRef.current;
+        const ctx = canvas?.getContext('2d');
+        if (!ctx || !canvas) return;
+        const image = new Image();
+        image.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(image, 0, 0);
+            const newImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            // Reset history stack with ONLY this synced state
+            setHistoryStack([newImageData]);
+        };
+        image.onerror = (err) => { console.error("Failed to load image for canvas sync:", err); };
+        image.src = data.dataUrl;
+    });
 
   socketIo.on('playerLeft', (leftPlayer: { id: number | string }) => { // Use the type emitted by your server
     const leftPlayerId = String(leftPlayer.id); // Ensure string key for map
@@ -807,7 +797,7 @@ return () => {
   socketIo.off('fill-area');
   socketIo.off('playerLeft');
   socketIo.off('lobbyState');
-  // Remove other listeners...
+  socketIo.off('sync-canvas');
   socketIo.disconnect();
   setSocket(null);
   remoteUsersLastPointRef.current.clear(); // Clear the map on component unmount
@@ -817,23 +807,29 @@ return () => {
 }, [lobbyId, apiService, currentUserId, clear, activeTool]);
 
 
+    // --- Local Clear Function (Saves the blank state) ---
+    const socketClearCanvas = useCallback(() => {
+      if (socket) {
+          console.log("Emitting clear event");
+          socket.emit('clear');
+      }
+      // Clear local canvas
+      const canvas = canvasElementRef.current;
+      const ctx = canvas?.getContext('2d');
+      if (!ctx || !canvas) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-const socketClearCanvas = () => {
-  if (socket) {
-      console.log("Emitting clear event");
-      // No need to send userId explicitly, server adds it based on socket.id
-      socket.emit('clear');
-  }
-  // Clear locally IMMEDIATELY
-  clear(); // Clear local canvas via useDraw hook
-  setHistoryStack([]); // Clear local undo history
-  saveCanvasState(); // Optional: Save the blank state
+      // Reset history locally
+      // setHistoryStack([]); // Clearing history might be premature before saving the blank state
 
-  // --- CRUCIAL: Also clear the local map for remote users ---
-  // Since *we* cleared, the canvas is blank for everyone from our perspective.
-  console.log("Clearing all remote user last points after local clear.");
-  remoteUsersLastPointRef.current.clear();
-};
+      // Save the blank state as the new base for history
+      saveCanvasState(); // Saves the cleared canvas state
+
+      // Also clear the last point map for remote users
+      remoteUsersLastPointRef.current.clear();
+  }, [socket, saveCanvasState]); // Added saveCanvasState dependency
+
+
   //Loading screen
   if (loading) {
     return (
