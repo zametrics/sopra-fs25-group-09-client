@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FC, useEffect, useState, useRef, useCallback, act } from 'react';
+import React, { FC, useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useApi } from '@/hooks/useApi';
 import { Button, Spin, message, Input, Modal } from 'antd';
@@ -27,11 +27,11 @@ interface PlayerData {
   username: string;
 }
 
-interface ChatMessage {
-  username: string;
-  message: string;
-  timestamp: string;
-}
+// interface ChatMessage {
+//   username: string;
+//   message: string;
+//   timestamp: string;
+// }
 
 type Point = { x: number; y: number };
 
@@ -64,6 +64,18 @@ interface DrawEndData {
 // Type for the clear event data from the server
 interface ClearEmitData {
   userId: string;
+}
+
+// Interfaces for state request/response
+interface GetCanvasStateData {
+  requesterId: string;
+}
+// interface SendCanvasStateData {
+//   targetUserId: string;
+//   dataUrl: string;
+// }
+interface LoadCanvasStateData {
+  dataUrl: string;
 }
 
 interface RGB { r: number; g: number; b: number; }
@@ -102,10 +114,11 @@ const LobbyPage: FC = ({}) => {
   const [players, setPlayers] = useState<PlayerData[]>([]);
   // old socket implementation
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [isCanvasInitialized, setIsCanvasInitialized] = useState(false); // Prevent multiple initial loads
   //const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isLeaveModalVisible, setIsLeaveModalVisible] = useState<boolean>(false);
+  const [isLeaveModalVisible] = useState<boolean>(false);
   const [color,setColor] = useState<string>('#000000')
   const [isColorPickerVisible, setIsColorPickerVisible] = useState<boolean>(false);
   const colorPickerRef = useRef<HTMLDivElement>(null); // Ref for click outside detection
@@ -176,6 +189,27 @@ const LobbyPage: FC = ({}) => {
       });
   }, []); // Should have empty dependencies
 
+  const loadCanvasFromDataUrl = useCallback((dataUrl: string, resetHistory: boolean) => {
+    const canvas = canvasElementRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!ctx || !canvas) return;
+    const image = new Image();
+    image.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(image, 0, 0);
+        if (resetHistory) {
+            const newImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            setHistoryStack([newImageData]); // Reset history with this state
+        }
+         setIsCanvasInitialized(true); // Mark as loaded
+    };
+    image.onerror = (err) => {
+        console.error("Failed to load image for canvas state:", err);
+         setIsCanvasInitialized(true); // Still mark done to avoid retries
+    };
+    image.src = dataUrl;
+}, []); // No dependencies needed for setters
+
   // --- Draw End Emit Callback ---
   const handleDrawEndEmit = useCallback(() => {
     if (socket && activeTool === 'brush') {
@@ -199,7 +233,7 @@ const LobbyPage: FC = ({}) => {
   };
     // --- Setup useDraw Hook with Batching ---
     const THROTTLE_MILLISECONDS = 75;
-    const { canvasRef: hookCanvasRef, onMouseDown, clear } = useDraw(
+    const { canvasRef: hookCanvasRef, onMouseDown } = useDraw(
       handleLocalDraw,
       handleDrawEmitBatch,
       handleDrawEndEmit,
@@ -519,17 +553,17 @@ useEffect(() => {
  //   }
  // };
   
-  const colorPool: string[] = [
-    '#e6194b', // kräftiges Rot
-    '#3cb44b', // kräftiges Grün
-    '#4363d8', // kräftiges Blau
-    '#f58231', // kräftiges Orange
-    '#911eb4', // dunkles Violett
-    '#42d4f4', // kräftiges Türkis
-    '#f032e6', // sattes Pink
-    '#1a1aff', // Royal Blue
-    '#008080', // Teal
-  ];
+  // const colorPool: string[] = [
+  //   '#e6194b', // kräftiges Rot
+  //   '#3cb44b', // kräftiges Grün
+  //   '#4363d8', // kräftiges Blau
+  //   '#f58231', // kräftiges Orange
+  //   '#911eb4', // dunkles Violett
+  //   '#42d4f4', // kräftiges Türkis
+  //   '#f032e6', // sattes Pink
+  //   '#1a1aff', // Royal Blue
+  //   '#008080', // Teal
+  // ];
   
     // --- Color Picker Toggle Handler ---
     const toggleColorPicker = () => {
@@ -555,15 +589,17 @@ useEffect(() => {
       setActiveTool('brush'); // Select brush tool when a size is clicked
       setBrushSize(newSize);
     };
-    // --- Undo Handler  ---
+
+    // --- Undo Handler (with sync) ---
     const handleUndo = useCallback(() => {
+      // ... (Implementation from previous step: local undo + emit sync-request) ...
        if (historyStack.length === 0 || !socket) return;
        const canvas = canvasElementRef.current;
        if (!canvas) return;
        const ctx = canvas.getContext('2d');
        if (!ctx) return;
        const newHistory = historyStack.slice(0, -1);
-       setHistoryStack(newHistory); // Update state first
+       setHistoryStack(newHistory);
        const prevState = newHistory.length > 0 ? newHistory[newHistory.length - 1] : null;
        ctx.clearRect(0, 0, canvas.width, canvas.height);
        if (prevState) {
@@ -571,7 +607,7 @@ useEffect(() => {
        }
        const restoredDataUrl = canvas.toDataURL('image/png');
        socket.emit('sync-request', { dataUrl: restoredDataUrl });
-   }, [historyStack, socket]);
+ }, [historyStack, socket]);
 
   
   // --- Helper: Hex to RGBA ---
@@ -620,56 +656,83 @@ useEffect(() => {
     }
 
 
-  const usernameColorsRef = useRef<{ [key: string]: string }>({});
+  // const usernameColorsRef = useRef<{ [key: string]: string }>({});
   
-  function getUsernameColor(username: string): string {
-  const usernameColors = usernameColorsRef.current;
+//   function getUsernameColor(username: string): string {
+//   const usernameColors = usernameColorsRef.current;
 
-  if (!username || typeof username !== 'string') return 'black';
+//   if (!username || typeof username !== 'string') return 'black';
 
-  if (usernameColors[username]) {
-    return usernameColors[username];
-  }
+//   if (usernameColors[username]) {
+//     return usernameColors[username];
+//   }
 
-  const availableColors = colorPool.filter(
-    (color) => !Object.values(usernameColors).includes(color)
-  );
+//   const availableColors = colorPool.filter(
+//     (color) => !Object.values(usernameColors).includes(color)
+//   );
 
-  const newColor =
-    availableColors.length > 0
-      ? availableColors[Math.floor(Math.random() * availableColors.length)]
-      : '#' + Math.floor(Math.random() * 16777215).toString(16);
+//   const newColor =
+//     availableColors.length > 0
+//       ? availableColors[Math.floor(Math.random() * availableColors.length)]
+//       : '#' + Math.floor(Math.random() * 16777215).toString(16);
 
-  usernameColors[username] = newColor;
-  return newColor;
-}
+//   usernameColors[username] = newColor;
+//   return newColor;
+// }
 
 
+// --- Socket useEffect ---
 useEffect(() => {
-  const socketIo = io('http://localhost:3001', {
-    path: '/api/socket',
-  });
+  let isMounted = true;
+  let socketIo: Socket | null = null;
 
-  setSocket(socketIo);
-
-  // Warten, bis wir unseren Username haben und uns in der Lobby anmelden
-  const fetchCurrentUsername = async () => {
-    try {
-      const userData = await apiService.get<PlayerData>(`/users/${currentUserId}`);
-      return userData.username;
-    } catch (error) {
-      console.error('Error fetching username:', error);
-      return 'Guest';
-    }
+  // Helper to fetch username (replace with your actual implementation)
+  const fetchCurrentUsername = async (): Promise<string> => {
+      try {
+          // Assuming you have a way to get the username, maybe from apiService or localStorage
+          const userData = await apiService.get<PlayerData>(`/users/${currentUserId}`);
+          return userData?.username || 'Player';
+      } catch {
+          return 'Player';
+      }
   };
+//http:/localhost:3001 
+  const setupSocket = async () => {
+       socketIo = io('https://socket-server-826256454260.europe-west1.run.app/', { path: '/api/socket' }); // Use your server URL
+       setSocket(socketIo);
 
-  const joinLobby = async () => {
-    const username = await fetchCurrentUsername();
-    socketIo.emit('joinLobby', { lobbyId, userId: currentUserId, username });
-    console.log('Emitted joinLobby:', { lobbyId, userId: currentUserId, username });
-  };
+       // --- Join Logic ---
+       const username = await fetchCurrentUsername();
+       socketIo.emit('joinLobby', { lobbyId, userId: currentUserId, username }); // Uses existing server handler
+       console.log('Emitted joinLobby');
 
-  joinLobby();
+       // --- Request initial state AFTER joining ---
+       if (!isCanvasInitialized && isMounted) {
+           console.log("Requesting initial canvas state...");
+           socketIo.emit('request-initial-state');
+       }
+
+      // --- Listener for receiving the final initial state ---
+      socketIo.on('load-canvas-state', (data: LoadCanvasStateData) => {
+           if (!isCanvasInitialized && data.dataUrl && isMounted) {
+              console.log("Received load-canvas-state. Loading canvas...");
+              loadCanvasFromDataUrl(data.dataUrl, true); // Load and reset history
+           }
+      });
+
+      // --- Listener to PROVIDE state if requested ---
+      socketIo.on('get-canvas-state', (data: GetCanvasStateData) => {
+          // Check if this client should respond (e.g., not the requester themselves, although server handles this)
+          // Also ensure canvas is ready and socket exists
+          if (canvasElementRef.current && socketIo) {
+              console.log(`Received request to provide canvas state for ${data.requesterId}. Sending...`);
+              const currentDataUrl = canvasElementRef.current.toDataURL('image/png');
+              socketIo.emit('send-canvas-state', {
+                  targetUserId: data.requesterId,
+                  dataUrl: currentDataUrl
+              });
+          }
+      });
 
     // --- Listener for INCOMING draw batches ---
     socketIo.on('draw-line-batch', (data: DrawBatchEmitDataWithUser) => {
@@ -756,21 +819,8 @@ useEffect(() => {
 
        // --- Listener for Sync Canvas (Resets history with synced state) ---
        socketIo.on('sync-canvas', (data: SyncCanvasData) => {
-        console.log(`Received sync-canvas request from ${data.userId}`);
-        const canvas = canvasElementRef.current;
-        const ctx = canvas?.getContext('2d');
-        if (!ctx || !canvas) return;
-        const image = new Image();
-        image.onload = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(image, 0, 0);
-            const newImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            // Reset history stack with ONLY this synced state
-            setHistoryStack([newImageData]);
-        };
-        image.onerror = (err) => { console.error("Failed to load image for canvas sync:", err); };
-        image.src = data.dataUrl;
-    });
+        if (isMounted) { loadCanvasFromDataUrl(data.dataUrl, true); }
+   });
 
   socketIo.on('playerLeft', (leftPlayer: { id: number | string }) => { // Use the type emitted by your server
     const leftPlayerId = String(leftPlayer.id); // Ensure string key for map
@@ -788,46 +838,45 @@ socketIo.on('lobbyState', (lobbyData: { players: PlayerData[] }) => {
   // You could potentially pre-populate the remoteUsersLastPointRef map here
   // if you had info about ongoing drawings, but usually starting fresh is fine.
 });
-
-return () => {
-  console.log("Disconnecting socket and cleaning up listeners.");
-  socketIo.off('draw-line-batch'); // Remove specific listener
-  socketIo.off('draw-end');
-  socketIo.off('clear');
-  socketIo.off('fill-area');
-  socketIo.off('playerLeft');
-  socketIo.off('lobbyState');
-  socketIo.off('sync-canvas');
-  socketIo.disconnect();
-  setSocket(null);
-  remoteUsersLastPointRef.current.clear(); // Clear the map on component unmount
+// --- Initial empty canvas state ---
+if (canvasElementRef.current && historyStack.length === 0 && !isCanvasInitialized) {
+  saveCanvasState();
+}
 };
-// Ensure all dependencies that *change* are included.
-// `clear` and `currentUserId` are important here.
-}, [lobbyId, apiService, currentUserId, clear, activeTool]);
+setupSocket();
 
+// --- Cleanup ---
+return () => {
+  isMounted = false;
+  if (socketIo) {
+      // Unregister all listeners
+      socketIo.off('load-canvas-state');
+      socketIo.off('get-canvas-state');
+      socketIo.off('clear');
+      socketIo.off('fill-area');
+      socketIo.off('sync-canvas');
+      // ... unregister other drawing listeners ...
+      socketIo.disconnect();
+  }
+  setSocket(null);
+};
+// Only include dependencies that, if changed, require the effect to re-run (like lobbyId)
+// Callbacks defined with useCallback outside usually don't need to be deps unless their own deps change.
+}, [lobbyId, apiService, currentUserId, loadCanvasFromDataUrl]); // `loadCanvasFromDataUrl` is stable
 
-    // --- Local Clear Function (Saves the blank state) ---
+     // --- Local Clear Function ---
     const socketClearCanvas = useCallback(() => {
-      if (socket) {
-          console.log("Emitting clear event");
-          socket.emit('clear');
-      }
-      // Clear local canvas
-      const canvas = canvasElementRef.current;
-      const ctx = canvas?.getContext('2d');
-      if (!ctx || !canvas) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Reset history locally
-      // setHistoryStack([]); // Clearing history might be premature before saving the blank state
-
-      // Save the blank state as the new base for history
-      saveCanvasState(); // Saves the cleared canvas state
-
-      // Also clear the last point map for remote users
-      remoteUsersLastPointRef.current.clear();
-  }, [socket, saveCanvasState]); // Added saveCanvasState dependency
+         // ... (Implementation: emit clear, clear locally, saveCanvasState) ...
+         if (socket) {
+             socket.emit('clear');
+         }
+         const canvas = canvasElementRef.current;
+         const ctx = canvas?.getContext('2d');
+         if (!ctx || !canvas) return;
+         ctx.clearRect(0, 0, canvas.width, canvas.height);
+         remoteUsersLastPointRef.current.clear();
+         saveCanvasState(); // Save the blank state
+    }, [socket, saveCanvasState]);
 
 
   //Loading screen

@@ -22,8 +22,8 @@ export const drawLine = ({
   ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = color; // Use fillStyle for pixel-perfect squares/circles
 
-  const radius = Math.max(1, Math.floor(brushSize / 2)); // Ensure radius is at least 1
-  const radiusSq = radius * radius; // Pre-calculate squared radius
+  //const radius = Math.max(1, Math.floor(brushSize / 2)); // Ensure radius is at least 1
+  // const radiusSq = radius * radius; // Pre-calculate squared radius
 
   // Function to draw a filled circle (approximated by squares) at a point
   const drawPixelatedCircle = (centerX: number, centerY: number) => {

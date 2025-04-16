@@ -19,6 +19,8 @@ const io = new Server(server, {
 const lobbies = new Map(); // Map<lobbyId, Map<userId, { socketId, username }>>
 const socketToLobby = new Map(); // Map<socketId, { lobbyId, userId }>
 
+const pendingStateRequests = new Map();
+
 io.on('connection', (socket) => {
   console.log(`Connected: ${socket.id}`);
 
@@ -129,6 +131,69 @@ socket.on('joinLobby', ({ lobbyId, userId, username }) => {
 
   
   //implementation of drawing board
+
+  // --- NEW: Handle request for initial state ---
+  socket.on('request-initial-state', () => {
+    const playerInfo = socketToLobby.get(socket.id);
+    if (!playerInfo) {
+         console.warn(`Received request-initial-state from socket ${socket.id} with no lobby info.`);
+         return;
+    }
+    const { lobbyId, userId: requesterId } = playerInfo;
+    const lobby = lobbies.get(lobbyId);
+
+    if (!lobby || lobby.size <= 1) {
+        console.log(`Lobby ${lobbyId} has only 1 player, no state to request.`);
+        return; // No one else to ask
+    }
+
+    // Store requester info temporarily
+    pendingStateRequests.set(requesterId, socket.id);
+    console.log(`Stored pending state request for ${requesterId} [${socket.id}]`);
+
+    // Broadcast request to OTHERS in the lobby
+    console.log(`Broadcasting 'get-canvas-state' to lobby ${lobbyId} for requester ${requesterId}`);
+    socket.to(lobbyId).emit('get-canvas-state', { requesterId: requesterId });
+
+    // Optional: Add a timeout to clear the pending request if no one responds
+    setTimeout(() => {
+        if (pendingStateRequests.has(requesterId)) {
+            console.log(`State request for ${requesterId} timed out.`);
+            pendingStateRequests.delete(requesterId);
+        }
+    }, 10000); // 10 second timeout
+});
+
+// --- NEW: Handle receiving state from existing client ---
+socket.on('send-canvas-state', (data) => { // Expects { targetUserId, dataUrl }
+    const senderInfo = socketToLobby.get(socket.id); // Optional: Log who sent it
+    const senderUserId = senderInfo?.userId || 'Unknown';
+
+    // Basic Validation
+    if (!data || typeof data.targetUserId !== 'string' || typeof data.dataUrl !== 'string' || !data.dataUrl.startsWith('data:image/')) {
+        console.error(`Received invalid send-canvas-state data from ${senderUserId}:`, data);
+        return;
+    }
+
+    // Check if there's a pending request for this targetUserId
+    if (pendingStateRequests.has(data.targetUserId)) {
+        const targetSocketId = pendingStateRequests.get(data.targetUserId);
+
+        console.log(`Received canvas state from ${senderUserId} for ${data.targetUserId}. Forwarding to ${targetSocketId}.`);
+
+        // Send the state DIRECTLY to the original requester's socket
+        io.to(targetSocketId).emit('load-canvas-state', { dataUrl: data.dataUrl });
+
+        // CRITICAL: Remove the pending request immediately after fulfilling it
+        pendingStateRequests.delete(data.targetUserId);
+         console.log(`Removed pending state request for ${data.targetUserId}.`);
+
+    } else {
+        // Ignore if no pending request (already fulfilled or timed out)
+         console.log(`Ignoring received canvas state from ${senderUserId} for ${data.targetUserId} (no pending request found).`);
+    }
+});
+
 
   socket.on('draw-line-batch', (data) => { // data is DrawBatchEmitData
     const playerInfo = socketToLobby.get(socket.id);

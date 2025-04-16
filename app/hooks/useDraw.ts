@@ -8,14 +8,13 @@ interface DrawBatchData { points: Point[] }
 
 // --- Simple Throttle Utility ---
 // (Leading edge: fires immediately, then waits for cooldown)
-function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T {
+function throttle<T extends () => void>(func: T, limit: number): T {
   let inThrottle: boolean;
-  let lastResult: any; // To potentially store last result if needed, though void here
 
-  return function(this: any, ...args: Parameters<T>): void {
-    const context = this;
+  return function(this: ThisParameterType<T>, ...args: Parameters<T>): void {
+    
     if (!inThrottle) {
-      func.apply(context, args); // Execute the function
+      func.apply(this, args); // Execute the function
       inThrottle = true;
       setTimeout(() => inThrottle = false, limit); // Start cooldown
     }
