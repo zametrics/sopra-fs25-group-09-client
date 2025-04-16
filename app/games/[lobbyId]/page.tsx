@@ -33,13 +33,19 @@ interface ChatMessage {
   timestamp: string;
 }
 
+type Point = { x: number; y: number };
+interface DrawBatchData { points: Point[] };
+interface DrawBatchEmitData extends DrawBatchData { // Type for received data
+    color: string;
+    brushSize: number;
+}
+
 interface DrawLineProps {
   prevPoint: Point | null;
   currentPoint: Point;
   color: string;
   brushSize: number;
 }
-
 
 interface RGB { r: number; g: number; b: number; }
 
@@ -63,7 +69,6 @@ const MAX_HISTORY_SIZE = 20; // Limit undo steps to prevent memory issues
 const LobbyPage: FC = ({}) => {
   const [activeTool, setActiveTool] = useState<Tool>('brush'); // Default to brush
   const [brushSize, setBrushSize] = useState<number>(brushSizes.size2); // Default size
-  const { canvasRef: hookCanvasRef, onMouseDown, clear } = useDraw(createLine);
   const params = useParams();
   const lobbyId = params.lobbyId as string;
   const apiService = useApi();
@@ -90,7 +95,6 @@ const LobbyPage: FC = ({}) => {
   const [customCursorPos, setCustomCursorPos] = useState({ x: 0, y: 0 });
   const [isCustomCursorVisible, setIsCustomCursorVisible] = useState(false);
   const [useCustomElementCursor, setUseCustomElementCursor] = useState(false); // Flag to control which cursor system to use
-  // --- Combine refs: One for direct access, one for the hook ---
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     // Get mouse position relative to the page
     setCustomCursorPos({ x: e.pageX, y: e.pageY });
@@ -101,23 +105,56 @@ const LobbyPage: FC = ({}) => {
     }
   };
 
+
+  // 1. Callback for IMMEDIATE LOCAL drawing
+  const handleLocalDraw = useCallback(({ ctx, currentPoint, prevPoint }: Draw) => {
+    // Use current color and brushSize state for local drawing
+    drawLine({ prevPoint, currentPoint, ctx, color, brushSize });
+  }, [color, brushSize]); // Dependencies: re-create if color or size changes
+
+    // --- Callback for THROTTLED BATCH EMISSION ---
+  const handleDrawEmitBatch = useCallback((batchData: DrawBatchData) => {
+      // console.log(`Emitting batch of ${batchData.points.length} points`); // Debug
+      if (socket && activeTool === 'brush' && batchData.points.length > 0) {
+          socket.emit('draw-line-batch', { // Use a distinct event name for batches
+              points: batchData.points,
+              color,    // Add current color
+              brushSize // Add current brush size
+          });
+      }
+  }, [socket, color, brushSize, activeTool]);
+
+
   const handleCanvasMouseEnter = () => {
     // Show custom cursor only if the fill tool is active
     if (useCustomElementCursor) {
       setIsCustomCursorVisible(true);
     }
   };
+    // --- Setup useDraw Hook with Batching ---
+    const THROTTLE_MILLISECONDS = 10;
+    const { canvasRef: hookCanvasRef, onMouseDown, clear } = useDraw(
+        handleLocalDraw,
+        handleDrawEmitBatch, // Pass the batch emit handler
+        THROTTLE_MILLISECONDS
+    );
+
 
   const handleCanvasMouseLeave = () => {
     // Always hide custom cursor when leaving the canvas
     setIsCustomCursorVisible(false);
   };
+
   const combinedCanvasRef = useCallback((node: HTMLCanvasElement | null) => {
-    // Set the ref for direct access
-    canvasElementRef.current = node;
-    // Call the ref callback from the useDraw hook
-    hookCanvasRef(node);
-  }, [hookCanvasRef]);
+    canvasElementRef.current = node; // For direct access (undo/history)
+    hookCanvasRef(node);            // For useDraw hook
+    // Ensure canvas dimensions are set after node exists (could also be done in useDraw's ref callback)
+    if (node) {
+        node.width = 650; // Or dynamic size
+        node.height = 500;
+    }
+  }, [hookCanvasRef]); // Dependency on hookCanvasRef
+
   // --- Save Canvas State Function ---
   const saveCanvasState = useCallback(() => {
     const canvas = canvasElementRef.current;
@@ -146,19 +183,16 @@ const LobbyPage: FC = ({}) => {
 }, []);
 
 
-  // --- Combined MouseDown Handler ---
-  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    // 1. Save state regardless of tool (simplest approach for undo)
-    saveCanvasState();
+const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  saveCanvasState(); // Save state before action
 
-    // 2. Execute tool-specific logic
-    if (activeTool === 'brush') {
-      onMouseDown(e); // Use the mouse down handler from useDraw
-    } else if (activeTool === 'fill') { // NO extra brace after this parenthesis
-      handleFillMouseDown(e); // Call the new fill handler
-    }
-    // Removed the extra closing brace that would correspond to the removed opening one
-  };
+  if (activeTool === 'brush') {
+    onMouseDown(e); // Use the hook's mousedown handler
+  } else if (activeTool === 'fill') {
+    handleFillMouseDown(e); // Keep existing fill logic
+  }
+};
+
 
 // --- NEW: Fill Tool MouseDown Handler ---
 const handleFillMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -593,23 +627,66 @@ useEffect(() => {
 
   setSocket(socketIo);
 
-  socketIo.on('draw-line', ({ prevPoint, currentPoint, color, brushSize }: DrawLineProps) => {
-    console.log("nigga drawing");
-    const canvas = canvasElementRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    drawLine({ prevPoint, currentPoint, ctx, color, brushSize });
+  // Warten, bis wir unseren Username haben und uns in der Lobby anmelden
+  const fetchCurrentUsername = async () => {
+    try {
+      const userData = await apiService.get<PlayerData>(`/users/${currentUserId}`);
+      return userData.username;
+    } catch (error) {
+      console.error('Error fetching username:', error);
+      return 'Guest';
+    }
+  };
+
+  const joinLobby = async () => {
+    const username = await fetchCurrentUsername();
+    socketIo.emit('joinLobby', { lobbyId, userId: currentUserId, username });
+    console.log('Emitted joinLobby:', { lobbyId, userId: currentUserId, username });
+  };
+
+  joinLobby();
+
+    // --- Listener for INCOMING draw batches ---
+    socketIo.on('draw-line-batch', (data: DrawBatchEmitData) => {
+      const canvas = canvasElementRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      console.log("received drawing information from websocket server")
+      // console.log(`Received batch of ${data.points.length} points`); // Debug
+
+      // Iterate through the received points and draw segments
+      let prevPointInBatch: Point | null = null;
+      for (const currentPoint of data.points) {
+           // The first point in the batch might connect to the *last* point
+           // of the *previous* batch from this user, but we don't track that state here.
+           // So, the first point is drawn as a dot (prevPoint=null),
+           // and subsequent points connect to the previous one *within the batch*.
+           drawLine({
+               prevPoint: prevPointInBatch, // Use the previous point *from this batch*
+               currentPoint: currentPoint,
+               ctx,
+               color: data.color,       // Use color from received data
+               brushSize: data.brushSize // Use size from received data
+           });
+           prevPointInBatch = currentPoint; // Update for the next segment in the batch
+      }
   });
 
-  socketIo.on('clear', () => {
-    console.log("tried to clear");
-    clear(); // Call the clear function from the hook
-    console.log("chakala");
-    setHistoryStack([]); // Clear the undo history
-  })
+    // --- Listener for INCOMING clear events ---
+    socketIo.on('clear', () => {
+      console.log("received clear instruction from websocket server");
+      clear(); // Call the clear function from the hook
+      setHistoryStack([]); // Also clear local undo history
+    });
 
-}, [canvasElementRef]);
+    return () => {
+      console.log("Disconnecting socket");
+      socketIo.disconnect();
+      setSocket(null);
+    };
+}, [clear, apiService, currentUserId, lobbyId]);
+
 
 function createLine({ prevPoint, currentPoint, ctx }: Draw) {
   if (socket) {
@@ -620,11 +697,13 @@ function createLine({ prevPoint, currentPoint, ctx }: Draw) {
 
 const socketClearCanvas = () => {
   if (socket) {
-    socket.emit('clear');
+    console.log("Emitting clear");
+    socket.emit('clear'); // Notify others
   }
-  clear(); // Call the clear function from the hook
-  setHistoryStack([]); // Clear the undo history
-}
+  clear(); // Clear local canvas via useDraw hook
+  setHistoryStack([]); // Clear local undo history
+  saveCanvasState(); // Optional: Save the blank state as the new history base
+};
 
   //Loading screen
   if (loading) {
@@ -714,18 +793,15 @@ const socketClearCanvas = () => {
 
         {/* Drawing Canvas */}
         <canvas
-             ref={combinedCanvasRef}
-             onMouseDown={handleCanvasMouseDown} // Your existing drawing logic
-             // Apply the basic cursor style ('none' or the brush SVG)
-             style={{ cursor: cursorStyle }}
-             // Add mouse tracking handlers
-             onMouseMove={handleCanvasMouseMove}
-             onMouseEnter={handleCanvasMouseEnter}
-             onMouseLeave={handleCanvasMouseLeave}
-             className="drawing-canvas"
-             width={650}
-             height={500}
-           ></canvas>
+         ref={combinedCanvasRef}
+         onMouseDown={handleCanvasMouseDown} // Use the combined handler
+         style={{ cursor: cursorStyle }}
+         onMouseMove={handleCanvasMouseMove}
+         onMouseEnter={handleCanvasMouseEnter}
+         onMouseLeave={handleCanvasMouseLeave}
+         className="drawing-canvas"
+         // width/height attributes are now preferably set in combinedCanvasRef or useDraw
+       ></canvas>
 
 
         {/* Drawing Tools */}
@@ -815,13 +891,13 @@ const socketClearCanvas = () => {
             </button>
 
              {/* Clear Tool (Trash Can) */}
-            <button
-                className="tool-button tool-icon"
-                aria-label="Clear Canvas"
-                onClick={socketClearCanvas}
-            >
-               <img src="/icons/trash-tool-black.svg" alt="Clear" className="tool-icon-image"/>
-            </button>
+             <button
+         className="tool-button tool-icon"
+         aria-label="Clear Canvas"
+         onClick={socketClearCanvas} // <<< Use the emitting clear function
+       >
+          <img src="/icons/trash-tool-black.svg" alt="Clear" className="tool-icon-image"/>
+       </button>
           </div>
         </div> {/* End drawing-tools-arrangement */}
       </div> {/* End game-box */}

@@ -130,14 +130,28 @@ socket.on('joinLobby', ({ lobbyId, userId, username }) => {
   
   //implementation of drawing board
 
-  socket.on('draw-line', ({prevPoint,currentPoint, color, brushSize}) => {
-    socket.broadcast.emit('draw-line', {prevPoint, currentPoint, color, brushSize});
-    
-  });
+  socket.on('draw-line-batch', (data) => { // data is DrawBatchEmitData
+    const info = socketToLobby.get(socket.id);
+    if (!info) return;
+    const { lobbyId } = info;
 
-  socket.on('clear', () => {
-    console.log('Received clear from client, broadcasting...');
-    socket.broadcast.emit('clear');
+    // Basic validation (optional but recommended)
+    if (!data || !Array.isArray(data.points) || typeof data.color !== 'string' || typeof data.brushSize !== 'number') {
+        console.error("Received invalid draw-line-batch data from socket:", socket.id);
+        return;
+    }
+
+    // Relay the batch to other players in the same lobby
+    // console.log(`Relaying batch of ${data.points.length} points to lobby ${lobbyId} from ${socket.id}`); // Debug
+    socket.to(lobbyId).emit('draw-line-batch', data);
+  });
+  
+   socket.on('clear', () => {
+    const info = socketToLobby.get(socket.id);
+    if (!info) return;
+    const { lobbyId } = info;
+    // console.log(`Relaying clear to lobby ${lobbyId} from ${socket.id}`); // Debug
+    socket.to(lobbyId).emit('clear');
   });
 
 });
