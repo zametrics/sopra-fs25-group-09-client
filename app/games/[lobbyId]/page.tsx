@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FC, useEffect, useState, useRef, useCallback } from 'react';
+import React, { FC, useEffect, useState, useRef, useCallback, act } from 'react';
 import { useParams } from 'next/navigation';
 import { useApi } from '@/hooks/useApi';
 import { Button, Spin, message, Input, Modal } from 'antd';
@@ -34,10 +34,16 @@ interface ChatMessage {
 }
 
 type Point = { x: number; y: number };
+
 interface DrawBatchData { points: Point[] };
+
 interface DrawBatchEmitData extends DrawBatchData { // Type for received data
     color: string;
     brushSize: number;
+}
+
+interface DrawBatchEmitDataWithUser extends DrawBatchEmitData {
+  userId: string; // Assuming userId from localStorage is a string
 }
 
 interface DrawLineProps {
@@ -45,6 +51,16 @@ interface DrawLineProps {
   currentPoint: Point;
   color: string;
   brushSize: number;
+}
+
+// --- NEW: Interface for Draw End event ---
+interface DrawEndData {
+  userId: string;
+}
+
+// Type for the clear event data from the server
+interface ClearEmitData {
+  userId: string;
 }
 
 interface RGB { r: number; g: number; b: number; }
@@ -90,6 +106,7 @@ const LobbyPage: FC = ({}) => {
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null); // Ref to access the canvas element directly for ImageData
   const wordToGuess = "daniel"; //PLACEHOLDER WORD
   const currentUserId = typeof window !== "undefined" ? localStorage.getItem("userId") : "";
+  const remoteUsersLastPointRef = useRef<Map<string, Point | null>>(new Map());
   const localAvatarUrl = typeof window !== "undefined" ? localStorage.getItem("avatarUrl") || "/icons/avatar.png" : "/icons/avatar.png";
   const [cursorStyle, setCursorStyle] = useState<string>('crosshair');
   const [customCursorPos, setCustomCursorPos] = useState({ x: 0, y: 0 });
@@ -124,6 +141,13 @@ const LobbyPage: FC = ({}) => {
       }
   }, [socket, color, brushSize, activeTool]);
 
+  // --- NEW: Draw End Emit Callback ---
+  const handleDrawEndEmit = useCallback(() => {
+    if (socket && activeTool === 'brush') { // Only emit if brush was active
+         // console.log("Emitting draw-end"); // Debug
+         socket.emit('draw-end'); // No data needed, server adds userId
+    }
+}, [socket, activeTool]);
 
   const handleCanvasMouseEnter = () => {
     // Show custom cursor only if the fill tool is active
@@ -132,10 +156,11 @@ const LobbyPage: FC = ({}) => {
     }
   };
     // --- Setup useDraw Hook with Batching ---
-    const THROTTLE_MILLISECONDS = 10;
+    const THROTTLE_MILLISECONDS = 75;
     const { canvasRef: hookCanvasRef, onMouseDown, clear } = useDraw(
         handleLocalDraw,
         handleDrawEmitBatch, // Pass the batch emit handler
+        handleDrawEndEmit,
         THROTTLE_MILLISECONDS
     );
 
@@ -647,64 +672,137 @@ useEffect(() => {
   joinLobby();
 
     // --- Listener for INCOMING draw batches ---
-    socketIo.on('draw-line-batch', (data: DrawBatchEmitData) => {
+    socketIo.on('draw-line-batch', (data: DrawBatchEmitDataWithUser) => {
+      console.log("received drawing information from socket server")
       const canvas = canvasElementRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
-      console.log("received drawing information from websocket server")
-      // console.log(`Received batch of ${data.points.length} points`); // Debug
+
+      const drawerUserId = data.userId;
+
+      // IMPORTANT: Normally, socket.to(lobbyId) excludes the sender.
+      // If your server logic changes to use io.to(lobbyId),
+      // you MUST uncomment the check below to avoid drawing your own lines twice.
+      // if (drawerUserId === currentUserId) {
+      //     // console.log("Ignoring own draw batch echo"); // Debug
+      //     return;
+      // }
+
+      // Ensure points exist
+       if (!data.points || data.points.length === 0) {
+          // console.log(`Received empty batch from ${drawerUserId}, ignoring.`); // Debug
+          return;
+      }
+
+      // Retrieve the last known point for this specific user
+      const lastPointForUser = remoteUsersLastPointRef.current.get(drawerUserId) || null;
+      let prevPointForDrawing: Point | null = lastPointForUser; // Start with the stored point
+
+      // console.log(`Drawing batch from ${drawerUserId}. Connecting from:`, prevPointForDrawing, `Points: ${data.points.length}`); // Debug
 
       // Iterate through the received points and draw segments
-      let prevPointInBatch: Point | null = null;
       for (const currentPoint of data.points) {
-           // The first point in the batch might connect to the *last* point
-           // of the *previous* batch from this user, but we don't track that state here.
-           // So, the first point is drawn as a dot (prevPoint=null),
-           // and subsequent points connect to the previous one *within the batch*.
+           // Draw the segment connecting the previous point to the current one
            drawLine({
-               prevPoint: prevPointInBatch, // Use the previous point *from this batch*
+               prevPoint: prevPointForDrawing, // Use the evolving previous point
                currentPoint: currentPoint,
                ctx,
-               color: data.color,       // Use color from received data
-               brushSize: data.brushSize // Use size from received data
+               color: data.color,
+               brushSize: data.brushSize
            });
-           prevPointInBatch = currentPoint; // Update for the next segment in the batch
+           // Update the previous point for the *next* segment within this batch
+           prevPointForDrawing = currentPoint;
       }
+
+      // --- CRUCIAL: Update the last known point for this user ---
+      // Store the very last point from this batch
+      const finalPointInBatch = data.points[data.points.length - 1];
+      remoteUsersLastPointRef.current.set(drawerUserId, finalPointInBatch);
+      // console.log(`Updated last point for ${drawerUserId} to:`, finalPointInBatch); // Debug
   });
 
-    // --- Listener for INCOMING clear events ---
-    socketIo.on('clear', () => {
-      console.log("received clear instruction from websocket server");
-      clear(); // Call the clear function from the hook
+
+    // --- Listener for INCOMING clear events ----
+    socketIo.on('clear', (data: ClearEmitData) => {
+      const clearerUserId = data.userId;
+      console.log(`Received clear instruction from user ${clearerUserId}`);
+
+      // Clear the entire canvas locally
+      clear(); // Call the clear function from the useDraw hook
       setHistoryStack([]); // Also clear local undo history
-    });
 
-    return () => {
-      console.log("Disconnecting socket");
-      socketIo.disconnect();
-      setSocket(null);
-    };
-}, [clear, apiService, currentUserId, lobbyId]);
+      // --- CRUCIAL: Reset the last known point for the user who cleared ---
+      // This prevents incorrect connections if they start drawing immediately after clearing.
+      // Also reset for ALL users, as the canvas is blank for everyone.
+      console.log("Clearing all remote user last points due to canvas clear.");
+      remoteUsersLastPointRef.current.clear(); // Clear the entire map
+
+      // If you only wanted to reset the clearer's last point:
+      // remoteUsersLastPointRef.current.set(clearerUserId, null);
+      // console.log(`Reset last point state for clearer ${clearerUserId}`);
+  });
+
+  // --- NEW: Listener for INCOMING Draw End ---
+  socketIo.on('draw-end', (data: DrawEndData) => {
+    const enderUserId = data.userId;
+    // console.log(`Received draw-end from user ${enderUserId}`); // Debug
+    // Reset the last known point for this user, so the next line doesn't connect
+    remoteUsersLastPointRef.current.set(enderUserId, null);
+     // console.log(`Reset last point for ${enderUserId} to null`); // Debug
+});
+
+  socketIo.on('playerLeft', (leftPlayer: { id: number | string }) => { // Use the type emitted by your server
+    const leftPlayerId = String(leftPlayer.id); // Ensure string key for map
+    if (remoteUsersLastPointRef.current.has(leftPlayerId)) {
+        remoteUsersLastPointRef.current.delete(leftPlayerId);
+        console.log(`Cleared last point state for user ${leftPlayerId} who left.`);
+    }
+});
+
+// Handle initial lobby state if needed (e.g., for players already present)
+socketIo.on('lobbyState', (lobbyData: { players: PlayerData[] }) => {
+  // console.log("Received initial lobby state:", lobbyData);
+  // Update players list if necessary
+  setPlayers(lobbyData.players);
+  // You could potentially pre-populate the remoteUsersLastPointRef map here
+  // if you had info about ongoing drawings, but usually starting fresh is fine.
+});
+
+return () => {
+  console.log("Disconnecting socket and cleaning up listeners.");
+  socketIo.off('draw-line-batch'); // Remove specific listener
+  socketIo.off('draw-end');
+  socketIo.off('clear');
+  socketIo.off('playerLeft');
+  socketIo.off('lobbyState');
+  // Remove other listeners...
+  socketIo.disconnect();
+  setSocket(null);
+  remoteUsersLastPointRef.current.clear(); // Clear the map on component unmount
+};
+// Ensure all dependencies that *change* are included.
+// `clear` and `currentUserId` are important here.
+}, [lobbyId, apiService, currentUserId, clear, activeTool]);
 
 
-function createLine({ prevPoint, currentPoint, ctx }: Draw) {
-  if (socket) {
-    socket.emit('draw-line', { prevPoint, currentPoint, color, brushSize });
-  }
-  drawLine({ prevPoint, currentPoint, ctx, color, brushSize });
-}
 
 const socketClearCanvas = () => {
   if (socket) {
-    console.log("Emitting clear");
-    socket.emit('clear'); // Notify others
+      console.log("Emitting clear event");
+      // No need to send userId explicitly, server adds it based on socket.id
+      socket.emit('clear');
   }
+  // Clear locally IMMEDIATELY
   clear(); // Clear local canvas via useDraw hook
   setHistoryStack([]); // Clear local undo history
-  saveCanvasState(); // Optional: Save the blank state as the new history base
-};
+  saveCanvasState(); // Optional: Save the blank state
 
+  // --- CRUCIAL: Also clear the local map for remote users ---
+  // Since *we* cleared, the canvas is blank for everyone from our perspective.
+  console.log("Clearing all remote user last points after local clear.");
+  remoteUsersLastPointRef.current.clear();
+};
   //Loading screen
   if (loading) {
     return (
@@ -793,15 +891,14 @@ const socketClearCanvas = () => {
 
         {/* Drawing Canvas */}
         <canvas
-         ref={combinedCanvasRef}
-         onMouseDown={handleCanvasMouseDown} // Use the combined handler
-         style={{ cursor: cursorStyle }}
-         onMouseMove={handleCanvasMouseMove}
-         onMouseEnter={handleCanvasMouseEnter}
-         onMouseLeave={handleCanvasMouseLeave}
-         className="drawing-canvas"
-         // width/height attributes are now preferably set in combinedCanvasRef or useDraw
-       ></canvas>
+                ref={combinedCanvasRef}
+                onMouseDown={handleCanvasMouseDown} // Use the combined handler
+                style={{ cursor: cursorStyle }}
+                onMouseMove={handleCanvasMouseMove}
+                onMouseEnter={handleCanvasMouseEnter}
+                onMouseLeave={handleCanvasMouseLeave}
+                className="drawing-canvas"
+        ></canvas>
 
 
         {/* Drawing Tools */}
@@ -892,12 +989,12 @@ const socketClearCanvas = () => {
 
              {/* Clear Tool (Trash Can) */}
              <button
-         className="tool-button tool-icon"
-         aria-label="Clear Canvas"
-         onClick={socketClearCanvas} // <<< Use the emitting clear function
-       >
-          <img src="/icons/trash-tool-black.svg" alt="Clear" className="tool-icon-image"/>
-       </button>
+                className="tool-button tool-icon"
+                aria-label="Clear Canvas"
+                onClick={socketClearCanvas} // <<< Use the emitting clear function
+             >
+               <img src="/icons/trash-tool-black.svg" alt="Clear" className="tool-icon-image"/>
+             </button>
           </div>
         </div> {/* End drawing-tools-arrangement */}
       </div> {/* End game-box */}

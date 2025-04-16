@@ -34,7 +34,8 @@ export interface DrawEmitData {
 export const useDraw = (
     onDrawLocal: ({ ctx, currentPoint, prevPoint }: Draw) => void, // For immediate local rendering
     onDrawEmitBatch: (data: DrawBatchData) => void, // For throttled BATCH emission
-    throttleInterval: number = 100 // e.g., 100ms = 10 emits/sec
+    onDrawEndEmit: () => void, // <<< NEW: Callback for mouse up
+    throttleInterval: number = 75 // e.g., 100ms = 10 emits/sec
 ) => {
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef(false);
@@ -45,9 +46,8 @@ export const useDraw = (
   const throttledEmitBatch = useCallback(
     throttle(() => {
       if (pointBufferRef.current.length > 0) {
-        // console.log(`Throttled Emit: Sending ${pointBufferRef.current.length} points`); // Debug
-        onDrawEmitBatch({ points: [...pointBufferRef.current] }); // Send a copy of the buffer
-        pointBufferRef.current = []; // Clear the buffer AFTER sending
+        onDrawEmitBatch({ points: [...pointBufferRef.current] });
+        pointBufferRef.current = [];
       }
     }, throttleInterval),
     [onDrawEmitBatch, throttleInterval]
@@ -113,7 +113,6 @@ export const useDraw = (
   }, [computePointInCanvas, onDrawLocal, throttledEmitBatch]);
 
   // --- Effect for Mouse Move and Up Listeners ---
-  // --- Effect for Mouse Move and Up Listeners ---
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDrawingRef.current) return;
@@ -158,6 +157,9 @@ export const useDraw = (
        // Reset state
        prevPointRef.current = null;
        pointBufferRef.current = []; // Clear buffer
+
+       // --- Call the new callback to signal the end of the stroke ---
+       onDrawEndEmit(); // <<< CALL THE NEW CALLBACK
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -168,8 +170,15 @@ export const useDraw = (
       window.removeEventListener('mouseup', handleMouseUp);
       // Optional: Clear buffer on unmount? Maybe not necessary if mouseup handles it.
       // pointBufferRef.current = [];
+      if (isDrawingRef.current) {
+        // console.log("Cleaning up potentially dangling drawing state"); // Debug
+        onDrawEndEmit(); // Ensure end signal is sent if mouseup missed
+        isDrawingRef.current = false;
+        prevPointRef.current = null;
+        pointBufferRef.current = [];
+      }
     };
-  }, [computePointInCanvas, onDrawLocal, onDrawEmitBatch, throttledEmitBatch]);
+  }, [computePointInCanvas, onDrawLocal, onDrawEmitBatch, throttledEmitBatch, onDrawEndEmit]);
 
 
    // Clear function

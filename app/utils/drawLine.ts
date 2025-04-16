@@ -1,17 +1,6 @@
 // utils/drawLine.ts (Check/Confirm)
 
 type Point = { x: number; y: number };
-type Draw = { ctx: CanvasRenderingContext2D; currentPoint: Point; prevPoint: Point | null };
-
-interface DrawBatchData {
-  points: Point[]; // Array of points drawn since last emit
-  // Color and brushSize will be added by the component before emitting
-}
-
-interface DrawBatchEmitData extends DrawBatchData {
-  color: string;
-  brushSize: number;
-}
 
 type DrawLineParams = {
   ctx: CanvasRenderingContext2D;

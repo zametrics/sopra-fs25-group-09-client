@@ -131,27 +131,58 @@ socket.on('joinLobby', ({ lobbyId, userId, username }) => {
   //implementation of drawing board
 
   socket.on('draw-line-batch', (data) => { // data is DrawBatchEmitData
-    const info = socketToLobby.get(socket.id);
-    if (!info) return;
-    const { lobbyId } = info;
+    const playerInfo = socketToLobby.get(socket.id);
+    if (!playerInfo) {
+        console.warn(`Received draw batch from socket ${socket.id} not in a lobby.`);
+        return;
+    }
+    const { lobbyId, userId } = playerInfo; // Get userId here
 
     // Basic validation (optional but recommended)
     if (!data || !Array.isArray(data.points) || typeof data.color !== 'string' || typeof data.brushSize !== 'number') {
         console.error("Received invalid draw-line-batch data from socket:", socket.id);
         return;
     }
+    // Ensure points array is not empty before proceeding (avoids potential errors)
+    if (data.points.length === 0) {
+        // console.log(`Ignoring empty draw batch from ${userId} in lobby ${lobbyId}`); // Optional debug
+        return;
+    }
 
-    // Relay the batch to other players in the same lobby
-    // console.log(`Relaying batch of ${data.points.length} points to lobby ${lobbyId} from ${socket.id}`); // Debug
-    socket.to(lobbyId).emit('draw-line-batch', data);
+    // --- MODIFICATION: Add userId to the relayed data ---
+    const dataToSend = {
+        ...data,
+        userId: userId // Add the drawer's ID
+    };
+
+    // Relay the batch (with userId) to other players in the same lobby
+    // socket.to(lobbyId) EXCLUDES the sender socket.id
+    // console.log(`Relaying batch from ${userId} (${data.points.length} points) to lobby ${lobbyId}`); // Debug
+    socket.to(lobbyId).emit('draw-line-batch', dataToSend);
   });
-  
-   socket.on('clear', () => {
-    const info = socketToLobby.get(socket.id);
-    if (!info) return;
-    const { lobbyId } = info;
-    // console.log(`Relaying clear to lobby ${lobbyId} from ${socket.id}`); // Debug
-    socket.to(lobbyId).emit('clear');
+
+  // --- Handler for Draw End ---
+  socket.on('draw-end', () => {
+    const playerInfo = socketToLobby.get(socket.id);
+    if (!playerInfo) {
+        console.warn(`Received draw-end from socket ${socket.id} not in a lobby.`);
+        return;
+    }
+    const { lobbyId, userId } = playerInfo;
+
+    // Relay the end signal with the user ID to others in the lobby
+    // console.log(`Relaying draw-end from ${userId} to lobby ${lobbyId}`); // Debug
+    socket.to(lobbyId).emit('draw-end', { userId: userId });
+  });
+
+  // --- Handler for Clear ---
+  socket.on('clear', () => {
+    const playerInfo = socketToLobby.get(socket.id);
+    if (!playerInfo) return;
+    const { lobbyId, userId } = playerInfo;
+    const dataToSend = { userId: userId };
+    // console.log(`Relaying clear from ${userId} to lobby ${lobbyId}`); // Debug
+    socket.to(lobbyId).emit('clear', dataToSend);
   });
 
 });
