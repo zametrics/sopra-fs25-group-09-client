@@ -185,6 +185,34 @@ socket.on('joinLobby', ({ lobbyId, userId, username }) => {
     socket.to(lobbyId).emit('clear', dataToSend);
   });
 
+  // --- NEW: Handler for Fill Area ---
+  socket.on('fill-area', (data) => { // data should be FillAreaData { x, y, color }
+    const playerInfo = socketToLobby.get(socket.id);
+    if (!playerInfo) {
+        console.warn(`Received fill-area from socket ${socket.id} not in a lobby.`);
+        return;
+    }
+    const { lobbyId, userId } = playerInfo;
+
+    // Basic Validation
+    if (!data || typeof data.x !== 'number' || typeof data.y !== 'number' || typeof data.color !== 'string') {
+        console.error(`Received invalid fill-area data from ${userId}:`, data);
+        return;
+    }
+    // Optional: Add bounds checking for x, y based on expected canvas size if known
+
+    // Relay the fill command (with userId) to others in the lobby
+    const dataToSend = {
+        x: data.x,
+        y: data.y,
+        color: data.color,
+        userId: userId
+    };
+
+    // console.log(`Relaying fill-area from ${userId} to lobby ${lobbyId}: x=${data.x}, y=${data.y}, color=${data.color}`); // Debug
+    socket.to(lobbyId).emit('fill-area', dataToSend);
+  });
+
 });
 
 const PORT = process.env.PORT || 3001;

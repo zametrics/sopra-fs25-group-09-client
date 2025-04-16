@@ -46,11 +46,14 @@ interface DrawBatchEmitDataWithUser extends DrawBatchEmitData {
   userId: string; // Assuming userId from localStorage is a string
 }
 
-interface DrawLineProps {
-  prevPoint: Point | null;
-  currentPoint: Point;
-  color: string;
-  brushSize: number;
+// --- NEW: Interface for Fill Area event data ---
+interface FillAreaData {
+  x: number;
+  y: number;
+  color: string; // The fill color (hex)
+}
+interface FillAreaDataWithUser extends FillAreaData {
+  userId: string;
 }
 
 // --- NEW: Interface for Draw End event ---
@@ -141,13 +144,47 @@ const LobbyPage: FC = ({}) => {
       }
   }, [socket, color, brushSize, activeTool]);
 
-  // --- NEW: Draw End Emit Callback ---
+    // --- Save Canvas State Function ---
+    const saveCanvasState = useCallback(() => {
+      const canvas = canvasElementRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+    const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  
+    
+    
+    setHistoryStack(prev => {
+      // Avoid saving identical consecutive states (e.g., multiple clicks without drawing)
+      if (prev.length > 0 && prev[prev.length - 1].data.byteLength === currentImageData.data.byteLength) {
+           // Basic check; a more robust check would compare data arrays, but that's slow.
+           // This simple check prevents saving after non-drawing actions like tool switches.
+          // You might need a more sophisticated check if needed.
+          // For now, let's assume any action that *might* change the canvas saves state.
+      }
+  
+      const newHistory = [...prev, currentImageData];
+      if (newHistory.length > MAX_HISTORY_SIZE) {
+          return newHistory.slice(newHistory.length - MAX_HISTORY_SIZE);
+      }
+      return newHistory;
+  });
+  }, []);
+
+  // --- Draw End Emit Callback ---
   const handleDrawEndEmit = useCallback(() => {
-    if (socket && activeTool === 'brush') { // Only emit if brush was active
-         // console.log("Emitting draw-end"); // Debug
-         socket.emit('draw-end'); // No data needed, server adds userId
+    if (socket && activeTool === 'brush') {
+        // console.log("Brush stroke ended"); // Debug
+        // Emit the signal for remote clients
+        socket.emit('draw-end');
+        // console.log("Emitted draw-end"); // Debug
+
+        // --- CRUCIAL: Save the state AFTER the brush stroke is finished ---
+        // console.log("Saving state AFTER brush stroke end"); // Debug
+        saveCanvasState();
     }
-}, [socket, activeTool]);
+    // Do nothing if another tool was active when mouseup occurred
+}, [socket, activeTool, saveCanvasState]); // Add saveCanvasState dependency
 
   const handleCanvasMouseEnter = () => {
     // Show custom cursor only if the fill tool is active
@@ -158,11 +195,11 @@ const LobbyPage: FC = ({}) => {
     // --- Setup useDraw Hook with Batching ---
     const THROTTLE_MILLISECONDS = 75;
     const { canvasRef: hookCanvasRef, onMouseDown, clear } = useDraw(
-        handleLocalDraw,
-        handleDrawEmitBatch, // Pass the batch emit handler
-        handleDrawEndEmit,
-        THROTTLE_MILLISECONDS
-    );
+      handleLocalDraw,
+      handleDrawEmitBatch,
+      handleDrawEndEmit,
+      THROTTLE_MILLISECONDS
+  );
 
 
   const handleCanvasMouseLeave = () => {
@@ -180,60 +217,112 @@ const LobbyPage: FC = ({}) => {
     }
   }, [hookCanvasRef]); // Dependency on hookCanvasRef
 
-  // --- Save Canvas State Function ---
-  const saveCanvasState = useCallback(() => {
-    const canvas = canvasElementRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-  const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-  
-  
-  setHistoryStack(prev => {
-    // Avoid saving identical consecutive states (e.g., multiple clicks without drawing)
-    if (prev.length > 0 && prev[prev.length - 1].data.byteLength === currentImageData.data.byteLength) {
-         // Basic check; a more robust check would compare data arrays, but that's slow.
-         // This simple check prevents saving after non-drawing actions like tool switches.
-        // You might need a more sophisticated check if needed.
-        // For now, let's assume any action that *might* change the canvas saves state.
+  // --- Flood Fill Implementation ---
+  const floodFill = (
+    ctx: CanvasRenderingContext2D,
+    startX: number,
+    startY: number,
+    fillColorHex: string
+  ) => {
+    const canvas = ctx.canvas;
+    const width = canvas.width;
+    const height = canvas.height;
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data; // Pixel data array (RGBA)
+
+    const fillColorRgba = hexToRgba(fillColorHex);
+    if (!fillColorRgba) {
+        console.error("Invalid fill color hex:", fillColorHex);
+        return; // Invalid fill color
     }
 
-    const newHistory = [...prev, currentImageData];
-    if (newHistory.length > MAX_HISTORY_SIZE) {
-        return newHistory.slice(newHistory.length - MAX_HISTORY_SIZE);
+    // Helper to get color at a point
+    const getPixel = (x: number, y: number): [number, number, number, number] => {
+        if (x < 0 || y < 0 || x >= width || y >= height) {
+            return [-1, -1, -1, -1]; // Out of bounds marker
+        }
+        const offset = (y * width + x) * 4;
+        return [data[offset], data[offset + 1], data[offset + 2], data[offset + 3]];
+    };
+
+    // Helper to compare colors (RGBA arrays)
+    const colorsMatch = (c1: number[], c2: number[]): boolean => {
+        return c1[0] === c2[0] && c1[1] === c2[1] && c1[2] === c2[2] && c1[3] === c2[3];
+    };
+
+    const targetColor = getPixel(startX, startY);
+
+    if (targetColor[0] === -1) return; // Clicked out of bounds
+    if (colorsMatch(targetColor, fillColorRgba)) return; // Clicked area is already the fill color
+
+    const queue: [number, number][] = [[startX, startY]]; // Queue of [x, y] coordinates
+
+    while (queue.length > 0) {
+        const [x, y] = queue.shift()!; // Get next pixel coordinates
+        const currentColor = getPixel(x, y);
+
+        if (currentColor[0] !== -1 && colorsMatch(currentColor, targetColor)) {
+            // Set the pixel color in imageData
+            const offset = (y * width + x) * 4;
+            data[offset] = fillColorRgba[0];     // R
+            data[offset + 1] = fillColorRgba[1]; // G
+            data[offset + 2] = fillColorRgba[2]; // B
+            data[offset + 3] = fillColorRgba[3]; // A
+
+            // Add neighbors to the queue
+            queue.push([x + 1, y]);
+            queue.push([x - 1, y]);
+            queue.push([x, y + 1]);
+            queue.push([x, y - 1]);
+        }
     }
-    return newHistory;
-});
-}, []);
 
+    // Put the modified pixel data back onto the canvas
+    ctx.putImageData(imageData, 0, 0);
+  };
 
-const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-  saveCanvasState(); // Save state before action
-
-  if (activeTool === 'brush') {
-    onMouseDown(e); // Use the hook's mousedown handler
-  } else if (activeTool === 'fill') {
-    handleFillMouseDown(e); // Keep existing fill logic
-  }
-};
-
-
-// --- NEW: Fill Tool MouseDown Handler ---
-const handleFillMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+// --- Fill Tool MouseDown Handler ---
+const handleFillMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
   const canvas = canvasElementRef.current;
-  if (!canvas) return;
-  // Get context with willReadFrequently hint for potential performance boost
+  if (!canvas || !socket) return;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return;
 
   const rect = canvas.getBoundingClientRect();
-  const x = Math.floor(e.clientX - rect.left);
-  const y = Math.floor(e.clientY - rect.top);
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = Math.round((e.clientX - rect.left) * scaleX);
+  const y = Math.round((e.clientY - rect.top) * scaleY);
 
-  // Execute the flood fill
-  floodFill(ctx, x, y, color);
-};
+  const currentFillColor = color;
+  // --- Perform local flood fill ---
+  floodFill(ctx, x, y, currentFillColor);
+
+  // --- Emit the fill event ---
+  socket.emit('fill-area', { x, y, color: currentFillColor });
+
+  // --- Save state AFTER local action for undo ---
+  // console.log("Saving state AFTER local fill"); // Debug
+  saveCanvasState();
+
+}, [socket, color, floodFill, saveCanvasState]); // Dependencies remain the same
+
+  // --- Combined MouseDown Handler (Conditional Save State) ---
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Only save state before action if it's the BRUSH tool.
+    // Fill tool saves state *after* the action within its own handler.
+    if (activeTool === 'brush') {
+         // console.log("Saving state BEFORE brush stroke"); // Debug
+         saveCanvasState(); // Save initial state before brush stroke begins
+         onMouseDown(e); // Use the hook's mousedown handler for brush
+    } else if (activeTool === 'fill') {
+         // console.log("Deferring save state for fill tool"); // Debug
+         // DO NOT save state here for fill. handleFillMouseDown will do it AFTER.
+         handleFillMouseDown(e); // Use the specific fill handler
+    }
+    // Add handling for other tools here if they need pre-action state saving
+}, [activeTool, onMouseDown, handleFillMouseDown, saveCanvasState]); // Keep saveCanvasState dependency
 
 useEffect(() => {
   const canvas = canvasElementRef.current;
@@ -468,31 +557,37 @@ useEffect(() => {
       setActiveTool('brush'); // Select brush tool when a size is clicked
       setBrushSize(newSize);
     };
+    // --- Undo Handler (No change needed) ---
+    const handleUndo = () => {
+      if (historyStack.length === 0) {
+         console.log("History empty, cannot undo.");
+         return;
+      }
 
-   // --- Undo Handler ---
-   const handleUndo = () => {
-    if (historyStack.length === 0) {
-      console.log("History empty, cannot undo.");
-      return; // Nothing to undo
-    }
+      const canvas = canvasElementRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-    const canvas = canvasElementRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+      // Remove the *current* state from the stack
+      const newHistory = historyStack.slice(0, -1);
+      setHistoryStack(newHistory);
 
-       ctx.imageSmoothingEnabled = false;
+      // Get the *previous* state (which is now the last on the shortened stack)
+      const prevState = newHistory.length > 0 ? newHistory[newHistory.length - 1] : null;
 
+       // console.log("Undo: Restoring state. New history size:", newHistory.length); // Debug
 
-    // 1. Get the last saved state (the state *before* the action we want to undo)
-    const prevState = historyStack[historyStack.length - 1]; // Don't pop yet
+      // Clear the canvas first
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 2. Restore this previous state onto the canvas
-    ctx.putImageData(prevState, 0, 0);
+      // If there's a previous state, restore it
+      if (prevState) {
+          ctx.putImageData(prevState, 0, 0);
+      }
+      // If newHistory is empty, the canvas remains clear (correctly undoing the very first action)
 
-    // 3. Remove the restored state from the stack (effectively removing the undone action's *result*)
-    setHistoryStack(prev => prev.slice(0, -1)); // Create new array without the last element
-  };
+   };
 
   
   // --- Helper: Hex to RGBA ---
@@ -540,69 +635,6 @@ useEffect(() => {
       return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
     }
 
-    // --- Flood Fill Implementation ---
-  const floodFill = (
-    ctx: CanvasRenderingContext2D,
-    startX: number,
-    startY: number,
-    fillColorHex: string
-  ) => {
-    const canvas = ctx.canvas;
-    const width = canvas.width;
-    const height = canvas.height;
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const data = imageData.data; // Pixel data array (RGBA)
-
-    const fillColorRgba = hexToRgba(fillColorHex);
-    if (!fillColorRgba) {
-        console.error("Invalid fill color hex:", fillColorHex);
-        return; // Invalid fill color
-    }
-
-    // Helper to get color at a point
-    const getPixel = (x: number, y: number): [number, number, number, number] => {
-        if (x < 0 || y < 0 || x >= width || y >= height) {
-            return [-1, -1, -1, -1]; // Out of bounds marker
-        }
-        const offset = (y * width + x) * 4;
-        return [data[offset], data[offset + 1], data[offset + 2], data[offset + 3]];
-    };
-
-    // Helper to compare colors (RGBA arrays)
-    const colorsMatch = (c1: number[], c2: number[]): boolean => {
-        return c1[0] === c2[0] && c1[1] === c2[1] && c1[2] === c2[2] && c1[3] === c2[3];
-    };
-
-    const targetColor = getPixel(startX, startY);
-
-    if (targetColor[0] === -1) return; // Clicked out of bounds
-    if (colorsMatch(targetColor, fillColorRgba)) return; // Clicked area is already the fill color
-
-    const queue: [number, number][] = [[startX, startY]]; // Queue of [x, y] coordinates
-
-    while (queue.length > 0) {
-        const [x, y] = queue.shift()!; // Get next pixel coordinates
-        const currentColor = getPixel(x, y);
-
-        if (currentColor[0] !== -1 && colorsMatch(currentColor, targetColor)) {
-            // Set the pixel color in imageData
-            const offset = (y * width + x) * 4;
-            data[offset] = fillColorRgba[0];     // R
-            data[offset + 1] = fillColorRgba[1]; // G
-            data[offset + 2] = fillColorRgba[2]; // B
-            data[offset + 3] = fillColorRgba[3]; // A
-
-            // Add neighbors to the queue
-            queue.push([x + 1, y]);
-            queue.push([x - 1, y]);
-            queue.push([x, y + 1]);
-            queue.push([x, y - 1]);
-        }
-    }
-
-    // Put the modified pixel data back onto the canvas
-    ctx.putImageData(imageData, 0, 0);
-  };
 
   const usernameColorsRef = useRef<{ [key: string]: string }>({});
   
@@ -627,22 +659,6 @@ useEffect(() => {
   usernameColors[username] = newColor;
   return newColor;
 }
-
-//test http://localhost:3001/
-//https://socket-server-826256454260.europe-west1.run.app/
-
-////socket implementation drawing system
-//const socketIo = io('http://localhost:3001', {
-//  path: '/api/socket',
-//});
-//
-//function createLine({prevPoint, currentPoint, ctx}: Draw) {
-////      socketIo.emit('draw-line', ({prevPoint, currentPoint, ctx}))
-//      drawLine({prevPoint, currentPoint, ctx, color, brushSize})
-//}
-
-// --- Clear function that also clears history ---
-
 
 
 useEffect(() => {
@@ -752,6 +768,20 @@ useEffect(() => {
      // console.log(`Reset last point for ${enderUserId} to null`); // Debug
 });
 
+     // --- Listener for INCOMING Fill Area (Still needs to save state) ---
+     socketIo.on('fill-area', (data: FillAreaDataWithUser) => {
+      const canvas = canvasElementRef.current;
+      const ctx = canvas?.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return;
+
+      // console.log(`Received fill-area from ${data.userId}`); // Debug
+      floodFill(ctx, data.x, data.y, data.color);
+
+      // Save canvas state AFTER remote fill for local undo
+      // console.log("Saving state AFTER remote fill"); // Debug
+      saveCanvasState();
+  });
+
   socketIo.on('playerLeft', (leftPlayer: { id: number | string }) => { // Use the type emitted by your server
     const leftPlayerId = String(leftPlayer.id); // Ensure string key for map
     if (remoteUsersLastPointRef.current.has(leftPlayerId)) {
@@ -774,6 +804,7 @@ return () => {
   socketIo.off('draw-line-batch'); // Remove specific listener
   socketIo.off('draw-end');
   socketIo.off('clear');
+  socketIo.off('fill-area');
   socketIo.off('playerLeft');
   socketIo.off('lobbyState');
   // Remove other listeners...
