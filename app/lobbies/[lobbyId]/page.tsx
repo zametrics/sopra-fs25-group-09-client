@@ -88,8 +88,9 @@ const LobbyPage: React.FC = () => {
   }, [lobbyId, apiService]);
 
   //http://localhost:3001/
+  //https://socket-server-826256454260.europe-west1.run.app/
 useEffect(() => {
-  const socketIo = io('https://socket-server-826256454260.europe-west1.run.app/', {
+  const socketIo = io('http://localhost:3001', {
     path: '/api/socket',
   });
   setSocket(socketIo);

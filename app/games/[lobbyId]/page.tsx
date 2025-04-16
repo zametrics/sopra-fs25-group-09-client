@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import withAuth from '@/hooks/withAuth';
 import io, { Socket } from 'socket.io-client';
 import { useDraw } from '@/hooks/useDraw';
+import { drawLine } from '@/utils/drawLine';
 
 
 
@@ -32,6 +33,14 @@ interface ChatMessage {
   timestamp: string;
 }
 
+interface DrawLineProps {
+  prevPoint: Point | null;
+  currentPoint: Point;
+  color: string;
+  brushSize: number;
+}
+
+
 interface RGB { r: number; g: number; b: number; }
 
 const colorPalette = [
@@ -54,7 +63,7 @@ const MAX_HISTORY_SIZE = 20; // Limit undo steps to prevent memory issues
 const LobbyPage: FC = ({}) => {
   const [activeTool, setActiveTool] = useState<Tool>('brush'); // Default to brush
   const [brushSize, setBrushSize] = useState<number>(brushSizes.size2); // Default size
-  const { canvasRef: hookCanvasRef, onMouseDown, clear: clearCanvas } = useDraw(drawLine);
+  const { canvasRef: hookCanvasRef, onMouseDown, clear } = useDraw(createLine);
   const params = useParams();
   const lobbyId = params.lobbyId as string;
   const apiService = useApi();
@@ -62,8 +71,9 @@ const LobbyPage: FC = ({}) => {
   const [lobby, setLobby] = useState<LobbyData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [players, setPlayers] = useState<PlayerData[]>([]);
+  // old socket implementation
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  //const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isLeaveModalVisible, setIsLeaveModalVisible] = useState<boolean>(false);
@@ -242,123 +252,126 @@ useEffect(() => {
     }
   }, [lobbyId, apiService]);
 
-  //test http://localhost:3001/
-  useEffect(() => {
-    const socketIo = io('https://socket-server-826256454260.europe-west1.run.app/', {
-      path: '/api/socket',
-    });
-    setSocket(socketIo);
   
-// Get current user's username from players state or fetch it
-const currentUsername = players.find((p) => p.id === Number(currentUserId))?.username ||"unknwon";
+// old socket implementation
+//test http://localhost:3001/
+//https://socket-server-826256454260.europe-west1.run.app/
+//  useEffect(() => {
+//    const socketIo = io('http://localhost:3001/', {
+//      path: '/api/socket',
+//    });
+//    setSocket(socketIo);
+//// Get current user's username from players state or fetch it
+//const currentUsername = players.find((p) => p.id === Number(currentUserId))?.username ||"unknwon";
+//
+//// Join lobby with userId and username
+//socketIo.emit('joinLobby', { lobbyId, userId: currentUserId, username: currentUsername });
+//
+//
+//// Listen for chat messages
+//socketIo.on('chatMessage', (message: ChatMessage) => {
+//  setMessages((prev) => [...prev, message]);
+//});
+//
+//// Listen for player joining
+//socketIo.on('playerJoined', (newPlayer: PlayerData) => {
+//  setPlayers((prev) => {
+//    const existingPlayer = prev.find((p) => p.id === newPlayer.id);
+//    if (existingPlayer) {
+//      // Update existing player if username changes (e.g., on reconnect)
+//      return prev.map((p) => (p.id === newPlayer.id ? { ...p, username: newPlayer.username } : p));
+//    }
+//    return [...prev, newPlayer];
+//  });
+//});
+//
+//  // Listen for player leaving
+//  socketIo.on('playerLeft', (leftPlayer: PlayerData) => {
+//    setPlayers((prev) => prev.filter((p) => p.id !== leftPlayer.id));
+//  });
+//  
+//}, [lobbyId, currentUserId]);
+//
 
-// Join lobby with userId and username
-socketIo.emit('joinLobby', { lobbyId, userId: currentUserId, username: currentUsername });
-
-// Listen for chat messages
-socketIo.on('chatMessage', (message: ChatMessage) => {
-  setMessages((prev) => [...prev, message]);
-});
-
-// Listen for player joining
-socketIo.on('playerJoined', (newPlayer: PlayerData) => {
-  setPlayers((prev) => {
-    const existingPlayer = prev.find((p) => p.id === newPlayer.id);
-    if (existingPlayer) {
-      // Update existing player if username changes (e.g., on reconnect)
-      return prev.map((p) => (p.id === newPlayer.id ? { ...p, username: newPlayer.username } : p));
-    }
-    return [...prev, newPlayer];
-  });
-});
-
-  // Listen for player leaving
-  socketIo.on('playerLeft', (leftPlayer: PlayerData) => {
-    setPlayers((prev) => prev.filter((p) => p.id !== leftPlayer.id));
-  });
-
-  return () => {
-    socketIo.disconnect();
-  };
-}, [lobbyId, currentUserId]);
-
-  // Scroll to the latest message
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-   // --- NEW useEffect for Click Outside Color Picker ---
-   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        isColorPickerVisible &&
-        colorPickerRef.current &&
-        !colorPickerRef.current.contains(event.target as Node) &&
-        colorButtonRef.current && // Check if the button ref exists
-        !colorButtonRef.current.contains(event.target as Node) // Check if the click was on the button itself
-      ) {
-        setIsColorPickerVisible(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isColorPickerVisible]); // Re-run when visibility changes
-  
-  const goBack = () => {
+// old chat code 
+//
+ // // Scroll to the latest message
+ // useEffect(() => {
+ //   messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+ // }, [messages]);
+//
+ //  // --- NEW useEffect for Click Outside Color Picker ---
+ //  useEffect(() => {
+ //   const handleClickOutside = (event: MouseEvent) => {
+ //     if (
+ //       isColorPickerVisible &&
+ //       colorPickerRef.current &&
+ //       !colorPickerRef.current.contains(event.target as Node) &&
+ //       colorButtonRef.current && // Check if the button ref exists
+ //       !colorButtonRef.current.contains(event.target as Node) // Check if the click was on the button itself
+ //     ) {
+ //       setIsColorPickerVisible(false);
+ //     }
+ //   };
+//
+ //   document.addEventListener('mousedown', handleClickOutside);
+ //   return () => {
+ //     document.removeEventListener('mousedown', handleClickOutside);
+ //   };
+ // }, [isColorPickerVisible]); // Re-run when visibility changes
+ // 
+ const goBack = () => {
     router.push('/home');
-  };
-
-  const showLeaveConfirmation = () => {
-      setIsLeaveModalVisible(true);
-    };
-  
-    const handleLeaveLobby = async () => {
-      if (!currentUserId || !lobbyId) {
-        router.push('/home');
-        return;
-      }
-  
-      try {
-        setLoading(true);
-        
-        // Remove player from lobby in database
-        // Adding an empty object as the second parameter to satisfy the put method signature
-        await apiService.put(`/lobbies/${lobbyId}/leave?playerId=${currentUserId}`, {});
-        
-        // Notify other players via socket
-        if (socket) {
-          socket.emit('leaveLobby', { 
-            lobbyId, 
-            userId: currentUserId 
-          });
-        }
-        
-        message.success('You have left the lobby');
-        router.push('/home');
-      } catch (error) {
-        console.error('Error leaving lobby:', error);
-        message.error('Failed to leave lobby properly, redirecting anyway');
-        router.push('/home');
-      } finally {
-        setLoading(false);
-        setIsLeaveModalVisible(false);
-      }
-    };
-    
-    const handleCancelLeave = () => {
-      setIsLeaveModalVisible(false);
-    };
-
-  const sendMessage = () => {
-    if (chatInput.trim() && socket) {
-      const username = players.find((p) => p.id === lobby?.lobbyOwner)?.username || 'You';
-      socket.emit('chatMessage', { lobbyId, message: chatInput, username });
-      setChatInput('');
-    }
-  };
+ };
+//
+ // const showLeaveConfirmation = () => {
+ //     setIsLeaveModalVisible(true);
+ //   };
+ // 
+ //   const handleLeaveLobby = async () => {
+ //     if (!currentUserId || !lobbyId) {
+ //       router.push('/home');
+ //       return;
+ //     }
+ // 
+ //     try {
+ //       setLoading(true);
+ //       
+ //       // Remove player from lobby in database
+ //       // Adding an empty object as the second parameter to satisfy the put method signature
+ //       await apiService.put(`/lobbies/${lobbyId}/leave?playerId=${currentUserId}`, {});
+ //       
+ //       // Notify other players via socket
+ //       if (socket) {
+ //         socket.emit('leaveLobby', { 
+ //           lobbyId, 
+ //           userId: currentUserId 
+ //         });
+ //       }
+ //       
+ //       message.success('You have left the lobby');
+ //       router.push('/home');
+ //     } catch (error) {
+ //       console.error('Error leaving lobby:', error);
+ //       message.error('Failed to leave lobby properly, redirecting anyway');
+ //       router.push('/home');
+ //     } finally {
+ //       setLoading(false);
+ //       setIsLeaveModalVisible(false);
+ //     }
+ //   };
+ //   
+ //   const handleCancelLeave = () => {
+ //     setIsLeaveModalVisible(false);
+ //   };
+//
+ // const sendMessage = () => {
+ //   if (chatInput.trim() && socket) {
+ //     const username = players.find((p) => p.id === lobby?.lobbyOwner)?.username || 'You';
+ //     socket.emit('chatMessage', { lobbyId, message: chatInput, username });
+ //     setChatInput('');
+ //   }
+ // };
   
   const colorPool: string[] = [
     '#e6194b', // kräftiges Rot
@@ -422,12 +435,7 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
     setHistoryStack(prev => prev.slice(0, -1)); // Create new array without the last element
   };
 
-  // --- Clear function that also clears history ---
-  const handleClearCanvas = () => {
-    clearCanvas(); // Call the clear function from the hook
-    setHistoryStack([]); // Clear the undo history
-  }
-
+  
   // --- Helper: Hex to RGBA ---
   const hexToRgba = (hex: string): [number, number, number, number] | null => {
     if (!hex || hex.charAt(0) !== '#') return null;
@@ -561,69 +569,62 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
   return newColor;
 }
 
- function drawLine({ prevPoint, currentPoint, ctx }: Draw) {
-  if (!currentPoint) return;
+//test http://localhost:3001/
+//https://socket-server-826256454260.europe-west1.run.app/
 
-  const lineColor = color;
-  const size = brushSize;
-  ctx.imageSmoothingEnabled = false;
+////socket implementation drawing system
+//const socketIo = io('http://localhost:3001', {
+//  path: '/api/socket',
+//});
+//
+//function createLine({prevPoint, currentPoint, ctx}: Draw) {
+////      socketIo.emit('draw-line', ({prevPoint, currentPoint, ctx}))
+//      drawLine({prevPoint, currentPoint, ctx, color, brushSize})
+//}
 
-  ctx.fillStyle = lineColor;
-
-  const drawPixel = (centerX: number, centerY: number) => {
-    const radius = Math.floor(size / 2); // immer ganzzahlig
-    const radiusSq = radius * radius;
-  
-    for (let y = -radius; y <= radius; y++) {
-      for (let x = -radius; x <= radius; x++) {
-        if (x * x + y * y <= radiusSq) {
-          ctx.fillRect(
-            Math.floor(centerX + x),
-            Math.floor(centerY + y),
-            1,
-            1
-          );
-        }
-      }
-    }
-  };
-
-  const p0 = prevPoint ?? currentPoint;
-  const p1 = currentPoint;
-
-  const dx = Math.abs(p1.x - p0.x);
-  const dy = Math.abs(p1.y - p0.y);
-  const sx = p0.x < p1.x ? 1 : -1;
-  const sy = p0.y < p1.y ? 1 : -1;
-  let err = dx - dy;
-
-  let x = Math.floor(p0.x);
-  let y = Math.floor(p0.y);
-  const endX = Math.floor(p1.x);
-  const endY = Math.floor(p1.y);
-
-  while (true) {
-    drawPixel(x, y); // nicht mehr x - size / 2!
+// --- Clear function that also clears history ---
 
 
-    if (x === endX && y === endY) break;
-    const e2 = 2 * err;
-    if (e2 > -dy) {
-      err -= dy;
-      x += sx;
-    }
-    if (e2 < dx) {
-      err += dx;
-      y += sy;
-    }
-    
+
+useEffect(() => {
+  const socketIo = io('http://localhost:3001', {
+    path: '/api/socket',
+  });
+
+  setSocket(socketIo);
+
+  socketIo.on('draw-line', ({ prevPoint, currentPoint, color, brushSize }: DrawLineProps) => {
+    console.log("nigga drawing");
+    const canvas = canvasElementRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    drawLine({ prevPoint, currentPoint, ctx, color, brushSize });
+  });
+
+  socketIo.on('clear', () => {
+    console.log("tried to clear");
+    clear(); // Call the clear function from the hook
+    console.log("chakala");
+    setHistoryStack([]); // Clear the undo history
+  })
+
+}, [canvasElementRef]);
+
+function createLine({ prevPoint, currentPoint, ctx }: Draw) {
+  if (socket) {
+    socket.emit('draw-line', { prevPoint, currentPoint, color, brushSize });
   }
-
-  
+  drawLine({ prevPoint, currentPoint, ctx, color, brushSize });
 }
 
-
-  
+const socketClearCanvas = () => {
+  if (socket) {
+    socket.emit('clear');
+  }
+  clear(); // Call the clear function from the hook
+  setHistoryStack([]); // Clear the undo history
+}
 
   //Loading screen
   if (loading) {
@@ -700,7 +701,7 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
         <h1 className="drawzone-logo-2-8rem">DRAWZONE</h1>
         <h2 className="drawzone-subtitle-1-1rem">ART BATTLE ROYALE</h2>
 
-        <button onClick={showLeaveConfirmation} className="leave-game-button">LEAVE GAME</button> {/* Added a class */}
+        <button className="leave-game-button">LEAVE GAME</button> {/* Added a class */}
 
         {/* Word Display Area */}
         <div className="word-display-area">
@@ -817,7 +818,7 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
             <button
                 className="tool-button tool-icon"
                 aria-label="Clear Canvas"
-                onClick={handleClearCanvas}
+                onClick={socketClearCanvas}
             >
                <img src="/icons/trash-tool-black.svg" alt="Clear" className="tool-icon-image"/>
             </button>
@@ -834,14 +835,14 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
       <h1 className="players-chat-title">CHAT</h1>
 
       <div className="chat-messages">
-        {messages.map((msg, index) => (
+      {/*{messages.map((msg, index) => (
           <div key={index} className="chat-message">
             <span style={{ color: getUsernameColor(msg.username) }} className="chat-username">
               {msg.username}:
             </span>
             <span className="chat-text"> {msg.message}</span>
           </div>
-        ))}
+        ))}*/}
         <div ref={messagesEndRef} />
       </div>
 
@@ -850,10 +851,10 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
           className="chat-input"
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
-          onPressEnter={sendMessage}
+          
           placeholder="Type your message here!"
         />
-        <Button className="chat-send-button" onClick={sendMessage}>
+        <Button className="chat-send-button" >
           <span role="img" aria-label="send">📨</span>
         </Button>
       </div>
@@ -863,8 +864,6 @@ socketIo.on('playerJoined', (newPlayer: PlayerData) => {
     <Modal
         title={<div className="leave-modal-title">Leave Lobby</div>}
         open={isLeaveModalVisible}
-        onOk={handleLeaveLobby}
-        onCancel={handleCancelLeave}
         okText="Yes, Leave"
         cancelText="Cancel"
         centered

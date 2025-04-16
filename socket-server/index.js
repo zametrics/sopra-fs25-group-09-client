@@ -126,6 +126,20 @@ socket.on('joinLobby', ({ lobbyId, userId, username }) => {
         console.log(`Socket ${socket.id} disconnected but had no lobby/user info.`);
     }
   });
+
+  
+  //implementation of drawing board
+
+  socket.on('draw-line', ({prevPoint,currentPoint, color, brushSize}) => {
+    socket.broadcast.emit('draw-line', {prevPoint, currentPoint, color, brushSize});
+    
+  });
+
+  socket.on('clear', () => {
+    console.log('Received clear from client, broadcasting...');
+    socket.broadcast.emit('clear');
+  });
+
 });
 
 const PORT = process.env.PORT || 3001;
