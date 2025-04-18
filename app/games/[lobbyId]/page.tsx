@@ -141,10 +141,8 @@ const LobbyPage: FC = ({}) => {
   //const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isLeaveModalVisible] = useState<boolean>(false);
-  const [color, setColor] = useState<string>("#000000");
-  const [isColorPickerVisible, setIsColorPickerVisible] =
-    useState<boolean>(false);
+  const [color,setColor] = useState<string>('#000000')
+  const [isColorPickerVisible, setIsColorPickerVisible] = useState<boolean>(false);
   const colorPickerRef = useRef<HTMLDivElement>(null); // Ref for click outside detection
   const colorButtonRef = useRef<HTMLButtonElement>(null); // Ref for the trigger button
   const [historyStack, setHistoryStack] = useState<ImageData[]>([]); // --- State for Undo History ---
@@ -161,6 +159,9 @@ const LobbyPage: FC = ({}) => {
   const [customCursorPos, setCustomCursorPos] = useState({ x: 0, y: 0 });
   const [isCustomCursorVisible, setIsCustomCursorVisible] = useState(false);
   const [useCustomElementCursor, setUseCustomElementCursor] = useState(false); // Flag to control which cursor system to use
+  const [isLeaveModalVisible, setIsLeaveModalVisible] = useState<boolean>(false);
+  
+  
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     // Get mouse position relative to the page
     setCustomCursorPos({ x: e.pageX, y: e.pageY });
@@ -536,86 +537,86 @@ const LobbyPage: FC = ({}) => {
   //}, [lobbyId, currentUserId]);
   //
 
-  // old chat code
-  //
-  // // Scroll to the latest message
-  // useEffect(() => {
-  //   messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  // }, [messages]);
-  //
-  //  // --- NEW useEffect for Click Outside Color Picker ---
-  //  useEffect(() => {
-  //   const handleClickOutside = (event: MouseEvent) => {
-  //     if (
-  //       isColorPickerVisible &&
-  //       colorPickerRef.current &&
-  //       !colorPickerRef.current.contains(event.target as Node) &&
-  //       colorButtonRef.current && // Check if the button ref exists
-  //       !colorButtonRef.current.contains(event.target as Node) // Check if the click was on the button itself
-  //     ) {
-  //       setIsColorPickerVisible(false);
-  //     }
-  //   };
-  //
-  //   document.addEventListener('mousedown', handleClickOutside);
-  //   return () => {
-  //     document.removeEventListener('mousedown', handleClickOutside);
-  //   };
-  // }, [isColorPickerVisible]); // Re-run when visibility changes
-  //
-  const goBack = () => {
-    router.push("/home");
-  };
-  //
-  // const showLeaveConfirmation = () => {
-  //     setIsLeaveModalVisible(true);
-  //   };
-  //
-  //   const handleLeaveLobby = async () => {
-  //     if (!currentUserId || !lobbyId) {
-  //       router.push('/home');
-  //       return;
-  //     }
-  //
-  //     try {
-  //       setLoading(true);
-  //
-  //       // Remove player from lobby in database
-  //       // Adding an empty object as the second parameter to satisfy the put method signature
-  //       await apiService.put(`/lobbies/${lobbyId}/leave?playerId=${currentUserId}`, {});
-  //
-  //       // Notify other players via socket
-  //       if (socket) {
-  //         socket.emit('leaveLobby', {
-  //           lobbyId,
-  //           userId: currentUserId
-  //         });
-  //       }
-  //
-  //       message.success('You have left the lobby');
-  //       router.push('/home');
-  //     } catch (error) {
-  //       console.error('Error leaving lobby:', error);
-  //       message.error('Failed to leave lobby properly, redirecting anyway');
-  //       router.push('/home');
-  //     } finally {
-  //       setLoading(false);
-  //       setIsLeaveModalVisible(false);
-  //     }
-  //   };
-  //
-  //   const handleCancelLeave = () => {
-  //     setIsLeaveModalVisible(false);
-  //   };
-  //
-  // const sendMessage = () => {
-  //   if (chatInput.trim() && socket) {
-  //     const username = players.find((p) => p.id === lobby?.lobbyOwner)?.username || 'You';
-  //     socket.emit('chatMessage', { lobbyId, message: chatInput, username });
-  //     setChatInput('');
-  //   }
-  // };
+// old chat code 
+//
+ // // Scroll to the latest message
+ // useEffect(() => {
+ //   messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+ // }, [messages]);
+//
+ //  // --- NEW useEffect for Click Outside Color Picker ---
+ //  useEffect(() => {
+ //   const handleClickOutside = (event: MouseEvent) => {
+ //     if (
+ //       isColorPickerVisible &&
+ //       colorPickerRef.current &&
+ //       !colorPickerRef.current.contains(event.target as Node) &&
+ //       colorButtonRef.current && // Check if the button ref exists
+ //       !colorButtonRef.current.contains(event.target as Node) // Check if the click was on the button itself
+ //     ) {
+ //       setIsColorPickerVisible(false);
+ //     }
+ //   };
+//
+ //   document.addEventListener('mousedown', handleClickOutside);
+ //   return () => {
+ //     document.removeEventListener('mousedown', handleClickOutside);
+ //   };
+ // }, [isColorPickerVisible]); // Re-run when visibility changes
+ // 
+ const goBack = () => {
+    router.push('/home');
+ };
 
+ const showLeaveConfirmation = () => {
+  setIsLeaveModalVisible(true);
+};
+
+const handleLeaveLobby = async () => {
+  if (!currentUserId || !lobbyId) {
+    router.push('/home');
+    return;
+  }
+
+  try {
+    setLoading(true);
+    
+    // Remove player from lobby in database
+    // Adding an empty object as the second parameter to satisfy the put method signature
+    await apiService.put(`/lobbies/${lobbyId}/leave?playerId=${currentUserId}`, {});
+    
+    // Notify other players via socket
+    if (socket) {
+      socket.emit('leaveLobby', { 
+        lobbyId, 
+        userId: currentUserId 
+      });
+    }
+    
+    message.success('You have left the lobby');
+    router.push('/home');
+  } catch (error) {
+    console.error('Error leaving lobby:', error);
+    message.error('Failed to leave lobby properly, redirecting anyway');
+    router.push('/home');
+  } finally {
+    setLoading(false);
+    setIsLeaveModalVisible(false);
+  }
+};
+
+const handleCancelLeave = () => {
+  setIsLeaveModalVisible(false);
+};
+//
+ // const sendMessage = () => {
+ //   if (chatInput.trim() && socket) {
+ //     const username = players.find((p) => p.id === lobby?.lobbyOwner)?.username || 'You';
+ //     socket.emit('chatMessage', { lobbyId, message: chatInput, username });
+ //     setChatInput('');
+ //   }
+ // };
+  
   // const colorPool: string[] = [
   //   '#e6194b', // kräftiges Rot
   //   '#3cb44b', // kräftiges Grün
@@ -1043,7 +1044,7 @@ const LobbyPage: FC = ({}) => {
         <div className="game-box">
           <h1 className="drawzone-logo-2-8rem">DRAWZONE</h1>
           <h2 className="drawzone-subtitle-1-1rem">ART BATTLE ROYALE</h2>
-          <button className="leave-game-button">LEAVE GAME</button>{" "}
+          <button className="leave-game-button" onClick={showLeaveConfirmation}>LEAVE GAME</button>{" "}
           {/* Added a class */}
           {/* Word Display Area */}
           <div className="word-display-area">
@@ -1244,34 +1245,36 @@ const LobbyPage: FC = ({}) => {
         </div>
         {/* Leave Confirmation Modal */}
         <Modal
-          title={<div className="leave-modal-title">Leave Lobby</div>}
-          open={isLeaveModalVisible}
-          okText="Yes, Leave"
-          cancelText="Cancel"
-          centered
-          closeIcon={<div className="leave-modal-close">✕</div>}
-          className="leave-modal-container"
-          okButtonProps={{
-            className: "leave-modal-confirm-button",
-            style: {
+           title={<div className="leave-modal-title">Leave Lobby</div>}
+           open={isLeaveModalVisible}
+           onOk={handleLeaveLobby}
+           onCancel={handleCancelLeave}
+           okText="Yes, Leave"
+           cancelText="Cancel"
+           centered
+           closeIcon={<div className="leave-modal-close">✕</div>}
+           className="leave-modal-container"
+           okButtonProps={{
+             className: "leave-modal-confirm-button",
+             style: {
               background: "#ff3b30",
               borderColor: "#e02d22",
               color: "white",
             },
-          }}
-          cancelButtonProps={{
-            className: "leave-modal-cancel-button",
-            style: {
+           }}
+           cancelButtonProps={{
+             className: "leave-modal-cancel-button",
+             style: {
               backgroundColor: "#f5f5f5",
               borderColor: "#d9d9d9",
               color: "#333",
             },
-          }}
-        >
-          <p className="leave-modal-message">
-            Are you sure you want to leave this lobby?
-          </p>
-        </Modal>
+           }}
+         >
+           <p className="leave-modal-message">
+             Are you sure you want to leave this lobby?
+           </p>
+         </Modal>
       </div>
     </>
   );
