@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 export const useBackgroundMusic = (
   audioSrc: string = "/audio/good-night-lofi-cozy-chill-music-160166.mp3"

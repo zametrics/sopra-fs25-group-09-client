@@ -59,8 +59,6 @@ a {
 
 /* styles/globals.css */
 
-
-
 .custom-datepicker-dropdown .ant-picker-cell {
   color: #000000 !important; /* White text for numbers */
 }
@@ -68,7 +66,6 @@ a {
 .custom-datepicker-dropdown .ant-picker-cell-in-view {
   color: #000000 !important; /* Ensure visible dates are white */
 }
-
 
 .custom-datepicker-dropdown .ant-picker-cell-selected {
   background-color: #ffffff !important; /* Selected date highlight */
@@ -80,35 +77,34 @@ a {
 }
 
 @font-face {
-  font-family: 'Kranky';
-  src: url('/fonts/Kranky.ttf') format('truetype');
+  font-family: "Kranky";
+  src: url("/fonts/Kranky.ttf") format("truetype");
 }
 
 @font-face {
-  font-family: 'Digitalt';
-  src: url('/fonts/Digitalt.ttf') format('truetype');
+  font-family: "Digitalt";
+  src: url("/fonts/Digitalt.ttf") format("truetype");
 }
 
 @font-face {
-  font-family: 'Koulen';
-  src: url('/fonts/Koulen.ttf') format('truetype');
+  font-family: "Koulen";
+  src: url("/fonts/Koulen.ttf") format("truetype");
 }
 
 @font-face {
-  font-family: 'Dhyana';
-  src: url('/fonts/Dhyana-Regular.ttf') format('truetype');
+  font-family: "Dhyana";
+  src: url("/fonts/Dhyana-Regular.ttf") format("truetype");
 }
 
 @font-face {
-  font-family: 'Nunito';
-  src: url('/fonts/Nunito.ttf') format('truetype');
+  font-family: "Nunito";
+  src: url("/fonts/Nunito.ttf") format("truetype");
 }
-
 
 .page-background {
   height: 100vh;
   overflow: hidden;
-  background: url('/images/background_new.jpg') no-repeat center center/cover;
+  background: url("/images/background_new.jpg") no-repeat center center/cover;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -122,7 +118,8 @@ a {
   max-width: 450px;
   width: 100%;
   text-align: center;
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.69), 0 8px 20px rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.69),
+    0 8px 20px rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(1px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -131,18 +128,11 @@ a {
   font-size: 4rem;
   margin-bottom: -0.1rem;
   color: #000;
-  font-family: 'Kranky', serif;
+  font-family: "Kranky", serif;
   font-weight: normal;
-  text-shadow:
-    -3px -3px 0 #fff,
-     3px -3px 0 #fff,
-    -3px  3px 0 #fff,
-     3px  3px 0 #fff,
-    -3px  0px 0 #fff,
-     3px  0px 0 #fff,
-     0px -3px 0 #fff,
-     0px  3px 0 #fff,
-     0    0   3px #fff;
+  text-shadow: -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff,
+    3px 3px 0 #fff, -3px 0px 0 #fff, 3px 0px 0 #fff, 0px -3px 0 #fff,
+    0px 3px 0 #fff, 0 0 3px #fff;
 }
 
 .drawzone-logo-3-7rem {
@@ -150,18 +140,11 @@ a {
   margin-top: 1.5rem;
   margin-bottom: -0.1rem;
   color: #000;
-  font-family: 'Kranky', serif;
+  font-family: "Kranky", serif;
   font-weight: normal;
-  text-shadow:
-    -3px -3px 0 #fff,
-     3px -3px 0 #fff,
-    -3px  3px 0 #fff,
-     3px  3px 0 #fff,
-    -3px  0px 0 #fff,
-     3px  0px 0 #fff,
-     0px -3px 0 #fff,
-     0px  3px 0 #fff,
-     0    0   3px #fff;
+  text-shadow: -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff,
+    3px 3px 0 #fff, -3px 0px 0 #fff, 3px 0px 0 #fff, 0px -3px 0 #fff,
+    0px 3px 0 #fff, 0 0 3px #fff;
 }
 
 .drawzone-logo-2-8rem {
@@ -169,18 +152,11 @@ a {
   margin-top: -15px;
   margin-bottom: -5px;
   color: #000;
-  font-family: 'Kranky', serif;
+  font-family: "Kranky", serif;
   font-weight: 500;
-  text-shadow:
-    -2px -2px 0 #fff,
-     2px -2px 0 #fff,
-    -2px  2px 0 #fff,
-     2px  2px 0 #fff,
-    -2px  0px 0 #fff,
-     2px  0px 0 #fff,
-     0px -2px 0 #fff,
-     0px  2px 0 #fff,
-     0    0   2px #fff;
+  text-shadow: -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff,
+    2px 2px 0 #fff, -2px 0px 0 #fff, 2px 0px 0 #fff, 0px -2px 0 #fff,
+    0px 2px 0 #fff, 0 0 2px #fff;
 }
 
 .drawzone-subtitle-1-1rem {
@@ -188,7 +164,7 @@ a {
   font-weight: 500;
   margin-bottom: 15px; /* Space below subtitle */
   color: #fff;
-  font-family: 'Digitalt', serif;
+  font-family: "Digitalt", serif;
   -webkit-text-stroke: 0.9px black;
 }
 
@@ -197,7 +173,7 @@ a {
   font-weight: 500;
   margin-bottom: 2rem;
   color: #fff;
-  font-family: 'Digitalt', serif;
+  font-family: "Digitalt", serif;
   -webkit-text-stroke: 1px black;
 }
 
@@ -206,9 +182,8 @@ a {
   font-weight: normal;
   margin-bottom: 4.5rem;
   color: #fff;
-  font-family: 'Digitalt', serif;
+  font-family: "Digitalt", serif;
   -webkit-text-stroke: 1px black;
-  
 }
 
 .login-label {
@@ -216,20 +191,19 @@ a {
   color: #000;
   font-size: 1.1rem;
   letter-spacing: 1.4px;
-  font-family: 'Digitalt', serif;
+  font-family: "Digitalt", serif;
   text-transform: uppercase;
   margin-bottom: -15px;
 }
 
 .login-input {
   height: 55px !important;
-  width: 95%  !important;
+  width: 95% !important;
   border-radius: 8px !important;
   background-color: #fff !important;
   border: 1px solid #000 !important;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3), 0 8px 20px rgba(0, 0, 0, 0.3) !important;
-  color: black !important
-
+  color: black !important;
 }
 
 .login-actions {
@@ -239,35 +213,24 @@ a {
 .login-button {
   width: 75% !important;
   height: 52px !important;
-  background-color: #CBB0FF !important;
+  background-color: #cbb0ff !important;
   border-color: #7f5ac5 !important;
   font-weight: 500 !important;
   font-size: 1.8rem !important;
   letter-spacing: 1.6px !important;
   border-radius: 8px !important;
   border: 1px solid #000 !important;
-  font-family: 'Digitalt', serif !important;
+  font-family: "Digitalt", serif !important;
   color: #000 !important;
   transition: all 0.3s ease !important;
-  box-shadow:
-    0 0px 10px rgb(255, 255, 255, 0.4),
-    0 6px 12px rgba(0, 0, 0, 0.3) !important;
-  text-shadow:
-     0 -1px 0 #fff,
-     1px 0 0 #fff,
-     0 1px 0 #fff,
-    -1px 0 0 #fff,
-    -1px -1px 0 #fff,
-     1px -1px 0 #fff,
-     1px 1px 0 #fff,
-    -1px 1px 0 #fff !important;
+  box-shadow: 0 0px 10px rgb(255, 255, 255, 0.4), 0 6px 12px rgba(0, 0, 0, 0.3) !important;
+  text-shadow: 0 -1px 0 #fff, 1px 0 0 #fff, 0 1px 0 #fff, -1px 0 0 #fff,
+    -1px -1px 0 #fff, 1px -1px 0 #fff, 1px 1px 0 #fff, -1px 1px 0 #fff !important;
 }
 
 .login-button:hover {
   background-color: #dabaff !important;
-  box-shadow:
-    0 8px 20px rgba(127, 90, 197, 0.4),
-    0 12px 12px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 8px 20px rgba(127, 90, 197, 0.4), 0 12px 12px rgba(0, 0, 0, 0.1) !important;
   transform: translateY(0px) !important;
   cursor: pointer !important;
 }
@@ -282,20 +245,21 @@ a {
   font-weight: 500;
   font-size: 1.2rem;
   letter-spacing: 1.3px;
-  font-family: 'Koulen', serif;
+  font-family: "Koulen", serif;
   color: #000;
 }
 
 .redirect-register-button {
-  width: 58%  !important;
-  background-color: #444  !important;
+  width: 58% !important;
+  background-color: #444 !important;
   color: white !important;
   font-weight: 900 !important;
   font-size: 0.9em !important;
   letter-spacing: 1px !important;
   border-radius: 8px !important;
   margin-top: 1.2px !important;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.77), 0 8px 20px rgba(255, 255, 255, 0.5) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.77),
+    0 8px 20px rgba(255, 255, 255, 0.5) !important;
   border: 1px solid #fff !important;
 }
 
@@ -319,13 +283,16 @@ a {
   max-width: 1200px;
 }
 
-.left-box, .profile-box, .quickplay-box {
+.left-box,
+.profile-box,
+.quickplay-box {
   background: rgba(255, 255, 255, 0.56);
   border-radius: 35px;
   padding: 40px;
   width: 400px;
   text-align: center;
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.69), 0 8px 20px rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.69),
+    0 8px 20px rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(1px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -432,9 +399,8 @@ a {
   z-index: 10;
 }
 
-
 .upload-image-btn {
-  color: #146FE1;
+  color: #146fe1;
   font-size: 17px;
   font-weight: 600;
   height: 35px;
@@ -444,12 +410,12 @@ a {
   background-color: transparent;
   cursor: pointer;
 }
-.upload-image-btn:hover{
+.upload-image-btn:hover {
   background-color: rgba(0, 0, 0, 0.08);
 }
 
 .delete-image-btn {
-  color: #FE6544;
+  color: #fe6544;
   font-size: 17px;
   font-weight: 600;
   height: 35px;
@@ -460,38 +426,37 @@ a {
   cursor: pointer;
 }
 
-.delete-image-btn:hover{
+.delete-image-btn:hover {
   background-color: rgba(0, 0, 0, 0.08);
 }
 
 .profile-username {
-  background-color: rgba(0, 0, 0, 0.2)!important; 
-  height: 50px!important;
+  background-color: rgba(0, 0, 0, 0.2) !important;
+  height: 50px !important;
   width: 50px;
-  padding: 16px 18px!important;
-  border-radius: 15px!important;
-  font-size: 1.1rem!important;
-  color: white!important;
-  font-weight: bold!important;
-  font-family: Arial, sans-serif!important;
-  flex: 1!important;
-  text-align: left!important;
+  padding: 16px 18px !important;
+  border-radius: 15px !important;
+  font-size: 1.1rem !important;
+  color: white !important;
+  font-weight: bold !important;
+  font-family: Arial, sans-serif !important;
+  flex: 1 !important;
+  text-align: left !important;
 }
 
 .profile-username-edit {
-  background-color: rgba(255, 255, 255, 0.918)!important; 
-  height: 50px!important;
+  background-color: rgba(255, 255, 255, 0.918) !important;
+  height: 50px !important;
   width: 50px;
-  padding: 16px 18px!important;
-  border-radius: 15px!important;
-  font-size: 1.1rem!important;
-  color: rgb(0, 0, 0)!important;
-  font-weight: bold!important;
-  font-family: Arial, sans-serif!important;
-  flex: 1!important;
-  text-align: left!important;
+  padding: 16px 18px !important;
+  border-radius: 15px !important;
+  font-size: 1.1rem !important;
+  color: rgb(0, 0, 0) !important;
+  font-weight: bold !important;
+  font-family: Arial, sans-serif !important;
+  flex: 1 !important;
+  text-align: left !important;
 }
-
 
 .edit-profile-button {
   width: 100%;
@@ -504,16 +469,13 @@ a {
   color: #666;
   text-align: center;
   font-family: inherit;
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.15),
-    0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.1);
   cursor: pointer;
 }
 
 .edit-profile-button.hover {
   background-color: #000000;
 }
-
 
 .confirm-edit-profile-button {
   width: 100%;
@@ -528,12 +490,9 @@ a {
   text-align: center;
   font-family: inherit;
   font-weight: 500;
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.15),
-    0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.1);
   cursor: pointer;
 }
-
 
 .placeholder::after {
   content: "";
@@ -565,7 +524,7 @@ a {
   width: 100%;
   padding: 12px;
   height: 42px;
-  background-color: #7753FC;
+  background-color: #7753fc;
   color: white;
   font-weight: normal;
   font-size: 1rem;
@@ -576,77 +535,78 @@ a {
   font-family: Arial, sans-serif;
 
   /* Der weiße innere Rand: */
-  box-shadow:
-    inset 0 0 0 1px white; /* weißer Innenrand */
+  box-shadow: inset 0 0 0 1px white; /* weißer Innenrand */
 }
 
 .logout-button:hover {
   background-color: #8564fc;
 }
 
-
 .quickplay-box {
   text-align: center;
 }
 
 .quickplay-title {
-  font-family: 'Digitalt', Medium;
+  font-family: "Digitalt", Medium;
   font-size: 3.2rem;
   margin-top: -10px;
   margin-bottom: 10px;
   color: white;
   -webkit-text-stroke: 0.1px black;
-  }
-
-.green-button {
-  font-family: 'Digitalt', Medium !important;
-  font-size: 2.2rem!important;
-  -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.822)!important;
-  background: linear-gradient(45deg,
-    #86EE04 0%,      /* Heller Ton unten links */
-    #86EE04 49.9%,
-    #67EB00 50%,     /* Dunkler Ton oben rechts */
-    #67EB00 100%)!important;
-  
-  height: 65px!important;
-  color: rgb(255, 255, 255)!important;
-  padding: 10px 30px!important;
-  border-radius: 25px!important;
-  border: 3px solid white!important;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4)!important;
-
-  box-shadow:
-    inset 0 -4px 0 rgba(0, 0, 0, 0.2),
-    0 5px 0 #00000023!important;
-
-  cursor: pointer!important;
-  margin-top: 10px!important;
-  margin-bottom: 30px!important;
-  transition: all 0.2s ease!important;
 }
 
+.green-button {
+  font-family: "Digitalt", Medium !important;
+  font-size: 2.2rem !important;
+  -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.822) !important;
+  background: linear-gradient(
+    45deg,
+    #86ee04 0%,
+    /* Heller Ton unten links */ #86ee04 49.9%,
+    #67eb00 50%,
+    /* Dunkler Ton oben rechts */ #67eb00 100%
+  ) !important;
+
+  height: 65px !important;
+  color: rgb(255, 255, 255) !important;
+  padding: 10px 30px !important;
+  border-radius: 25px !important;
+  border: 3px solid white !important;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4) !important;
+
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.2), 0 5px 0 #00000023 !important;
+
+  cursor: pointer !important;
+  margin-top: 10px !important;
+  margin-bottom: 30px !important;
+  transition: all 0.2s ease !important;
+}
 
 .green-button:hover {
-  background: linear-gradient(45deg,
-    #a1ff4d 0%,      /* Hellerer Ton unten links */
-    #a1ff4d 49.9%,
-    #8ff140 50%,     /* Dunklerer Ton oben rechts */
-    #8ff140 100%);
+  background: linear-gradient(
+    45deg,
+    #a1ff4d 0%,
+    /* Hellerer Ton unten links */ #a1ff4d 49.9%,
+    #8ff140 50%,
+    /* Dunklerer Ton oben rechts */ #8ff140 100%
+  );
 }
 
 .green-button:active {
   transform: translateY(2px);
-  box-shadow:
-    inset 0 -2px 0 rgba(0, 0, 0, 0.3),
-    0 3px 0 #00000040;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.3), 0 3px 0 #00000040;
 }
 
-.player-box, .settings-box, .chat-box, .game-box{
+.player-box,
+.settings-box,
+.chat-box,
+.game-box {
   background: rgba(255, 255, 255, 0.56);
   border-radius: 50px;
   padding: 40px;
   text-align: center;
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.69), 0 8px 20px rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.69),
+    0 8px 20px rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(1px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -672,7 +632,7 @@ a {
   max-width: 330px;
   width: 100%;
   margin-right: 13px;
-  margin-top:100px;
+  margin-top: 100px;
   height: 650px;
 }
 
@@ -681,11 +641,11 @@ a {
   width: 100%;
   margin-left: 13px;
   height: 650px;
-  margin-top:100px;
+  margin-top: 100px;
 }
 
 .players-chat-title {
-  font-family: 'Digitalt', Medium;
+  font-family: "Digitalt", Medium;
   font-size: 2.5rem;
   font-weight: 1000f;
   margin-top: -30px;
@@ -712,8 +672,7 @@ a {
   font-weight: bold;
   font-size: 1.2rem;
   font-family: Arial, sans-serif;
-  box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.8),
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.8),
     0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
@@ -735,18 +694,15 @@ a {
   background-color: #0099ff; /* dunkleres Blau */
 }
 
-
 .chat-messages {
   background-color: white;
   height: 460px;
   border-radius: 18px;
   padding: 2px 8px;
   margin-bottom: 15px;
-  box-shadow:
-    inset 0 0 0 2px rgba(0, 0, 0, 0.1),
-    0 6px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.1), 0 6px 12px rgba(0, 0, 0, 0.2);
 
-  overflow-y: hidden;   /* verhindert Scrollen */
+  overflow-y: hidden; /* verhindert Scrollen */
   display: flex;
   flex-direction: column;
   justify-content: flex-end; /* Neue Nachrichten unten */
@@ -760,9 +716,9 @@ a {
   margin-bottom: 8px;
   word-break: break-word;
   text-align: left;
-  color: rgb(0, 0, 0)
+  color: rgb(0, 0, 0);
 }
- 
+
 .chat-username {
   font-weight: bold;
   margin-right: 5px;
@@ -771,7 +727,6 @@ a {
 .chat-text {
   white-space: pre-wrap;
 }
-
 
 .chat-input-area {
   display: flex;
@@ -802,7 +757,6 @@ a {
   padding: 0;
 }
 
-
 .lobby-header {
   display: flex;
   justify-content: space-between;
@@ -814,10 +768,10 @@ a {
 .lobby-banner {
   background-color: #a75efa;
   color: white;
-  height:40px;
-  font-family: 'Digitalt', sans-serif;
+  height: 40px;
+  font-family: "Digitalt", sans-serif;
   font-size: 1.8rem;
-  font-weight:normal;
+  font-weight: normal;
   text-transform: uppercase;
   padding: 5px 10px;
   letter-spacing: 1.2;
@@ -853,7 +807,7 @@ a {
 .lobby-label {
   font-weight: 500;
   font-size: 1.9rem;
-  font-family: 'Digitalt', sans-serif;
+  font-family: "Digitalt", sans-serif;
   color: #ffffff;
   display: block;
   margin-top: 25px;
@@ -901,7 +855,6 @@ textarea {
   gap: 20px;
 }
 
-
 .roomcode-box {
   display: flex;
   flex-direction: column;
@@ -918,13 +871,13 @@ textarea {
   font-weight: bold;
   color: #ffffff;
   text-transform: uppercase;
-  font-family: 'Digitalt', sans-serif;
+  font-family: "Digitalt", sans-serif;
   letter-spacing: 1px;
   -webkit-text-stroke: 0.6px rgb(0, 0, 0);
   margin-bottom: -13px;
   margin-top: -30;
 }
- 
+
 .roomcode-value {
   background-color: white;
   border: 2px solid #333;
@@ -933,7 +886,7 @@ textarea {
   padding: 1px 10px;
   font-size: 2.6rem;
   font-weight: 500;
-  font-family: 'Digitalt', sans-serif;
+  font-family: "Digitalt", sans-serif;
   letter-spacing: 2px;
   color: black;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
@@ -956,28 +909,28 @@ textarea {
 }
 
 .word-to-guess {
-  font-family: 'Nunito', sans-serif; /* Or other suitable font */
-  font-size: 2.5rem;          /* Smaller font size */
+  font-family: "Nunito", sans-serif; /* Or other suitable font */
+  font-size: 2.5rem; /* Smaller font size */
   font-weight: 500;
   color: #000;
   text-transform: lowercase;
-  display: inline-block;      /* Keep as inline-block */
-  border-bottom: none;        /* Remove container underline */
-  letter-spacing: normal;     /* Remove container letter-spacing */
-  margin-left: 0;             /* Remove container margin */
+  display: inline-block; /* Keep as inline-block */
+  border-bottom: none; /* Remove container underline */
+  letter-spacing: normal; /* Remove container letter-spacing */
+  margin-left: 0; /* Remove container margin */
   text-shadow: none;
   /* Ensure letters inside are centered if container alignment matters */
   /* text-align: center; /* Usually handled by parent .word-display-area */
 }
 
 .word-letter {
-  display: inline-block;      /* Treat each letter as a block */
-  min-width: 1ch;           /* Give letters like 'I' some minimum width */
-  text-align: center;         /* Center letter above its underline */
+  display: inline-block; /* Treat each letter as a block */
+  min-width: 1ch; /* Give letters like 'I' some minimum width */
+  text-align: center; /* Center letter above its underline */
   border-bottom: 3px solid #333; /* Dark grey underline for each letter */
-  padding-bottom: 0px;        /* Space between letter and its underline */
-  margin: 0 0.2em;            /* Horizontal space BETWEEN letters */
-                               /* Adjust 0.4em to control the gap */
+  padding-bottom: 0px; /* Space between letter and its underline */
+  margin: 0 0.2em; /* Horizontal space BETWEEN letters */
+  /* Adjust 0.4em to control the gap */
 }
 
 .test {
@@ -986,7 +939,7 @@ textarea {
 
 /* Drawing Canvas */
 .drawing-canvas {
-  width: 650px!important;
+  width: 650px !important;
   /* flex-grow: 1; /* Allow canvas to take up remaining vertical space */
   height: 500px; /* Or a fixed height that works */
   background-color: #ffffff;
@@ -994,11 +947,10 @@ textarea {
   box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3);
   margin-bottom: 20px; /* Space below canvas */
 
-  image-rendering: -moz-crisp-edges;          /* Firefox */
-  image-rendering: -webkit-crisp-edges;       /* Webkit (Safari, Chrome < 41) */
+  image-rendering: -moz-crisp-edges; /* Firefox */
+  image-rendering: -webkit-crisp-edges; /* Webkit (Safari, Chrome < 41) */
   /*image-rendering: pixelated;                 /* Chrome >= 41, Opera >= 28 */
 }
-
 
 /* Drawing Tools Container */
 .drawing-tools-arrangement {
@@ -1012,32 +964,32 @@ textarea {
 
 .drawing-tools {
   background-color: #f0f0f0; /* Light grey background for the bar */
-  border: 1px solid #cccccc;  /* Border around the bar */
-  border-radius: 10px;        /* Rounded corners for the bar */
-  padding: 3px;               /* Small padding inside the bar */
-  display: inline-flex;       /* Use inline-flex to wrap content tightly */
-  justify-content: flex-start;/* Align items to the start */
+  border: 1px solid #cccccc; /* Border around the bar */
+  border-radius: 10px; /* Rounded corners for the bar */
+  padding: 3px; /* Small padding inside the bar */
+  display: inline-flex; /* Use inline-flex to wrap content tightly */
+  justify-content: flex-start; /* Align items to the start */
   align-items: center;
-  box-shadow: none;           /* Remove previous shadow */
-  width: auto;                /* Let width be determined by content */
-  max-width: 95%;           /* Prevent overflow on smaller screens */
+  box-shadow: none; /* Remove previous shadow */
+  width: auto; /* Let width be determined by content */
+  max-width: 95%; /* Prevent overflow on smaller screens */
 }
 /* General Tool Button Styling */
 .tool-button {
   background-color: #ffffff; /* White background for each tool area */
-  border: none;             /* Remove default button border */
+  border: none; /* Remove default button border */
   border-right: 1px solid #dcdcdc; /* Vertical separator line */
-  padding: 0;               /* Remove padding, control size with width/height */
-  margin: 0;                /* Remove margins */
-  border-radius: 0;         /* Square corners by default */
+  padding: 0; /* Remove padding, control size with width/height */
+  margin: 0; /* Remove margins */
+  border-radius: 0; /* Square corners by default */
   cursor: pointer;
-  display: flex;            /* Center content inside */
+  display: flex; /* Center content inside */
   align-items: center;
   justify-content: center;
-  width: 52px;              /* Fixed width for each tool square */
-  height: 52px;             /* Fixed height */
+  width: 52px; /* Fixed width for each tool square */
+  height: 52px; /* Fixed height */
   transition: background-color 0.2s ease; /* Hover effect */
-  flex-shrink: 0;           /* Prevent items from shrinking */
+  flex-shrink: 0; /* Prevent items from shrinking */
 }
 
 .tool-button:last-child {
@@ -1045,7 +997,7 @@ textarea {
 }
 
 .tool-button:first-child {
-  border-top-left-radius: 7px;    /* Match container radius (minus padding/border) */
+  border-top-left-radius: 7px; /* Match container radius (minus padding/border) */
   border-bottom-left-radius: 7px;
 }
 .tool-button:last-child {
@@ -1057,8 +1009,8 @@ textarea {
   background-color: #f5f5f5; /* Slightly darken white background on hover */
 }
 .tool-button:active {
-    transform: none; /* Override previous active scale */
-    background-color: #eeeeee; /* Slightly darker for active */
+  transform: none; /* Override previous active scale */
+  background-color: #eeeeee; /* Slightly darker for active */
 }
 
 /* Active Tool Indicator */
@@ -1066,7 +1018,7 @@ textarea {
   background-color: #e0e0e0; /* Example: Grey background for active tool */
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15); /* Inset shadow for pressed look */
   border-color: #adadad; /* Optional: slightly darker border */
-} 
+}
 
 /* Specific styling for active brush dot if needed (though background color change might be enough) */
 .tool-button.active-tool .brush-dot {
@@ -1084,17 +1036,24 @@ textarea {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red); /* Rainbow gradient */
+  background: conic-gradient(
+    red,
+    yellow,
+    lime,
+    aqua,
+    blue,
+    magenta,
+    red
+  ); /* Rainbow gradient */
   border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 .tool-icon-image {
-  width: 22px;  /* Adjust size as needed */
+  width: 22px; /* Adjust size as needed */
   height: 22px;
   object-fit: contain;
   display: block; /* Prevents extra space below image */
 }
-
 
 .color-picker-btn .tool-icon-image {
   width: 100%; /* Let image fill the padded area */
@@ -1111,10 +1070,22 @@ textarea {
 }
 
 /* Specific Brush Dot Sizes */
-.brush-size-1 .brush-dot { width: 6px; height: 6px; }
-.brush-size-2 .brush-dot { width: 12px; height: 12px; }
-.brush-size-3 .brush-dot { width: 18px; height: 18px; }
-.brush-size-4 .brush-dot { width: 24px; height: 24px; }
+.brush-size-1 .brush-dot {
+  width: 6px;
+  height: 6px;
+}
+.brush-size-2 .brush-dot {
+  width: 12px;
+  height: 12px;
+}
+.brush-size-3 .brush-dot {
+  width: 18px;
+  height: 18px;
+}
+.brush-size-4 .brush-dot {
+  width: 24px;
+  height: 24px;
+}
 
 /* Active Tool Indicator */
 .active-tool {
@@ -1123,13 +1094,12 @@ textarea {
 }
 /* Adjust active border for color picker */
 .color-picker-btn.active-tool {
-   border-color: #007bff;
+  border-color: #007bff;
 }
 
 .tool-icon:hover {
   background-color: #ddd;
 }
-
 
 .ant-form-item-required::before {
   content: \"*\";
@@ -1142,7 +1112,7 @@ textarea {
   font-weight: normal;
   text-align: center;
   color: #212121;
-  font-family: 'Digitalt', serif;
+  font-family: "Digitalt", serif;
   margin-bottom: 8px;
   text-transform: uppercase;
 }

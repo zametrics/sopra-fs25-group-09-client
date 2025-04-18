@@ -21,32 +21,52 @@ const Register = () => {
   const [form] = Form.useForm();
 
   // Handle form submission
-  const handleRegister = async (values: { username: string; password: string }) => {
-    
+  const handleRegister = async (values: {
+    username: string;
+    password: string;
+  }) => {
     try {
       // Password validation
-      const validatePassword = (password: string): { isValid: boolean; message: string } => {
+      const validatePassword = (
+        password: string
+      ): { isValid: boolean; message: string } => {
         const minLength = password.length >= 4;
         const maxLength = password.length <= 32;
         const hasLetter = /[a-zA-Z]/.test(password);
         const hasNumber = /\d/.test(password);
         const noSpaces = !/\s/.test(password);
 
-        if (!minLength) return { isValid: false, message: "Password must be at least 4 characters long" };
-        if (!maxLength) return { isValid: false, message: "Password cannot exceed 32 characters" };
-        if (!hasLetter) return { isValid: false, message: "Password must contain at least one letter" };
-        if (!hasNumber) return { isValid: false, message: "Password must contain at least one number" };
-        if (!noSpaces) return { isValid: false, message: "Password cannot contain spaces" };
-        
+        if (!minLength)
+          return {
+            isValid: false,
+            message: "Password must be at least 4 characters long",
+          };
+        if (!maxLength)
+          return {
+            isValid: false,
+            message: "Password cannot exceed 32 characters",
+          };
+        if (!hasLetter)
+          return {
+            isValid: false,
+            message: "Password must contain at least one letter",
+          };
+        if (!hasNumber)
+          return {
+            isValid: false,
+            message: "Password must contain at least one number",
+          };
+        if (!noSpaces)
+          return { isValid: false, message: "Password cannot contain spaces" };
+
         return { isValid: true, message: "Password is valid" };
       };
 
-      
       // Validate password
       const passwordValidation = validatePassword(values.password);
       if (!passwordValidation.isValid) {
         throw new Error(passwordValidation.message);
-      } 
+      }
 
       // Send registration request to the backend
       const response = await apiService.post<UserGetDTO>("/users", values);
@@ -85,13 +105,17 @@ const Register = () => {
           onFinish={handleRegister}
           layout="vertical"
           size="large"
-        > 
+        >
           <Form.Item
             name="username"
             rules={[{ required: true, message: "Please enter a username" }]}
             label={<label className="login-label">Username:</label>}
           >
-            <Input prefix={<UserOutlined />} className="login-input" placeholder="Your username" />
+            <Input
+              prefix={<UserOutlined />}
+              className="login-input"
+              placeholder="Your username"
+            />
           </Form.Item>
 
           <Form.Item
@@ -99,7 +123,11 @@ const Register = () => {
             rules={[{ required: true, message: "Please enter a password" }]}
             label={<label className="login-label">Password:</label>}
           >
-            <Input.Password prefix={<LockOutlined />} className="login-input" placeholder="Your password" />
+            <Input.Password
+              prefix={<LockOutlined />}
+              className="login-input"
+              placeholder="Your password"
+            />
           </Form.Item>
 
           <div className="login-actions">
@@ -112,7 +140,10 @@ const Register = () => {
             <div className="login-divider">OR</div>
 
             <Form.Item>
-              <Button onClick={() => router.push("/login")} className="redirect-register-button">
+              <Button
+                onClick={() => router.push("/login")}
+                className="redirect-register-button"
+              >
                 BACK TO LOGIN
               </Button>
             </Form.Item>

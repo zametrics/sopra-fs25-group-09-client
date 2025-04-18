@@ -7,10 +7,8 @@
 // clicking on a user in this list will display /app/users/[id]/page.tsx
 "use client"; // For components that need React hooks and browser APIs, SSR (server-side rendering) has to be disabled. Read more here: https://nextjs.org/docs/pages/building-your-application/rendering/server-side-rendering
 
-
 import { Typography } from "antd"; // UI components from Ant Design
 import { Form } from "antd"; // Importing the type for table properties
-
 
 import withAuth from "@/hooks/withAuth"; // Import the authentication wrapper
 
@@ -19,17 +17,10 @@ import withAuth from "@/hooks/withAuth"; // Import the authentication wrapper
 
 const {} = Typography; // Extracting the Title component from Typography for styling
 
-
 const Dashboard: React.FC = () => {
-
   const [] = Form.useForm();
 
-  
-
-  return (
-    <>
-    </>
-  );
+  return <></>;
 };
 
 export default withAuth(Dashboard);

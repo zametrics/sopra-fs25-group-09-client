@@ -6,168 +6,167 @@ import { LogoutOutlined } from "@ant-design/icons";
 import { message } from "antd";
 import { useApi } from "@/hooks/useApi";
 import { User } from "@/types/user";
-import { useBackgroundMusic } from '@/hooks/useBackgroundMusic';
-
-
+import { useBackgroundMusic } from "@/hooks/useBackgroundMusic";
 
 // Exporting the HomeLayout component as default so that it can be imported easily in other files
-export default function HomeLayout({ children }: { children: React.ReactNode }) {
-
+export default function HomeLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   /* The HomeLayout component receives 'children' as a prop.
     'children' is a special prop in React that allows passing components or elements
      inside the HomeLayout component when it is used, making it flexible for rendering dynamic content.
      React.ReactNode is a type that includes any valid React element (JSX, strings, numbers, fragments, etc.)
      It ensures that 'children' can be anything React can render. */
 
+  // Using Next.js's `useRouter` hook to get access to the router object for navigating between pages
+  const router = useRouter();
 
-// Using Next.js's `useRouter` hook to get access to the router object for navigating between pages
-const router = useRouter();
+  // Using `usePathname` to get the current URL path (helps in identifying which page the user is on)
+  const pathname = usePathname();
 
-// Using `usePathname` to get the current URL path (helps in identifying which page the user is on)
-const pathname = usePathname();
+  // `useApi` is likely a custom hook that provides access to API functions for making network requests
+  const apiService = useApi();
 
-// `useApi` is likely a custom hook that provides access to API functions for making network requests
-const apiService = useApi();
+  // State variable to manage the avatar URL of the user
+  const [avatarUrl, setAvatarUrl] = useState("");
 
-// State variable to manage the avatar URL of the user
-const [avatarUrl, setAvatarUrl] = useState(""); 
+  // State variable to control whether the avatar menu (for uploading or deleting an avatar) is visible
+  const [showAvatarMenu, setShowAvatarMenu] = useState(false);
 
-// State variable to control whether the avatar menu (for uploading or deleting an avatar) is visible
-const [showAvatarMenu, setShowAvatarMenu] = useState(false);
+  // Boolean flag to determine if the current page is the user's profile page based on the pathname
+  const isProfilePage = pathname.startsWith("/home/") && pathname !== "/home";
 
-// Boolean flag to determine if the current page is the user's profile page based on the pathname
-const isProfilePage = pathname.startsWith("/home/") && pathname !== "/home";
+  // State variable to hold the URL of the avatar stored in localStorage, with a default value
+  const [localAvatarUrl, setLocalAvatarUrl] =
+    useState<string>("/icons/avatar.png");
 
-// State variable to hold the URL of the avatar stored in localStorage, with a default value
-const [localAvatarUrl, setLocalAvatarUrl] = useState<string>("/icons/avatar.png");
+  // State to store the `editUserId`, which is used when editing a user profile
+  const [editUserId, setEditUserId] = useState<string | null>(null);
 
-// State to store the `editUserId`, which is used when editing a user profile
-const [editUserId, setEditUserId] = useState<string | null>(null);
+  // State to manage the new username that the user might set while editing their profile
+  const [newUsername, setNewUsername] = useState("");
 
-// State to manage the new username that the user might set while editing their profile
-const [newUsername, setNewUsername] = useState("");
+  // State to manage the current username, which is fetched from localStorage or initially set to an empty string
+  const [username, setUsername] = useState<string>("");
 
-// State to manage the current username, which is fetched from localStorage or initially set to an empty string
-const [username, setUsername] = useState<string>("");
+  // This line retrieves the current user's ID from localStorage (only runs in the browser, so `typeof window !== "undefined"` is used to avoid SSR issues)
+  const currentUserId =
+    typeof window !== "undefined" ? localStorage.getItem("userId") : "";
 
-// This line retrieves the current user's ID from localStorage (only runs in the browser, so `typeof window !== "undefined"` is used to avoid SSR issues)
-const currentUserId = typeof window !== "undefined" ? localStorage.getItem("userId") : "";
+  const { isPlaying, toggle, volume, setVolume } = useBackgroundMusic(); //used oor accessing the background music hook
 
-const { isPlaying, toggle, volume, setVolume } = useBackgroundMusic(); //used oor accessing the background music hook
+  useEffect(() => {
+    // Check if running in the browser to avoid errors during server-side rendering (SSR)
+    if (typeof window !== "undefined") {
+      // Get the stored username from localStorage (or fallback to an empty string if not found)
+      const storedUsername = localStorage.getItem("username") || "";
+      // Update the state with the stored username
+      setUsername(storedUsername);
 
+      // Get the stored avatar URL from localStorage (or fallback to default avatar if not found)
+      const storedAvatarUrl =
+        localStorage.getItem("avatarUrl") || "/icons/avatar.png";
+      // Update the state with the stored avatar URL
+      setLocalAvatarUrl(storedAvatarUrl);
+    }
+  }, []); // Runs only once when the component mounts, to initialize state from localStorage
 
-useEffect(() => {
-  // Check if running in the browser to avoid errors during server-side rendering (SSR)
-  if (typeof window !== "undefined") {
-    // Get the stored username from localStorage (or fallback to an empty string if not found)
-    const storedUsername = localStorage.getItem("username") || "";
-    // Update the state with the stored username
-    setUsername(storedUsername);
+  useEffect(() => {
+    // If there's no editUserId (we're not editing someone), fallback to locally stored values
+    if (!editUserId) {
+      setNewUsername(username || ""); // Pre-fill the username input with the stored username
+      setAvatarUrl(localAvatarUrl); // Use the locally stored avatar
+      return;
+    }
 
-    // Get the stored avatar URL from localStorage (or fallback to default avatar if not found)
-    const storedAvatarUrl = localStorage.getItem("avatarUrl") || "/icons/avatar.png";
-    // Update the state with the stored avatar URL
-    setLocalAvatarUrl(storedAvatarUrl);
-  }
-}, []); // Runs only once when the component mounts, to initialize state from localStorage
+    // If we do have an editUserId, fetch that user's info from the backend
+    const fetchUser = async () => {
+      const userData = await apiService.get<User>(`/users/${editUserId}`);
+      setNewUsername(userData.username || ""); // Populate input with fetched username
+      setAvatarUrl(userData.avatarUrl || localAvatarUrl); // Show their avatar, or fallback
+    };
 
-useEffect(() => {
-  // If there's no editUserId (we're not editing someone), fallback to locally stored values
-  if (!editUserId) {
-    setNewUsername(username || "");  // Pre-fill the username input with the stored username
-    setAvatarUrl(localAvatarUrl);    // Use the locally stored avatar
-    return;
-  }
+    // Fetch and set the data
+    fetchUser();
+  }, [apiService, editUserId, username, localAvatarUrl]);
+  //    Runs when editUserId, apiService, username, or localAvatarUrl changes
+  //    It ensures the right data is shown when editing a profile
 
-  // If we do have an editUserId, fetch that user's info from the backend
-  const fetchUser = async () => {
-    const userData = await apiService.get<User>(`/users/${editUserId}`);
-    setNewUsername(userData.username || "");                // Populate input with fetched username
-    setAvatarUrl(userData.avatarUrl || localAvatarUrl);     // Show their avatar, or fallback
+  useEffect(() => {
+    const profilePage = pathname.startsWith("/home/") && pathname !== "/home";
+    // If we're on a profile page (e.g., /home/123), extract the user ID from the URL
+    if (profilePage) {
+      const parts = pathname.split("/"); // Split path like ['home', '123']
+      const id = parts[parts.length - 1]; // Get the last part => '123'
+      setEditUserId(id); // Set it as the current user being edited
+    } else {
+      // If not on a profile route, clear the edit user state
+      setEditUserId(null);
+    }
+  }, [pathname]);
+  //    Runs whenever the URL path changes
+  //    Helps determine if we're in "edit profile" mode and who we’re editing
+
+  // Function to save the updated username
+  const saveUsername = async () => {
+    // Prevent saving an empty username
+    if (!newUsername.trim()) {
+      message.error("Username cannot be empty.");
+      return;
+    }
+
+    try {
+      // Build the object to send to the server
+      const updatedFields = { newUsername };
+
+      // Send a PUT request to update the username for the current editUserId
+      await apiService.put(`/users/${editUserId}`, updatedFields);
+
+      localStorage.setItem("username", newUsername); // Update in localStorage
+      setUsername(newUsername); // Update state immediately
+      // Notify user and update both localStorage and state
+      message.success("Username updated successfully!");
+    } catch (error) {
+      // If the username hasn't actually changed, silently ignore
+      if (newUsername === localStorage.getItem("username")) {
+        console.error("", error);
+        return;
+      } else {
+        // Otherwise show a generic error (e.g. username already taken)
+        message.error("Error updating username. It might be taken.");
+      }
+    }
   };
 
-  // Fetch and set the data
-  fetchUser();
-}, [apiService, editUserId, username, localAvatarUrl]);
-//    Runs when editUserId, apiService, username, or localAvatarUrl changes
-//    It ensures the right data is shown when editing a profile
+  // Function that gets called when the user confirms profile changes
+  const handleConfirmChanges = async () => {
+    // Run both saveUsername and saveAvatar in parallel
+    await Promise.all([saveUsername(), saveAvatar()]);
 
-useEffect(() => {
-
-  const profilePage = pathname.startsWith("/home/") && pathname !== "/home";
-  // If we're on a profile page (e.g., /home/123), extract the user ID from the URL
-  if (profilePage) {
-    const parts = pathname.split("/"); // Split path like ['home', '123']
-    const id = parts[parts.length - 1]; // Get the last part => '123'
-    setEditUserId(id); // Set it as the current user being edited
-  } else {
-    // If not on a profile route, clear the edit user state
-    setEditUserId(null);
-  }
-}, [pathname]);
-//    Runs whenever the URL path changes
-//    Helps determine if we're in "edit profile" mode and who we’re editing
-
-// Function to save the updated username
-const saveUsername = async () => {
-  // Prevent saving an empty username
-  if (!newUsername.trim()) {
-    message.error("Username cannot be empty.");
-    return;
-  }
-
-  try {
-    // Build the object to send to the server
-    const updatedFields = { newUsername };
-
-    // Send a PUT request to update the username for the current editUserId
-    await apiService.put(`/users/${editUserId}`, updatedFields);
-
-    localStorage.setItem("username", newUsername); // Update in localStorage
-    setUsername(newUsername);                      // Update state immediately
-    // Notify user and update both localStorage and state
-    message.success("Username updated successfully!");
-  } catch (error) {
-    
-    // If the username hasn't actually changed, silently ignore
-    if (newUsername === localStorage.getItem("username")) {
-      console.error("", error);
-      return;
-
-    } else {
-      // Otherwise show a generic error (e.g. username already taken)
-      message.error("Error updating username. It might be taken.");
-    }
-  }
-};
-
-// Function that gets called when the user confirms profile changes
-const handleConfirmChanges = async () => {
-  // Run both saveUsername and saveAvatar in parallel
-  await Promise.all([saveUsername(), saveAvatar()]);
-
-  // After saving, navigate the user back to the main home page
-  router.push("/home");
-};
+    // After saving, navigate the user back to the main home page
+    router.push("/home");
+  };
 
   const handleLogout = async () => {
     const storedToken = localStorage.getItem("token");
-  
+
     // Extract the token from the stored object
     const parsedToken = storedToken ? JSON.parse(storedToken)?.token : null;
-  
+
     // Log the parsedToken value to the console
     console.log("Parsed Token:", parsedToken);
-  
+
     if (parsedToken) {
       try {
         // Send the token directly, not wrapped in an object
-        await apiService.post("/logout", { token: parsedToken });  
+        await apiService.post("/logout", { token: parsedToken });
       } catch (error) {
         console.error("Logout failed", error);
       }
     }
-  
+
     // Clear the token and username from localStorage
     localStorage.removeItem("token");
     localStorage.removeItem("username");
@@ -185,184 +184,198 @@ const handleConfirmChanges = async () => {
     setAvatarUrl("/icons/avatar.png"); // Reset to default avatar
   };
 
+  // Function to handle uploading (setting) a new image URL for the avatar
+  const handleUploadImage = () => {
+    // Prompt the user to enter a new image URL
+    const url = prompt("Enter new image URL:");
 
-// Function to handle uploading (setting) a new image URL for the avatar
-const handleUploadImage = () => {
-  // Prompt the user to enter a new image URL
-  const url = prompt("Enter new image URL:");
-
-  // If the user provided a non-empty, trimmed URL, update the avatar state
-  if (url && url.trim()) {
-    setAvatarUrl(url); // This sets the new avatar URL into component state
-  } 
-  // If the user entered something (not cancelled), but it's invalid (e.g. empty string), show an error
-  else if (url !== null) {
-    message.error("Please enter a valid image URL.");
-  }
-
-  // Note: If the user presses "Cancel" on the prompt, `url` will be null and nothing happens
-};
-
-
-// Async function to handle saving/updating the user's avatar URL
-const saveAvatar = async () => {
-  // If the avatar URL is empty or only whitespace, show an error message and exit early
-  if (!avatarUrl.trim()) {
-    message.error("Please enter a valid image URL.");
-    return;
-  }
-
-  try {
-
-
-    // Construct the object with the updated avatar URL to send to the server
-    const updatedFields = { avatarUrl };
-
-    // Send a PUT request to update the user's avatar on the backend
-    await apiService.put(`/users/${editUserId}/avatar`, updatedFields);
-
-
-    // Update the avatar URL in localStorage so it's persisted between sessions
-    localStorage.setItem("avatarUrl", avatarUrl);
-
-    if (avatarUrl == localAvatarUrl){
-      // On success, show a success message to the user
-      message.success("Profile picture updated successfully!");
+    // If the user provided a non-empty, trimmed URL, update the avatar state
+    if (url && url.trim()) {
+      setAvatarUrl(url); // This sets the new avatar URL into component state
+    }
+    // If the user entered something (not cancelled), but it's invalid (e.g. empty string), show an error
+    else if (url !== null) {
+      message.error("Please enter a valid image URL.");
     }
 
-    // Close the avatar editing menu/modal
-    setShowAvatarMenu(false);
-  } catch (error) {
-    // If there's an error, show an error message to the user
-    message.error("Error updating profile picture.");
-    // Also log the error to the console for debugging purposes
-    console.error("Update error:", error);
+    // Note: If the user presses "Cancel" on the prompt, `url` will be null and nothing happens
+  };
+
+  // Async function to handle saving/updating the user's avatar URL
+  const saveAvatar = async () => {
+    // If the avatar URL is empty or only whitespace, show an error message and exit early
+    if (!avatarUrl.trim()) {
+      message.error("Please enter a valid image URL.");
+      return;
+    }
+
+    try {
+      // Construct the object with the updated avatar URL to send to the server
+      const updatedFields = { avatarUrl };
+
+      // Send a PUT request to update the user's avatar on the backend
+      await apiService.put(`/users/${editUserId}/avatar`, updatedFields);
+
+      // Update the avatar URL in localStorage so it's persisted between sessions
+      localStorage.setItem("avatarUrl", avatarUrl);
+
+      if (avatarUrl == localAvatarUrl) {
+        // On success, show a success message to the user
+        message.success("Profile picture updated successfully!");
+      }
+
+      // Close the avatar editing menu/modal
+      setShowAvatarMenu(false);
+    } catch (error) {
+      // If there's an error, show an error message to the user
+      message.error("Error updating profile picture.");
+      // Also log the error to the console for debugging purposes
+      console.error("Update error:", error);
     }
   };
 
-// Async function that handles the creation of a new game lobby
-const handleCreateLobby = async () => {
-  try {
-    // Get the current user's ID from localStorage
-    const userIdStr = localStorage.getItem("userId");
-    const userId = userIdStr ? JSON.parse(userIdStr) : null;
+  // Async function that handles the creation of a new game lobby
+  const handleCreateLobby = async () => {
+    try {
+      // Get the current user's ID from localStorage
+      const userIdStr = localStorage.getItem("userId");
+      const userId = userIdStr ? JSON.parse(userIdStr) : null;
 
-    // If there's no user ID (e.g. user not logged in), show error and stop
-    if (!userId) {
-      message.error("User ID not found. Please log in again.");
-      return;
+      // If there's no user ID (e.g. user not logged in), show error and stop
+      if (!userId) {
+        message.error("User ID not found. Please log in again.");
+        return;
+      }
+
+      // Set up default lobby settings
+      const defaultLobbyData = {
+        numOfMaxPlayers: 8, // Maximum players allowed
+        playerIds: [userId], // Add the current user as the first player
+        wordset: "english", // Word set to be used in the game
+        numOfRounds: 3, // Number of rounds for the game
+        drawTime: 80, // Drawing time in seconds per round
+        lobbyOwner: userId, // Set the current user as the lobby owner
+      };
+
+      // Send POST request to backend to create the lobby
+      const response = await apiService.post("/lobbies", defaultLobbyData);
+
+      console.log("Lobby creation response:", response);
+
+      // Type guard to check if the response has an `id` directly
+      const hasId = (obj: unknown): obj is { id: string | number } => {
+        return (
+          typeof obj === "object" &&
+          obj !== null &&
+          "id" in (obj as Record<string, unknown>)
+        );
+      };
+
+      // Type guard to check if the response has a nested `data.id`
+      const hasDataId = (
+        obj: unknown
+      ): obj is { data: { id: string | number } } => {
+        return (
+          typeof obj === "object" &&
+          obj !== null &&
+          "data" in (obj as Record<string, unknown>) &&
+          typeof (obj as { data: unknown }).data === "object" &&
+          (obj as { data: unknown }).data !== null &&
+          "id" in (obj as { data: Record<string, unknown> }).data
+        );
+      };
+
+      // Try to extract the lobby ID using the type guards
+      let lobbyId;
+
+      if (hasId(response)) {
+        lobbyId = response.id;
+      } else if (hasDataId(response)) {
+        lobbyId = response.data.id;
+      } else {
+        // If we can't find the ID, show an error and exit
+        console.error("Could not determine lobby ID from response:", response);
+        message.error(
+          "Created lobby but couldn't get ID. Please check lobby list."
+        );
+        return;
+      }
+
+      // If we successfully got the lobby ID, show a success message
+      message.success(`Lobby created successfully! ID: ${lobbyId}`);
+
+      // Navigate the user to the newly created lobby
+      router.push(`/lobbies/${lobbyId}`);
+    } catch (error) {
+      // Catch any errors during the process and notify the user
+      console.error("Error creating lobby:", error);
+      message.error("Failed to create lobby. Please try again.");
+    } finally {
+      // Optional: you could add cleanup code here if needed
     }
+  };
 
-    // Set up default lobby settings
-    const defaultLobbyData = {
-      numOfMaxPlayers: 8,            // Maximum players allowed
-      playerIds: [userId],           // Add the current user as the first player
-      wordset: "english",            // Word set to be used in the game
-      numOfRounds: 3,                // Number of rounds for the game
-      drawTime: 80,                  // Drawing time in seconds per round
-      lobbyOwner: userId             // Set the current user as the lobby owner
-    };
-
-    // Send POST request to backend to create the lobby
-    const response = await apiService.post("/lobbies", defaultLobbyData);
-
-    console.log("Lobby creation response:", response);
-
-    // Type guard to check if the response has an `id` directly
-    const hasId = (obj: unknown): obj is { id: string | number } => {
-      return typeof obj === "object" && obj !== null && "id" in (obj as Record<string, unknown>);
-    };
-
-    // Type guard to check if the response has a nested `data.id`
-    const hasDataId = (obj: unknown): obj is { data: { id: string | number } } => {
-      return (
-        typeof obj === "object" &&
-        obj !== null &&
-        "data" in (obj as Record<string, unknown>) &&
-        typeof (obj as { data: unknown }).data === "object" &&
-        (obj as { data: unknown }).data !== null &&
-        "id" in (obj as { data: Record<string, unknown> }).data
-      );
-    };
-
-    // Try to extract the lobby ID using the type guards
-    let lobbyId;
-
-    if (hasId(response)) {
-      lobbyId = response.id;
-    } else if (hasDataId(response)) {
-      lobbyId = response.data.id;
-    } else {
-      // If we can't find the ID, show an error and exit
-      console.error("Could not determine lobby ID from response:", response);
-      message.error("Created lobby but couldn't get ID. Please check lobby list.");
-      return;
-    }
-
-    // If we successfully got the lobby ID, show a success message
-    message.success(`Lobby created successfully! ID: ${lobbyId}`);
-
-    // Navigate the user to the newly created lobby
-    router.push(`/lobbies/${lobbyId}`);
-
-  } catch (error) {
-    // Catch any errors during the process and notify the user
-    console.error("Error creating lobby:", error);
-    message.error("Failed to create lobby. Please try again.");
-  } finally {
-    // Optional: you could add cleanup code here if needed
-  }
-};
-
-
-  
   return (
     <div className="page-background">
       {/* MUSIC CONTROLS */}
-    <div style={{
-      position: 'absolute',
-      top: '20px',
-      right: '20px',
-      backgroundColor: 'rgba(255, 255, 255, 0.85)',
-      borderRadius: '10px',
-      padding: '10px 14px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-      zIndex: 9999,
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px'
-    }}>
-      <button onClick={toggle} style={{
-        background: 'none',
-        border: 'none',
-        fontSize: '1.2rem',
-        cursor: 'pointer'
-      }}>
-        {isPlaying ? '🔊' : '🔇'}
-      </button>
+      <div
+        style={{
+          position: "absolute",
+          top: "20px",
+          right: "20px",
+          backgroundColor: "rgba(255, 255, 255, 0.85)",
+          borderRadius: "10px",
+          padding: "10px 14px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+          zIndex: 9999,
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+        }}
+      >
+        <button
+          onClick={toggle}
+          style={{
+            background: "none",
+            border: "none",
+            fontSize: "1.2rem",
+            cursor: "pointer",
+          }}
+        >
+          {isPlaying ? "🔊" : "🔇"}
+        </button>
 
-      <input
-        type="range"
-        min={0}
-        max={1}
-        step={0.01}
-        value={volume}
-        onChange={(e) => setVolume(parseFloat(e.target.value))}
-        style={{ width: '80px' }}
-      />
-    </div>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={volume}
+          onChange={(e) => setVolume(parseFloat(e.target.value))}
+          style={{ width: "80px" }}
+        />
+      </div>
 
       <div className="home-wrapper">
         <div className="left-box">
-          <img src="/icons/settings_icon.png" alt="Settings" className="settings-icon" />
+          <img
+            src="/icons/settings_icon.png"
+            alt="Settings"
+            className="settings-icon"
+          />
           <h1 className="drawzone-logo-3-7rem">DRAWZONE</h1>
           <p className="drawzone-subtitle-1-5rem">ART BATTLE ROYALE</p>
-          <button className="green-button" onClick={() => router.push("/join-lobby")}>JOIN LOBBY</button>
+          <button
+            className="green-button"
+            onClick={() => router.push("/join-lobby")}
+          >
+            JOIN LOBBY
+          </button>
           <button className="green-button" onClick={handleCreateLobby}>
-          HOST GAME
+            HOST GAME
           </button>
         </div>
-          
+
         <div className="right-side">
           <div className="profile-box">
             {isProfilePage ? (
@@ -373,18 +386,38 @@ const handleCreateLobby = async () => {
                       src={avatarUrl}
                       alt="Avatar"
                       className="avatar-image"
-                      style={{marginTop: 5, marginBottom: 1}}
+                      style={{ marginTop: 5, marginBottom: 1 }}
                     />
                     <span
                       onClick={() => setShowAvatarMenu(!showAvatarMenu)}
-                      style={{ position: "absolute", bottom: 0, right: 0, cursor: "pointer" }}
+                      style={{
+                        position: "absolute",
+                        bottom: 0,
+                        right: 0,
+                        cursor: "pointer",
+                      }}
                     >
-                      <img src="/icons/edit_icon.png" alt="Edit" width={35} height={35} />
+                      <img
+                        src="/icons/edit_icon.png"
+                        alt="Edit"
+                        width={35}
+                        height={35}
+                      />
                     </span>
                     {showAvatarMenu && (
                       <div className="avatar-menu">
-                        <button onClick={handleUploadImage} className="upload-image-btn">upload image</button>
-                        <button onClick={handleDeleteImage} className="delete-image-btn">delete image</button>
+                        <button
+                          onClick={handleUploadImage}
+                          className="upload-image-btn"
+                        >
+                          upload image
+                        </button>
+                        <button
+                          onClick={handleDeleteImage}
+                          className="delete-image-btn"
+                        >
+                          delete image
+                        </button>
                       </div>
                     )}
                   </div>
@@ -394,7 +427,12 @@ const handleCreateLobby = async () => {
                     className="profile-username-edit"
                   />
                 </div>
-                <button className="confirm-edit-profile-button" onClick={handleConfirmChanges}>Confirm changes</button>
+                <button
+                  className="confirm-edit-profile-button"
+                  onClick={handleConfirmChanges}
+                >
+                  Confirm changes
+                </button>
                 <button className="logout-button" onClick={handleLogout}>
                   <LogoutOutlined /> Log out
                 </button>
@@ -402,10 +440,19 @@ const handleCreateLobby = async () => {
             ) : (
               <>
                 <div className="profile-top-row">
-                  <img src={localAvatarUrl} alt="Avatar" className="avatar-image" />
+                  <img
+                    src={localAvatarUrl}
+                    alt="Avatar"
+                    className="avatar-image"
+                  />
                   <div className="profile-username">{username}</div>
                 </div>
-                <button className="edit-profile-button" onClick={handleEditProfile}>Edit Profile</button>
+                <button
+                  className="edit-profile-button"
+                  onClick={handleEditProfile}
+                >
+                  Edit Profile
+                </button>
                 <button className="logout-button" onClick={handleLogout}>
                   <LogoutOutlined /> Log out
                 </button>
@@ -417,7 +464,12 @@ const handleCreateLobby = async () => {
 
           <div className="quickplay-box">
             <h2 className="quickplay-title">QUICKPLAY</h2>
-            <button className="green-button" onClick={() => router.push("/quickplay")}>PLAY</button>
+            <button
+              className="green-button"
+              onClick={() => router.push("/quickplay")}
+            >
+              PLAY
+            </button>
           </div>
         </div>
       </div>

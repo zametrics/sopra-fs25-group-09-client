@@ -8,7 +8,7 @@ type DrawLineParams = {
   prevPoint: Point | null; // Can be null for the first point in a batch or single dot
   color: string;
   brushSize: number;
-}
+};
 
 export const drawLine = ({
   prevPoint,
@@ -49,7 +49,7 @@ export const drawLine = ({
   };
 
   const p0 = prevPoint ?? currentPoint; // Start point for interpolation or the only point
-  const p1 = currentPoint;           // End point
+  const p1 = currentPoint; // End point
 
   if (prevPoint === null) {
     // Draw a single dot/circle if no previous point
@@ -68,10 +68,11 @@ export const drawLine = ({
       drawPixelatedCircle(x, y);
     }
 
-  // Ensure the final exact point is also drawn (interpolation might miss it slightly)
-  drawPixelatedCircle(p1.x, p1.y);
-  if (!prevPoint) { // If it was just a dot (mousedown without move)
+    // Ensure the final exact point is also drawn (interpolation might miss it slightly)
+    drawPixelatedCircle(p1.x, p1.y);
+    if (!prevPoint) {
+      // If it was just a dot (mousedown without move)
       drawPixelatedCircle(p0.x, p0.y);
-  }
+    }
   }
 };

@@ -3,11 +3,7 @@
 import withAuth from "@/hooks/withAuth";
 
 const UserProfileEdit: React.FC = () => {
-
-  return (
-    <>
-    </>
-  );
+  return <></>;
 };
 
 export default withAuth(UserProfileEdit);

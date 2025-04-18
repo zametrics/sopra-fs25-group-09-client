@@ -25,7 +25,7 @@ fi
 set -u
 
 # If NIX_INSTALLER_FORCE_ALLOW_HTTP is unset or empty, default it.
-NIX_INSTALLER_BINARY_ROOT="${NIX_INSTALLER_BINARY_ROOT:-https://install.determinate.systems/nix/tag/v3.1.1}"
+NIX_INSTALLER_BINARY_ROOT="${NIX_INSTALLER_BINARY_ROOT:-https://install.determinate.systems/nix/tag/v3.3.1}"
 
 main() {
     downloader --check

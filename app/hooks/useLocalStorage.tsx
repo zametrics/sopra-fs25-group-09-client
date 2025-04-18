@@ -23,7 +23,7 @@ interface LocalStorage<T> {
  */
 export default function useLocalStorage<T>(
   key: string,
-  defaultValue: T,
+  defaultValue: T
 ): LocalStorage<T> {
   const [value, setValue] = useState<T>(defaultValue);
 

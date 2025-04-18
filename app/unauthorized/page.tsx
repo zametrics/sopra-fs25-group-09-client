@@ -54,7 +54,9 @@ const Unauthorized = () => {
           width: "400px",
         }}
       >
-        <Title level={3} style={{ color: "#ff4d4f" }}>🚫 Access Denied</Title>
+        <Title level={3} style={{ color: "#ff4d4f" }}>
+          🚫 Access Denied
+        </Title>
         <Text type="secondary" style={{ color: "rgb(255, 255, 255)" }}>
           Only logged-in users can access this page.
         </Text>
