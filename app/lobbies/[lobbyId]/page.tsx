@@ -308,6 +308,13 @@ useEffect(() => {
     } finally {
       setLoading(false);
     }
+    console.log("Starting game with settings:", {
+      rounds,
+      drawTime,
+      language,
+      type,
+      customWords: type === "custom" ? customWords.substring(0, 20) + "..." : null
+    });
   };
   
   const colorPool: string[] = [

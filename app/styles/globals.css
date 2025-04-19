@@ -1220,3 +1220,78 @@ textarea {
   position: relative; /* Needed for absolute positioning of popup if wrapper isn't relative */
   padding-bottom: 5px; /* Add a little space below tools */
 }
+
+.timer-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer-circle {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.timer-circle-bg {
+  fill: none;
+  stroke: #333;
+  stroke-width: 5;
+  opacity: 0.2;
+}
+
+.timer-circle-progress {
+  fill: none;
+  stroke: #693cd3;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 283;
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+.timer-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.timer-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #333;
+  line-height: 1;
+}
+
+.timer-label {
+  font-size: 0.85rem;
+  color: #666;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* Add a pulsing animation when time is running low (under 10 seconds) */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.timer-low {
+  animation: pulse 0.8s infinite;
+}
+
+/* Color changes based on time remaining */
+.timer-warning .timer-circle-progress {
+  stroke: #ffa500; /* Orange for warning (less than 30% time left) */
+}
+
+.timer-danger .timer-circle-progress {
+  stroke: #ff3b30; /* Red for danger (less than 10% time left) */
+}

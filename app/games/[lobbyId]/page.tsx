@@ -160,7 +160,11 @@ const LobbyPage: FC = ({}) => {
   const [isCustomCursorVisible, setIsCustomCursorVisible] = useState(false);
   const [useCustomElementCursor, setUseCustomElementCursor] = useState(false); // Flag to control which cursor system to use
   const [isLeaveModalVisible, setIsLeaveModalVisible] = useState<boolean>(false);
-  
+
+  const [timer, setTimer] = useState<number | null>(null);
+  const [currentRound, setCurrentRound] = useState(69);
+  const [numOfRounds, setNumOfRounds] = useState(420);
+
   
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     // Get mouse position relative to the page
@@ -423,7 +427,7 @@ const LobbyPage: FC = ({}) => {
   useEffect(() => {
     const canvas = canvasElementRef.current;
     if (!canvas) return;
-
+    
     let newCursorStyle = "crosshair"; // Default if no tool active or custom element used
     let useCustomElement = false; // Reset flag
 
@@ -496,6 +500,16 @@ const LobbyPage: FC = ({}) => {
       fetchLobby();
     }
   }, [lobbyId, apiService]);
+
+  useEffect(() => {
+    if (socket && lobby && lobby.drawTime) {
+      console.log("Auto-starting timer on page load, lobbyId:", lobbyId);
+      socket.emit("startTimer", { 
+        lobbyId,
+        drawTime: lobby.drawTime
+      });
+    }
+  }, [socket, lobby, lobbyId]);
 
   // old socket implementation
   //test http://localhost:3001/
@@ -760,10 +774,10 @@ const handleCancelLeave = () => {
         return "Player";
       }
     };
-    //http:/localhost:3001
+    //http:/localhost:3001 --- "https://socket-server-826256454260.europe-west1.run.app/" { path: "/api/socket" }
     const setupSocket = async () => {
       socketIo = io(
-        "https://socket-server-826256454260.europe-west1.run.app/",
+        "http://localhost:3001",
         { path: "/api/socket" }
       ); // Use your server URL
       setSocket(socketIo);
@@ -780,6 +794,18 @@ const handleCancelLeave = () => {
       }
 
       // --- Listener for receiving the final initial state ---
+      socketIo.on("timerUpdate", (newTime: number) => {
+        //console.log("Received timer update:", newTime);
+        setTimer(newTime);
+      });
+
+      socketIo.on('gameUpdate', (gameData) => {
+        console.log('Received game update:', gameData);
+        if (gameData.currentRound) setCurrentRound(gameData.currentRound);
+        if (gameData.numOfRounds) setNumOfRounds(gameData.numOfRounds);
+      });
+    
+      
       socketIo.on("load-canvas-state", (data: LoadCanvasStateData) => {
         if (!isCanvasInitialized && data.dataUrl && isMounted) {
           console.log("Received load-canvas-state. Loading canvas...");
@@ -934,6 +960,7 @@ const handleCancelLeave = () => {
         socketIo.off("clear");
         socketIo.off("fill-area");
         socketIo.off("sync-canvas");
+        socketIo.off('gameUpdate');
         // ... unregister other drawing listeners ...
         socketIo.disconnect();
       }
@@ -1042,9 +1069,50 @@ const handleCancelLeave = () => {
         </div>
         {/* Game Box */}
         <div className="game-box">
+        <div className="timer-area" style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 10 }}>
+        <div className="timer-container">
+          <svg className="timer-circle" viewBox="0 0 100 100">
+            <circle className="timer-circle-bg" cx="50" cy="50" r="45" />
+            <circle 
+              className="timer-circle-progress" 
+              cx="50" 
+              cy="50" 
+              r="45" 
+              style={{
+                strokeDashoffset: timer !== null ? 
+                  283 - (283 * timer / (lobby?.drawTime || 60)) : 283
+              }}
+            />
+          </svg>
+          <div className="timer-content">
+            <span className="timer-value">{timer !== null ? timer : "--"}</span>
+            <span className="timer-label">seconds</span>
+          </div>
+        </div>
+        <div className="round-content">
+          <span className="currentRound">Round: {currentRound || 69}</span>
+          <span className="allRound">/{numOfRounds || 420}</span>
+        </div>
+      </div>
           <h1 className="drawzone-logo-2-8rem">DRAWZONE</h1>
           <h2 className="drawzone-subtitle-1-1rem">ART BATTLE ROYALE</h2>
-          <button className="leave-game-button" onClick={showLeaveConfirmation}>LEAVE GAME</button>{" "}
+          <button className="leave-game-button" onClick={showLeaveConfirmation}>LEAVE GAME</button>
+          {/* <Button
+            onClick={() => {
+              console.log("Start Timer clicked, lobbyId:", lobbyId);
+              if (lobby && lobby.drawTime) {
+                socket?.emit("startTimer", { 
+                  lobbyId,
+                  drawTime: lobby.drawTime // Pass the drawTime to server
+                });
+              } else {
+                console.error("Cannot start timer: drawTime not available");
+              }
+            }}
+          >
+            Start Timer
+          </Button> */}
+
           {/* Added a class */}
           {/* Word Display Area */}
           <div className="word-display-area">
