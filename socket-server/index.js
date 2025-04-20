@@ -2,6 +2,8 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+//const fetch = require("node-fetch"); // to fetch draw-time or other data from the database
+
 
 const app = express();
 app.use(cors());
@@ -21,9 +23,99 @@ const socketToLobby = new Map(); // Map<socketId, { lobbyId, userId }>
 
 const pendingStateRequests = new Map();
 
+const gameStates = new Map(); // Track game state including current round
+const timers = new Map(); // Declare this once globally
+
+// function stopLobbyTimer(lobbyId) {
+//   const entry = timers.get(lobbyId);
+//   if (entry) {
+//     clearInterval(entry.interval);
+//     timers.delete(lobbyId);
+//   }
+// }
+
+
 io.on('connection', (socket) => {
   console.log(`Connected: ${socket.id}`);
 
+
+const playerInfo = socketToLobby.get(socket.id);
+  if (playerInfo) {
+    const { lobbyId } = playerInfo;
+    const entry = timers.get(lobbyId);
+    if (entry) {
+      socket.emit("timerUpdate", entry.time);
+    }
+  }
+  
+  socket.on("startTimer", async ({ lobbyId, drawTime }) => {
+    console.log(`Start timer for lobby ${lobbyId} with drawTime: ${drawTime}s`);
+    
+    if (timers.has(lobbyId)) {
+      console.log(`⏱️ Timer already running for lobby ${lobbyId}`);
+      return;
+    }
+  
+    // Initialize or get game state for this lobby
+    if (!gameStates.has(lobbyId)) {
+      // Get numOfRounds from your lobby data
+      const lobby = lobbies.get(lobbyId);
+      const lobbyOwnerSocket = [...lobby.values()].find(player => player.isOwner)?.socketId;
+      
+      // Initialize game state
+      gameStates.set(lobbyId, {
+        currentRound: 1,
+        numOfRounds: 5, // Default value
+        drawTime: drawTime
+      });
+      
+      // Emit initial game state
+      io.to(lobbyId).emit("gameUpdate", {
+        currentRound: 1,
+        numOfRounds: 5 // Replace with actual lobby.numOfRounds when available
+      });
+    }
+    
+    let gameState = gameStates.get(lobbyId);
+    let time = drawTime || 60; // Use provided drawTime or default to 60
+    
+    const interval = setInterval(() => {
+      time--;
+      //console.log(`⏱️ Lobby ${lobbyId} timer: ${time}`);
+      io.to(lobbyId).emit("timerUpdate", time);
+  
+      if (time <= 0) {
+        console.log(`🔁 Timer reached 0 for lobby ${lobbyId}`);
+        
+        // Update round
+        if (gameState.currentRound < gameState.numOfRounds) {
+          gameState.currentRound++;
+          gameStates.set(lobbyId, gameState);
+          
+          // Emit round update
+          io.to(lobbyId).emit("gameUpdate", {
+            currentRound: gameState.currentRound,
+            numOfRounds: gameState.numOfRounds
+          });
+          
+          // Reset timer for next round
+          time = drawTime;
+          io.to(lobbyId).emit("roundEnded");
+        } else {
+          // Game over - all rounds completed
+          clearInterval(interval);
+          timers.delete(lobbyId);
+          gameStates.delete(lobbyId);
+          
+          io.to(lobbyId).emit("gameEnded");
+        }
+      }
+    }, 1000);
+  
+    timers.set(lobbyId, { time, interval });
+  });
+
+  
 socket.on('joinLobby', ({ lobbyId, userId, username }) => {
   if (!lobbies.has(lobbyId)) {
     lobbies.set(lobbyId, new Map());
@@ -44,6 +136,12 @@ socket.on('joinLobby', ({ lobbyId, userId, username }) => {
 
   // Join socket to lobby room
   socket.join(lobbyId);
+
+  const timerEntry = timers.get(lobbyId);
+  if (timerEntry) {
+    socket.emit("timerUpdate", timerEntry.time);
+  }
+
 
   console.log(`User ${userId} (${username}) with socket ${socket.id} joined lobby ${lobbyId}`);
   console.log(`Lobby ${lobbyId} players:`, Array.from(lobby.entries()));
