@@ -1221,7 +1221,6 @@ textarea {
   padding-bottom: 5px; /* Add a little space below tools */
 }
 
-<<<<<<< HEAD
 /* settings.module.css or global.css */
 @keyframes fadeSlideIn {
   from {
@@ -1334,7 +1333,6 @@ textarea {
   font-size: 2rem;
   margin-bottom: 1.5rem;
 }
-=======
 .timer-container {
   position: relative;
   width: 120px;
@@ -1392,9 +1390,15 @@ textarea {
 
 /* Add a pulsing animation when time is running low (under 10 seconds) */
 @keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .timer-low {
@@ -1409,4 +1413,3 @@ textarea {
 .timer-danger .timer-circle-progress {
   stroke: #ff3b30; /* Red for danger (less than 10% time left) */
 }
->>>>>>> 43fb29ea6ae0cf9cde3370f01d01a0d9da22e187
