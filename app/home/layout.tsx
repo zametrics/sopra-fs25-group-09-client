@@ -36,7 +36,10 @@ export default function HomeLayout({
   const [showAvatarMenu, setShowAvatarMenu] = useState(false);
 
   // Boolean flag to determine if the current page is the user's profile page based on the pathname
-  const isProfilePage = pathname.startsWith("/home/") && pathname !== "/home";
+  const isProfilePage =
+    pathname.startsWith("/home/") &&
+    pathname !== "/home" &&
+    !pathname.startsWith("/home/settings");
 
   // State variable to hold the URL of the avatar stored in localStorage, with a default value
   const [localAvatarUrl, setLocalAvatarUrl] =
@@ -362,6 +365,8 @@ export default function HomeLayout({
             src="/icons/settings_icon.png"
             alt="Settings"
             className="settings-icon"
+            style={{ cursor: "pointer" }}
+            onClick={() => router.push("/home/settings")}
           />
           <h1 className="drawzone-logo-3-7rem">DRAWZONE</h1>
           <p className="drawzone-subtitle-1-5rem">ART BATTLE ROYALE</p>

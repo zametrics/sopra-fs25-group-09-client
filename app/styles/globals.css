@@ -1220,3 +1220,116 @@ textarea {
   position: relative; /* Needed for absolute positioning of popup if wrapper isn't relative */
   padding-bottom: 5px; /* Add a little space below tools */
 }
+
+/* settings.module.css or global.css */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.settings-close-button {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  color: white;
+  font-size: 1.5rem;
+  border: none;
+  cursor: pointer;
+}
+
+.settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  backdrop-filter: blur(5px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeSlideIn 0.1s ease-out;
+}
+
+.settings-modal {
+  background: #f9f9f9;
+  padding: 30px;
+  border-radius: 20px;
+  width: 350px;
+  position: relative;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  animation: fadeSlideIn 0.1s ease-out;
+}
+
+.settings-close-button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #b58ef8;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 1rem;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.settings-title {
+  background-color: #b58ef8;
+  color: white;
+  padding: 10px;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+
+.settings-section {
+  background: #eee;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.setting-label {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.toggle-placeholder {
+  font-size: 1.2rem;
+  color: green;
+}
+
+.delete-account-button {
+  background-color: #ff4d4f;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+.settings-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem;
+}
+
+.settings-title {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+}
