@@ -468,9 +468,9 @@ useEffect(() => {
               onChange={(e) => setLanguage(e.target.value)}
               disabled={Number(currentUserId) !== lobby.lobbyOwner}
             >
-              <option value="english">English</option>
-              <option value="german">German</option>
-              <option value="swissgerman">Schwitzerdütsch</option>
+              <option value="en">English</option>
+              <option value="de">German</option>
+              <option value="ch">Schwitzerdütsch</option>
             </select>
           </div>
         </div>

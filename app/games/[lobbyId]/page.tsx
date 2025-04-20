@@ -14,15 +14,21 @@ interface LobbyData {
   id: number;
   numOfMaxPlayers: number;
   playerIds: number[];
-  wordset: string;
+  type: string;
   numOfRounds: number;
   drawTime: number;
   lobbyOwner: number;
+  language: string;
 }
 
 interface PlayerData {
   id: number;
   username: string;
+}
+
+interface WordOption {
+  word: string;
+  selected: boolean;
 }
 
 // interface ChatMessage {
@@ -147,7 +153,7 @@ const LobbyPage: FC = ({}) => {
   const colorButtonRef = useRef<HTMLButtonElement>(null); // Ref for the trigger button
   const [historyStack, setHistoryStack] = useState<ImageData[]>([]); // --- State for Undo History ---
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null); // Ref to access the canvas element directly for ImageData
-  const wordToGuess = "daniel"; //PLACEHOLDER WORD
+  // const wordToGuess = "daniel"; //PLACEHOLDER WORD
   const currentUserId =
     typeof window !== "undefined" ? localStorage.getItem("userId") : "";
   const remoteUsersLastPointRef = useRef<Map<string, Point | null>>(new Map());
@@ -165,6 +171,101 @@ const LobbyPage: FC = ({}) => {
   const [currentRound, setCurrentRound] = useState(69);
   const [numOfRounds, setNumOfRounds] = useState(420);
 
+  const [wordOptions, setWordOptions] = useState<WordOption[]>([]);
+  const [showWordSelection, setShowWordSelection] = useState<boolean>(false);
+  const [selectedWord, setSelectedWord] = useState<string>("");
+
+  const wordToGuess = selectedWord || "placeholder"; //PLACEHOLDER WORD
+
+  const fetchWordOptions = useCallback(async () => {
+    try {
+      if (!lobby) {
+        console.log("Skipping word fetch: lobby not loaded yet");
+        return;
+      }
+      
+      
+      const language = lobby.language;
+      const wordType = lobby.type;
+
+      console.log(`Fetching words: lang=${language}, type=${wordType}`);
+      
+      try {
+        const response = await apiService.get<string[]>(
+          `/api/words/gpt?lang=${language}&type=${wordType}&count=3`
+        );
+        
+        if (response && Array.isArray(response)) {
+          console.log("API response:", response);
+          const options = response.map(word => ({ word, selected: false }));
+          setWordOptions(options);
+          setShowWordSelection(true);
+        } else {
+          console.error("Invalid response format for word options:", response);
+          // Fallback options if API call fails
+          setWordOptions([
+            { word: "apple", selected: false },
+            { word: "banana", selected: false },
+            { word: "cherry", selected: false }
+          ]);
+          setShowWordSelection(true);
+        }
+      } catch (apiError) {
+        console.error("API error fetching word options:", apiError);
+        // Fallback options if API call fails
+        setWordOptions([
+          { word: "apple", selected: false },
+          { word: "banana", selected: false },
+          { word: "cherry", selected: false }
+        ]);
+        setShowWordSelection(true);
+      }
+    } catch (outerError) {
+      console.error("Unexpected error in fetchWordOptions:", outerError);
+      // Ensure we don't crash the application
+      setWordOptions([
+        { word: "apple", selected: false },
+        { word: "banana", selected: false },
+        { word: "cherry", selected: false }
+      ]);
+      setShowWordSelection(true);
+    }
+  }, [lobby, apiService]);
+
+  const handleWordSelect = useCallback((selectedIndex: number) => {
+    if (selectedIndex < 0 || selectedIndex >= wordOptions.length) {
+      console.error("Invalid word selection index:", selectedIndex);
+      return;
+    }
+  
+    // Update the selected state
+    const updatedOptions = wordOptions.map((option, index) => ({
+      ...option,
+      selected: index === selectedIndex
+    }));
+    
+    setWordOptions(updatedOptions);
+    
+    // Set the selected word
+    const word = wordOptions[selectedIndex].word;
+    setSelectedWord(word);
+    
+    // Emit the selected word to other players via socket
+    if (socket) {
+      console.log(`Emitting selected word "${word}" to other players`);
+      socket.emit('word-selected', { 
+        lobbyId, 
+        word 
+      });
+    }
+    
+    // Hide word selection after a short delay
+    setTimeout(() => {
+      setShowWordSelection(false);
+    }, 1000);
+  }, [wordOptions, socket, lobbyId]);
+
+  // const wordToGuess = selectedWord || "noword";
   
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     // Get mouse position relative to the page
@@ -774,7 +875,7 @@ const handleCancelLeave = () => {
         return "Player";
       }
     };
-    //http:/localhost:3001 --- "https://socket-server-826256454260.europe-west1.run.app/" { path: "/api/socket" }
+    //http://localhost:3001 --- "https://socket-server-826256454260.europe-west1.run.app/" { path: "/api/socket" }
     const setupSocket = async () => {
       socketIo = io(
         "https://socket-server-826256454260.europe-west1.run.app/",
@@ -799,6 +900,30 @@ const handleCancelLeave = () => {
         setTimer(newTime);
       });
 
+      socketIo.on('word-selected', (data) => {
+        console.log('Received selected word from another player:', data.word);
+        
+        // Update the selected word state
+        setSelectedWord(data.word);
+        
+        // Hide the word selection modal if it's visible
+        setShowWordSelection(false);
+      });
+
+      socketIo.on("roundEnded", () => {
+        console.log("Round ended, fetching new words");
+        try {
+          // Only try to fetch words if the lobby has been loaded
+          if (lobby) {
+            fetchWordOptions(); 
+          } else {
+            console.log("Skipping word fetch: lobby not loaded yet");
+          }
+        } catch (error) {
+          console.error("Error during fetchWordOptions from roundEnded event:", error);
+        }
+      });
+      
       socketIo.on('gameUpdate', (gameData) => {
         console.log('Received game update:', gameData);
         if (gameData.currentRound) setCurrentRound(gameData.currentRound);
@@ -939,6 +1064,17 @@ const handleCancelLeave = () => {
         // You could potentially pre-populate the remoteUsersLastPointRef map here
         // if you had info about ongoing drawings, but usually starting fresh is fine.
       });
+
+      // First word fetching
+      try {
+        if (lobby) {
+          console.log("Fetching initial words for first round");
+          fetchWordOptions();
+        }
+      } catch (error) {
+        console.error("Error fetching initial words:", error);
+      }
+
       // --- Initial empty canvas state ---
       if (
         canvasElementRef.current &&
@@ -947,6 +1083,7 @@ const handleCancelLeave = () => {
       ) {
         saveCanvasState();
       }
+
     };
     setupSocket();
 
@@ -961,6 +1098,9 @@ const handleCancelLeave = () => {
         socketIo.off("fill-area");
         socketIo.off("sync-canvas");
         socketIo.off('gameUpdate');
+        socketIo.off("roundEnded");
+        socketIo.off("timerUpdate");
+        socketIo.off("word-selected");
         // ... unregister other drawing listeners ...
         socketIo.disconnect();
       }
@@ -968,7 +1108,7 @@ const handleCancelLeave = () => {
     };
     // Only include dependencies that, if changed, require the effect to re-run (like lobbyId)
     // Callbacks defined with useCallback outside usually don't need to be deps unless their own deps change.
-  }, [lobbyId, apiService, currentUserId, loadCanvasFromDataUrl]); // `loadCanvasFromDataUrl` is stable
+  }, [lobbyId, apiService, currentUserId, loadCanvasFromDataUrl, fetchWordOptions]); // `loadCanvasFromDataUrl` is stable
 
   // --- Local Clear Function ---
   const socketClearCanvas = useCallback(() => {
@@ -1343,6 +1483,24 @@ const handleCancelLeave = () => {
              Are you sure you want to leave this lobby?
            </p>
          </Modal>
+         {showWordSelection && (
+          <div className="word-selection-overlay">
+            <div className="word-selection-container">
+              <h2>Select a word to draw:</h2>
+              <div className="word-options">
+                {wordOptions.map((option, index) => (
+                  <button
+                    key={index}
+                    className={`word-option ${option.selected ? 'selected' : ''}`}
+                    onClick={() => handleWordSelect(index)}
+                  >
+                    {option.word}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

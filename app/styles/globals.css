@@ -1413,3 +1413,81 @@ textarea {
 .timer-danger .timer-circle-progress {
   stroke: #ff3b30; /* Red for danger (less than 10% time left) */
 }
+
+/* Super-specific Word Selection Modal Styles */
+html body .page-background .word-selection-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background-color: rgba(0, 0, 0, 0.7) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  z-index: 9999 !important; /* Even higher z-index */
+  animation: fadeIn 0.3s ease-in-out !important;
+}
+
+html body .page-background .word-selection-container {
+  background-color: white !important;
+  border-radius: 10px !important;
+  padding: 20px !important;
+  text-align: center !important;
+  max-width: 500px !important;
+  width: 90% !important;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3) !important;
+  animation: slideIn 0.3s ease-out !important;
+  color: black !important; /* Force black text for all container content */
+}
+
+html body .page-background .word-selection-container h2 {
+  color: black !important;
+  margin-bottom: 20px !important;
+  font-size: 1.5rem !important;
+  font-weight: bold !important;
+}
+
+html body .page-background .word-options {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  margin-top: 20px !important;
+}
+
+html body .page-background .word-option {
+  padding: 15px !important;
+  border: 2px solid #e0e0e0 !important;
+  border-radius: 8px !important;
+  font-size: 1.2rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  background-color: white !important;
+  color: black !important; /* Force black text */
+  text-transform: uppercase !important;
+  font-weight: 500 !important;
+  letter-spacing: 1px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+html body .page-background .word-option:hover {
+  border-color: #4D92EB !important;
+  background-color: #f0f8ff !important;
+  color: black !important; /* Ensure text remains black on hover */
+  transform: translateY(-2px) !important;
+}
+
+html body .page-background .word-option.selected {
+  border-color: #4D92EB !important;
+  background-color: #BBD8FF !important; /* Much lighter blue for contrast with black text */
+  color: black !important; /* Force black text */
+  transform: scale(1.02) !important;
+  animation: pulse 0.5s ease-in-out !important;
+}
+
+/* Animation for when a word is selected */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
