@@ -4,7 +4,6 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { message } from "antd";
 import { useApi } from "@/hooks/useApi";
-import { useBackgroundMusic } from "@/hooks/useBackgroundMusic";
 
 const SettingsPage = () => {
   const router = useRouter();
