@@ -878,7 +878,7 @@ const handleCancelLeave = () => {
     //http://localhost:3001 --- "https://socket-server-826256454260.europe-west1.run.app/" { path: "/api/socket" }
     const setupSocket = async () => {
       socketIo = io(
-        "https://socket-server-826256454260.europe-west1.run.app/",
+        "http://localhost:3001/",
         { path: "/api/socket" }
       ); // Use your server URL
       setSocket(socketIo);
