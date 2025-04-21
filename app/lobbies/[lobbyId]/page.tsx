@@ -89,8 +89,9 @@ const LobbyPage: React.FC = () => {
 
   //http://localhost:3001/
   //https://socket-server-826256454260.europe-west1.run.app/
+
 useEffect(() => {
-  const socketIo = io('https://socket-server-826256454260.europe-west1.run.app/', {
+  const socketIo = io('http://localhost:3001/', {
     path: '/api/socket',
   });
   setSocket(socketIo);
@@ -157,6 +158,28 @@ useEffect(() => {
 
   socketIo.on('playerLeft', (leftPlayer: PlayerData) => {
     setPlayers((prev) => prev.filter((p) => p.id !== leftPlayer.id));
+    const fetchLobby = async () => {
+      setLoading(true);
+      try {
+        const response = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+        setLobby(response as LobbyData);
+  
+        if (response.playerIds && response.playerIds.length > 0) {
+          const playerPromises = response.playerIds.map((id: number) =>
+            apiService.get<PlayerData>(`/users/${id}`).catch(() => ({ id, username: 'Guest' } as PlayerData))
+          );
+          const playerData = await Promise.all(playerPromises);
+          setPlayers(playerData as PlayerData[]);
+        }
+      } catch (error) {
+        console.error('Error fetching lobby:', error);
+        message.error('Failed to load lobby information');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLobby();
   });
 
   return () => {
@@ -213,17 +236,6 @@ useEffect(() => {
     }
   };
 
-  useEffect(() => {
-    const handleBeforeUnload = async () => {
-      if (!currentUserId || !lobbyId) return;
-  
-      handleLeaveLobby()
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [socket, currentUserId, lobbyId]);
   
   const handleCancelLeave = () => {
     setIsLeaveModalVisible(false);
