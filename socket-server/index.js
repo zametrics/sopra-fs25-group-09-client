@@ -47,54 +47,19 @@ const playerInfo = socketToLobby.get(socket.id);
       socket.emit("timerUpdate", entry.time);
     }
   }
-
-  socket.on('word-selected', (data) => {
-    // Extract the lobbyId and selected word from the data
-    const { lobbyId, word } = data;
+  
+  socket.on("startTimer", async ({ lobbyId, drawTime }) => {
+    console.log(`Start timer for lobby ${lobbyId} with drawTime: ${drawTime}s`);
     
-    if (!lobbyId || !word) {
-      console.warn('Invalid word-selected event data:', data);
+    if (timers.has(lobbyId)) {
+      console.log(`⏱️ Timer already running for lobby ${lobbyId}`);
       return;
     }
-    
-    console.log(`Player selected word "${word}" in lobby ${lobbyId}`);
-    
-    // Broadcast the selected word to all players in the lobby
-    // Use socket.to() to send to everyone except the sender
-    socket.to(lobbyId).emit('word-selected', { word });
-  });
   
-socket.on("startTimer", async ({ lobbyId, drawTime }) => {
-  console.log(`Start timer for lobby ${lobbyId} with drawTime: ${drawTime}s`);
-  
-  if (timers.has(lobbyId)) {
-    console.log(`⏱️ Timer already running for lobby ${lobbyId}`);
-    return;
-  }
-
-  // Initialize or get game state for this lobby
-  if (!gameStates.has(lobbyId)) {
-    // Get numOfRounds from your lobby data
-    const lobby = lobbies.get(lobbyId);
-    
-    // Add this null check before accessing lobby.values()
-    if (!lobby) {
-      console.error(`Cannot start timer: Lobby ${lobbyId} not found in lobbies map`);
-      
-      // Initialize with default values if lobby isn't in the map yet
-      gameStates.set(lobbyId, {
-        currentRound: 1,
-        numOfRounds: 5, // Default value
-        drawTime: drawTime
-      });
-      
-      // Emit initial game state even without a lobby
-      io.to(lobbyId).emit("gameUpdate", {
-        currentRound: 1,
-        numOfRounds: 5
-      });
-    } else {
-      // Only try to find the owner if lobby exists
+    // Initialize or get game state for this lobby
+    if (!gameStates.has(lobbyId)) {
+      // Get numOfRounds from your lobby data
+      const lobby = lobbies.get(lobbyId);
       const lobbyOwnerSocket = [...lobby.values()].find(player => player.isOwner)?.socketId;
       
       // Initialize game state
@@ -107,49 +72,48 @@ socket.on("startTimer", async ({ lobbyId, drawTime }) => {
       // Emit initial game state
       io.to(lobbyId).emit("gameUpdate", {
         currentRound: 1,
-        numOfRounds: 5
+        numOfRounds: 5 // Replace with actual lobby.numOfRounds when available
       });
     }
-  }
+    
+    let gameState = gameStates.get(lobbyId);
+    let time = drawTime || 60; // Use provided drawTime or default to 60
+    
+    const interval = setInterval(() => {
+      time--;
+      //console.log(`⏱️ Lobby ${lobbyId} timer: ${time}`);
+      io.to(lobbyId).emit("timerUpdate", time);
   
-  let gameState = gameStates.get(lobbyId);
-  let time = drawTime || 60; // Use provided drawTime or default to 60
-  
-  const interval = setInterval(() => {
-    time--;
-    //console.log(`⏱️ Lobby ${lobbyId} timer: ${time}`);
-    io.to(lobbyId).emit("timerUpdate", time);
-
-    if (time <= 0) {
-      console.log(`🔁 Timer reached 0 for lobby ${lobbyId}`);
-      
-      // Update round
-      if (gameState.currentRound < gameState.numOfRounds) {
-        gameState.currentRound++;
-        gameStates.set(lobbyId, gameState);
+      if (time <= 0) {
+        console.log(`🔁 Timer reached 0 for lobby ${lobbyId}`);
         
-        // Emit round update
-        io.to(lobbyId).emit("gameUpdate", {
-          currentRound: gameState.currentRound,
-          numOfRounds: gameState.numOfRounds
-        });
-        
-        // Reset timer for next round
-        time = drawTime;
-        io.to(lobbyId).emit("roundEnded");
-      } else {
-        // Game over - all rounds completed
-        clearInterval(interval);
-        timers.delete(lobbyId);
-        gameStates.delete(lobbyId);
-        
-        io.to(lobbyId).emit("gameEnded");
+        // Update round
+        if (gameState.currentRound < gameState.numOfRounds) {
+          gameState.currentRound++;
+          gameStates.set(lobbyId, gameState);
+          
+          // Emit round update
+          io.to(lobbyId).emit("gameUpdate", {
+            currentRound: gameState.currentRound,
+            numOfRounds: gameState.numOfRounds
+          });
+          
+          // Reset timer for next round
+          time = drawTime;
+          io.to(lobbyId).emit("roundEnded");
+        } else {
+          // Game over - all rounds completed
+          clearInterval(interval);
+          timers.delete(lobbyId);
+          gameStates.delete(lobbyId);
+          
+          io.to(lobbyId).emit("gameEnded");
+        }
       }
-    }
-  }, 1000);
-
-  timers.set(lobbyId, { time, interval });
-});
+    }, 1000);
+  
+    timers.set(lobbyId, { time, interval });
+  });
 
   
 socket.on('joinLobby', ({ lobbyId, userId, username }) => {
