@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { Button, Input, message } from "antd";
 import { Socket } from "socket.io-client";
 import { useApi } from "@/hooks/useApi";
@@ -31,14 +31,32 @@ interface LayoutProps {
   children: React.ReactNode;
   socket: Socket | null;
   lobbyId: string;
-  currentUserId: string | null;
+  currentUserId: string | null; // Keep as string if from localStorage
   localAvatarUrl: string;
+  // --- Make lobby state mutable ---
   lobby: LobbyData | null;
+  // --- NEW: Callback to update lobby state in parent ---
+  // This is needed if the parent component (e.g., lobbies/page.tsx)
+  // needs to react to the owner change for enabling/disabling controls.
+  // If only the indicator in Layout needs updating, this isn't strictly necessary.
+  onLobbyUpdate?: (updatedLobby: Partial<LobbyData>) => void;
 }
 
 interface PlayerLeftData {
   id: string | number; // ID might be string or number from server
   username: string;
+}
+
+// --- NEW Interface for Owner Change ---
+interface LobbyOwnerChangedData {
+  newOwnerId: number | string; // ID might be number or string
+  newOwnerUsername: string;
+}
+
+// --- Interface for Lobby State Event (including owner) ---
+interface LobbyStateData {
+  players: { id: string; username: string }[]; // Assuming server sends string IDs now
+  ownerId?: number | string | null; // Owner ID can be included
 }
 
 const Layout: React.FC<LayoutProps> = ({
@@ -47,7 +65,8 @@ const Layout: React.FC<LayoutProps> = ({
   lobbyId,
   currentUserId,
   localAvatarUrl,
-  lobby,
+  lobby: initialLobby, // Rename prop to avoid conflict with state
+  onLobbyUpdate, // Get the update function
 }) => {
   const apiService = useApi();
   const [players, setPlayers] = useState<PlayerData[]>([]);
@@ -68,6 +87,28 @@ const Layout: React.FC<LayoutProps> = ({
   ];
 
   const usernameColorsRef = useRef<{ [key: string]: string }>({});
+  const [lobby, setLobby] = useState<LobbyData | null>(initialLobby);
+
+  // Update local lobby state if the prop changes
+  useEffect(() => {
+    setLobby(initialLobby);
+  }, [initialLobby]);
+
+  // --- Helper function to update lobby state locally and notify parent ---
+  const updateLobbyState = useCallback(
+    (updates: Partial<LobbyData>) => {
+      setLobby((prevLobby) => {
+        if (!prevLobby) return null; // Should not happen if updates occur
+        const newLobby = { ...prevLobby, ...updates };
+        // Notify parent component if callback provided
+        if (onLobbyUpdate) {
+          onLobbyUpdate(updates);
+        }
+        return newLobby;
+      });
+    },
+    [onLobbyUpdate]
+  ); // Dependency on the callback
 
   function getUsernameColor(username: string): string {
     const usernameColors = usernameColorsRef.current;
@@ -91,12 +132,14 @@ const Layout: React.FC<LayoutProps> = ({
     return newColor;
   }
 
-  // Fetch initial players and handle socket events
+  // --- useEffect for Fetching and Socket Listeners ---
   useEffect(() => {
-    const fetchLobbyPlayers = async () => {
-      // ... (keep this function as is for initial load) ...
+    const fetchLobbyPlayersAndOwner = async () => {
       try {
+        // Fetch full lobby details initially
         const response = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+        setLobby(response); // Set the full lobby state
+
         if (response.playerIds && response.playerIds.length > 0) {
           const playerPromises = response.playerIds.map((id: number) =>
             apiService
@@ -104,80 +147,78 @@ const Layout: React.FC<LayoutProps> = ({
               .catch(() => ({ id, username: "Guest" } as PlayerData))
           );
           const playerData = await Promise.all(playerPromises);
-          // Ensure consistent types if necessary upon initial fetch
           setPlayers(
             playerData.map((p) => ({ ...p, id: Number(p.id) })) as PlayerData[]
           );
         } else {
-          setPlayers([]); // Clear players if lobby is empty
+          setPlayers([]);
         }
       } catch (error) {
-        console.error("Error fetching lobby players:", error);
-        // message.error("Failed to load players"); // Consider removing or making less intrusive
-        setPlayers([]); // Clear players on error
-      } finally {
-        // Optional: handle loading state
+        console.error("Error fetching lobby details:", error);
+        setPlayers([]);
+        setLobby(null); // Clear lobby on error
       }
     };
 
     if (lobbyId) {
-      fetchLobbyPlayers();
+      fetchLobbyPlayersAndOwner();
     }
 
     if (socket) {
-      // --- Lobby State Update (Usually on join) ---
-      socket.on(
-        "lobbyState",
-        ({
-          players: receivedPlayers,
-        }: {
-          players: { id: string; username: string }[];
-        }) => {
-          // Make sure the IDs are numbers, matching PlayerData interface
-          setPlayers(
-            receivedPlayers.map((p) => ({
-              id: Number(p.id), // Convert ID to number
-              username: p.username,
-            }))
-          );
+      // --- Handle Full Lobby State Updates ---
+      socket.on("lobbyState", (data: LobbyStateData) => {
+        console.log("Received lobbyState:", data);
+        // Update players
+        setPlayers(
+          data.players.map((p) => ({
+            id: Number(p.id), // Convert back to number if needed locally
+            username: p.username,
+          }))
+        );
+        // Update owner if provided
+        if (data.ownerId !== undefined && data.ownerId !== null) {
+          updateLobbyState({ lobbyOwner: Number(data.ownerId) });
         }
-      );
-
-      // --- Chat Message Handling (No change needed) ---
-      socket.on("chatMessage", (message: ChatMessage) => {
-        setMessages((prev) => [...prev, message]);
       });
 
-      // --- Player Joined Handling (Optimized) ---
+      // --- Player Joined ---
       socket.on(
         "playerJoined",
         (newPlayer: { id: string | number; username: string }) => {
+          // ... (keep existing optimized logic - ensure ID conversion is consistent) ...
           console.log("Player joined event received:", newPlayer);
           setPlayers((prev) => {
-            // Ensure ID is treated consistently (e.g., as number)
             const newPlayerId = Number(newPlayer.id);
-            // Avoid adding duplicates if already present
-            if (prev.some((p) => p.id === newPlayerId)) {
-              return prev;
-            }
-            // Add the new player
+            if (prev.some((p) => p.id === newPlayerId)) return prev;
             return [...prev, { id: newPlayerId, username: newPlayer.username }];
           });
-          // fetchLobbyPlayers(); // REMOVED redundant fetch
         }
       );
 
-      // --- Player Left Handling (MODIFIED) ---
+      // --- Player Left ---
       socket.on("playerLeft", (leftPlayer: PlayerLeftData) => {
+        // ... (keep existing optimized logic - ensure ID conversion is consistent) ...
         console.log("Player left event received:", leftPlayer);
         setPlayers((prev) => {
-          // Filter out the player who left. Compare IDs consistently.
-          // Convert both to string or number for reliable comparison.
-          const leftPlayerIdString = String(leftPlayer.id);
-          return prev.filter((p) => String(p.id) !== leftPlayerIdString);
+          const leftPlayerIdNumber = Number(leftPlayer.id); // Compare numbers
+          return prev.filter((p) => p.id !== leftPlayerIdNumber);
         });
-        // fetchLobbyPlayers(); // <<--- REMOVED THIS LINE ---<<
-        message.info(`${leftPlayer.username || "A player"} left the lobby.`); // Optional feedback
+        message.info(`${leftPlayer.username || "A player"} left the lobby.`);
+      });
+
+      // --- *** NEW: Handle Owner Change Event *** ---
+      socket.on("lobbyOwnerChanged", (data: LobbyOwnerChangedData) => {
+        console.log(
+          `Received lobbyOwnerChanged: New owner is ${data.newOwnerUsername} (${data.newOwnerId})`
+        );
+        const newOwnerNumericId = Number(data.newOwnerId);
+        // Update the local lobby state
+        updateLobbyState({ lobbyOwner: newOwnerNumericId });
+        message.success(`${data.newOwnerUsername} is now the lobby owner!`);
+      });
+      // --- Chat Message Handling (No change needed) ---
+      socket.on("chatMessage", (message: ChatMessage) => {
+        setMessages((prev) => [...prev, message]);
       });
 
       // --- Error handling ---
@@ -195,16 +236,20 @@ const Layout: React.FC<LayoutProps> = ({
       });
     }
 
+    // --- Cleanup ---
     return () => {
       if (socket) {
         socket.off("lobbyState");
-        socket.off("chatMessage");
         socket.off("playerJoined");
         socket.off("playerLeft");
+        socket.off("lobbyOwnerChanged"); // <-- Unregister new listener
+        socket.off("chatMessage");
+        socket.off("connect_error");
+        socket.off("disconnect");
       }
     };
-  }, [lobbyId, socket, apiService, currentUserId]);
-
+    // Add updateLobbyState to dependencies
+  }, [lobbyId, socket, apiService, currentUserId, updateLobbyState]);
   // Scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -223,26 +268,23 @@ const Layout: React.FC<LayoutProps> = ({
   return (
     <div className="page-background">
       <div className="player-box">
+        {/* Use local lobby state for display */}
         <h1 className="players-chat-title">
-          PLAYERS ({players.length}/{lobby?.numOfMaxPlayers || "?"}){" "}
-          {/* Use ? if lobby might be null */}
+          PLAYERS ({players.length}/{lobby?.numOfMaxPlayers || "?"})
         </h1>
         <div className="player-list">
           {players.map((player) => (
             <div
-              key={player.id} // Use the number ID as key
+              key={player.id} // Use number ID
               className={`player-entry ${
-                // Compare consistently (e.g., both as strings)
-                String(player.id) === String(currentUserId)
-                  ? "player-entry-own"
-                  : ""
+                // Use string for comparison with currentUserId from localStorage
+                String(player.id) === currentUserId ? "player-entry-own" : ""
               }`}
             >
               <div className="player-info">
                 <img
                   src={
-                    // Compare consistently
-                    String(player.id) === String(currentUserId)
+                    String(player.id) === currentUserId
                       ? localAvatarUrl
                       : "/icons/avatar.png"
                   }
@@ -251,7 +293,7 @@ const Layout: React.FC<LayoutProps> = ({
                 />
                 <span>{player.username}</span>
               </div>
-              {/* Optional: Add owner indicator based on lobby.lobbyOwner */}
+              {/* Use local lobby state to check owner */}
               {lobby && player.id === lobby.lobbyOwner && (
                 <span className="player-owner-indicator" title="Lobby Owner">
                   👑

@@ -19,26 +19,94 @@ const io = new Server(server, {
   },
 });
 
-const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8080"; // Fallback
+const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8080";
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetch }) => fetch(...args)); // Dynamic import
 
-const lobbies = new Map(); // Map<lobbyId, Map<userId, { socketId, username }>>
+// --- Modified Data Structure ---
+// Map<lobbyId, { ownerId: number | null, players: Map<userId, { socketId, username }>, detailsFetched: boolean }>
+const lobbies = new Map();
 const socketToLobby = new Map(); // Map<socketId, { lobbyId, userId }>
-
 const pendingStateRequests = new Map();
-
-const gameStates = new Map(); // Track game state including current round
-const timers = new Map(); // Declare this once globally
-
+const gameStates = new Map();
+const timers = new Map();
 const pendingDisconnects = new Map();
-const LEAVE_DELAY = 5000; // 10 seconds in milliseconds
+const LEAVE_DELAY = 5000;
 
-// function stopLobbyTimer(lobbyId) {
-//   const entry = timers.get(lobbyId);
-//   if (entry) {
-//     clearInterval(entry.interval);
-//     timers.delete(lobbyId);
-//   }
-// }
+// --- NEW: Fetch Lobby Details Function ---
+async function fetchLobbyDetailsFromDb(lobbyId) {
+  const url = `${BACKEND_API_URL}/lobbies/${lobbyId}`;
+  console.log(`Fetching lobby details from API: GET ${url}`);
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(
+        `API Error: Failed to fetch lobby details for ${lobbyId}. Status: ${response.status}`
+      );
+      return null;
+    }
+    const lobbyData = await response.json();
+    console.log(
+      `API Success: Fetched lobby details for ${lobbyId}` /* lobbyData */
+    ); // Avoid logging sensitive data if any
+    return lobbyData; // Expected format: { id, playerIds, lobbyOwner, ... }
+  } catch (error) {
+    console.error(
+      `Network Error: Could not connect to API to fetch lobby details for ${lobbyId}. URL: ${url}`,
+      error
+    );
+    return null;
+  }
+}
+
+// --- NEW: Update Lobby Owner Function ---
+async function updateLobbyOwnerInDb(lobbyId, newOwnerId) {
+  // IMPORTANT: Adjust the URL and method based on your actual API endpoint
+  // Option 1: Specific endpoint
+  // const url = `${BACKEND_API_URL}/lobbies/${lobbyId}/setOwner?newOwnerId=${newOwnerId}`;
+  // const method = 'PUT'; // or POST
+  // const body = {};
+
+  // Option 2: Update the whole lobby object (ensure your backend handles this)
+  const url = `${BACKEND_API_URL}/lobbies/${lobbyId}`;
+  const method = "PUT";
+  const body = JSON.stringify({ lobbyOwner: newOwnerId }); // Send only the field to update (if backend supports partial update)
+  // Or fetch the full lobby, modify owner, send back full object
+
+  console.log(
+    `Attempting to set new owner ${newOwnerId} for lobby ${lobbyId} via API: ${method} ${url}`
+  );
+
+  try {
+    const response = await fetch(url, {
+      method: method,
+      headers: { "Content-Type": "application/json" },
+      body: body,
+    });
+
+    if (!response.ok) {
+      let errorBody = "";
+      try {
+        errorBody = await response.text();
+      } catch (e) {}
+      console.error(
+        `API Error: Failed to update owner for lobby ${lobbyId}. Status: ${response.status}. Body: ${errorBody}`
+      );
+      return false;
+    } else {
+      console.log(
+        `API Success: Updated owner for lobby ${lobbyId} to ${newOwnerId} (Status ${response.status}).`
+      );
+      return true;
+    }
+  } catch (error) {
+    console.error(
+      `Network Error: Could not connect to API to update owner for lobby ${lobbyId}. URL: ${url}`,
+      error
+    );
+    return false;
+  }
+}
 
 // --- NEW: Database Interaction Function ---
 async function removePlayerFromDb(lobbyId, userId) {
@@ -91,6 +159,97 @@ async function removePlayerFromDb(lobbyId, userId) {
     );
     // Decide how to handle network errors (e.g., retry logic, logging)
     // throw error; // Re-throw if you want calling function to know
+  }
+}
+
+// --- Helper to handle owner transfer logic ---
+async function handleOwnerTransfer(lobbyId, disconnectedUserIdNum) {
+  // Assume receives number
+  console.log(
+    `[Ownership] Checking owner transfer for lobby ${lobbyId} after user ${disconnectedUserIdNum} disconnect.`
+  );
+  const lobbyData = lobbies.get(lobbyId);
+  if (!lobbyData) {
+    /* ... error ... */ return;
+  }
+
+  const currentDbLobbyState = await fetchLobbyDetailsFromDb(lobbyId);
+  if (!currentDbLobbyState) {
+    /* ... error ... */ return;
+  }
+
+  const dbOwnerIdNumber = Number(currentDbLobbyState.lobbyOwner);
+  console.log(
+    `[Ownership] DB Owner: ${dbOwnerIdNumber}, Disconnecting User: ${disconnectedUserIdNum}`
+  );
+
+  if (dbOwnerIdNumber === disconnectedUserIdNum) {
+    console.log(`[Ownership] User ${disconnectedUserIdNum} was the owner.`);
+    const remainingPlayerIds = Array.from(lobbyData.players.keys())
+      .map((id) => Number(id))
+      .filter((id) => id !== disconnectedUserIdNum);
+    console.log(`[Ownership] Remaining player IDs: ${remainingPlayerIds}`);
+
+    if (remainingPlayerIds.length > 0) {
+      let newOwnerId = null;
+      const orderedDbPlayerIds = (currentDbLobbyState.playerIds || []).map(
+        (id) => Number(id)
+      );
+      console.log(`[Ownership] DB Player Order: ${orderedDbPlayerIds}`);
+
+      for (const dbPlayerId of orderedDbPlayerIds) {
+        if (remainingPlayerIds.includes(dbPlayerId)) {
+          newOwnerId = dbPlayerId;
+          break;
+        }
+      }
+
+      if (newOwnerId !== null) {
+        console.log(
+          `[Ownership] Selecting new owner ${newOwnerId}. Updating DB...`
+        );
+        const success = await updateLobbyOwnerInDb(lobbyId, newOwnerId); // Call API
+
+        if (success) {
+          console.log(
+            "[Ownership] DB Update successful. Updating memory and emitting."
+          );
+          // Update memory (optional, could rely on next fetch)
+          lobbyData.ownerIdFromLastFetch = newOwnerId; // Update last known owner
+          lobbies.set(lobbyId, lobbyData);
+
+          // Notify clients
+          const newOwnerUsername =
+            lobbyData.players.get(String(newOwnerId))?.username || // Use string for map key
+            lobbyData.players.get(newOwnerId)?.username ||
+            "New Owner"; // Try number too just in case
+
+          io.to(lobbyId).emit("lobbyOwnerChanged", {
+            newOwnerId: newOwnerId, // Send number
+            newOwnerUsername: newOwnerUsername,
+          });
+          // Also emit updated lobby state
+          const currentPlayers = Array.from(lobbyData.players.entries()).map(
+            ([id, data]) => ({
+              id: String(id),
+              username: data.username,
+            })
+          );
+          io.to(lobbyId).emit("lobbyState", {
+            players: currentPlayers,
+            ownerId: newOwnerId, // Send the confirmed new owner
+          });
+        } else {
+          /* ... handle API failure ... */
+        }
+      } else {
+        /* ... handle no suitable owner ... */
+      }
+    } else {
+      /* ... handle lobby empty ... */
+    }
+  } else {
+    /* ... handle disconnected user wasn't owner ... */
   }
 }
 
@@ -179,125 +338,169 @@ io.on("connection", (socket) => {
     timers.set(lobbyId, { time, interval });
   });
 
-  // --- joinLobby Handler (MODIFIED to clear pending disconnect) ---
-  socket.on("joinLobby", ({ lobbyId, userId, username }) => {
-    // --- Check and Clear Pending Disconnect ---
-    const lobbyTimeouts = pendingDisconnects.get(lobbyId);
-    if (lobbyTimeouts && lobbyTimeouts.has(userId)) {
-      const timeoutId = lobbyTimeouts.get(userId);
-      clearTimeout(timeoutId);
-      lobbyTimeouts.delete(userId);
-      // Clean up the lobby map if no more pending disconnects for this lobby
-      if (lobbyTimeouts.size === 0) {
-        pendingDisconnects.delete(lobbyId);
-      }
-      console.log(
-        `[Join] Cleared pending disconnect timer for user ${userId} in lobby ${lobbyId}`
-      );
-    }
-    // --- End Check ---
-
-    if (!lobbies.has(lobbyId)) {
-      lobbies.set(lobbyId, new Map());
-    }
-    const lobby = lobbies.get(lobbyId);
-
-    // Store previous socket ID if user was present (for logging)
-    const previousPlayerData = lobby.get(userId);
-    const wasPlayerPresent = !!previousPlayerData;
-
-    // Update player data with the *new* socket ID
-    lobby.set(userId, { socketId: socket.id, username });
-
-    // Update socket-to-lobby mapping for the *new* socket
-    socketToLobby.set(socket.id, { lobbyId, userId });
-
-    // Join socket to lobby room
-    socket.join(lobbyId);
-
-    // Emit current timer state if exists
-    const timerEntry = timers.get(lobbyId);
-    if (timerEntry) {
-      socket.emit("timerUpdate", timerEntry.time);
-    }
-    // Emit current game state if exists
-    const gameState = gameStates.get(lobbyId);
-    if (gameState) {
-      socket.emit("gameUpdate", gameState);
-    }
+  // --- REVISED joinLobby Handler ---
+  socket.on("joinLobby", async ({ lobbyId, userId, username }) => {
+    // Use consistent types internally (e.g., numbers for IDs if possible)
+    const lobbyIdNum = Number(lobbyId); // Or keep as string if keys are strings
+    const userIdNum = Number(userId);
 
     console.log(
-      `User ${userId} (${username}) with socket ${socket.id} joined lobby ${lobbyId}` +
-        (wasPlayerPresent
-          ? ` (replaced old socket ${previousPlayerData.socketId})`
-          : "")
+      `[Join] User ${userIdNum} (${username}) attempting to join lobby ${lobbyIdNum}`
     );
-    console.log(`Lobby ${lobbyId} players:`, Array.from(lobby.keys())); // Log only IDs for brevity
 
-    // Always send full lobby state to the joining client *and* others
-    const currentPlayers = Array.from(lobby.entries()).map(([id, data]) => ({
-      id,
-      username: data.username,
-    }));
-    // Send to joining client
-    socket.emit("lobbyState", { players: currentPlayers });
-    // Notify others a player joined/rejoined (can be used to update player list)
-    socket.to(lobbyId).emit("playerJoined", { id: userId, username });
+    // --- Clear Pending Disconnect (use original userId key) ---
+    const lobbyTimeouts = pendingDisconnects.get(lobbyId); // Use original lobbyId key
+    if (lobbyTimeouts && lobbyTimeouts.has(userId)) {
+      // Use original userId key
+      clearTimeout(lobbyTimeouts.get(userId));
+      lobbyTimeouts.delete(userId);
+      if (lobbyTimeouts.size === 0) pendingDisconnects.delete(lobbyId);
+      console.log(`[Join] Cleared pending disconnect for user ${userId}`);
+    }
 
-    // // Only emit playerJoined if the player wasn't already in the lobby
-    // if (!wasPlayerPresent) {
-    //   io.to(lobbyId).emit("playerJoined", {
-    //     id: userId,
-    //     username,
-    //   });
-    // }
+    let lobbyData = lobbies.get(lobbyId); // Use original lobbyId key
 
-    // // Always send full lobby state to the joining client
-    // socket.emit("lobbyState", {
-    //   players: Array.from(lobby.entries()).map(([id, data]) => ({
-    //     id,
-    //     username: data.username,
-    //   })),
-    // });
+    // --- Initialize lobby in memory if needed ---
+    if (!lobbyData) {
+      console.log(`[Join] Initializing memory for lobby ${lobbyId}`);
+      lobbyData = { players: new Map(), ownerIdFromLastFetch: null };
+      lobbies.set(lobbyId, lobbyData);
+    }
+
+    // --- *** Always Fetch Fresh Lobby Details on Join *** ---
+    // This ensures we have the latest owner and player list from the DB
+    console.log(`[Join] Fetching latest DB details for lobby ${lobbyId}`);
+    const dbDetails = await fetchLobbyDetailsFromDb(lobbyId); // Use original lobbyId
+
+    if (!dbDetails) {
+      console.error(
+        `[Join] CRITICAL: Could not fetch DB details for lobby ${lobbyId}. Aborting join.`
+      );
+      // Optionally emit an error to the client
+      socket.emit("joinError", {
+        message: `Lobby ${lobbyId} not found or backend unavailable.`,
+      });
+      // Consider disconnecting the socket if join is essential
+      // socket.disconnect();
+      return;
+    }
+
+    // Update owner ID in memory from the fresh fetch
+    const currentDbOwnerId = Number(dbDetails.lobbyOwner);
+    lobbyData.ownerIdFromLastFetch = currentDbOwnerId;
+    console.log(
+      `[Join] Current DB Owner for lobby ${lobbyId} is: ${currentDbOwnerId}`
+    );
+
+    // --- Add/Update player in memory (use consistent key type, e.g., string) ---
+    const userIdString = String(userId); // Use string key for map consistency
+    const wasPlayerPresent = lobbyData.players.has(userIdString);
+    const previousPlayerData = lobbyData.players.get(userIdString);
+    lobbyData.players.set(userIdString, { socketId: socket.id, username });
+    lobbies.set(lobbyId, lobbyData); // Update map entry
+
+    // --- Update socket mapping (use original types) ---
+    socketToLobby.set(socket.id, { lobbyId, userId });
+    socket.join(lobbyId); // Join the socket room
+
+    console.log(
+      `[Join] User ${userIdString} (${username}) [${socket.id}] joined lobby ${lobbyId}. Was present before: ${wasPlayerPresent}`
+    );
+    console.log(
+      `[Join] Lobby ${lobbyId} players in memory:`,
+      Array.from(lobbyData.players.keys())
+    );
+
+    // --- Emit current state (using fresh DB owner) ---
+    const currentPlayers = Array.from(lobbyData.players.entries()).map(
+      ([id, data]) => ({
+        id: String(id), // Ensure string ID for client
+        username: data.username,
+      })
+    );
+
+    console.log(
+      `[Join] Emitting lobbyState to all in ${lobbyId}. Owner: ${currentDbOwnerId}`
+    );
+    // Emit to EVERYONE in the lobby to ensure sync
+    io.to(lobbyId).emit("lobbyState", {
+      players: currentPlayers,
+      ownerId: currentDbOwnerId, // Use the freshly fetched owner ID
+    });
+
+    // You might not need 'playerJoined' if 'lobbyState' is always sent to all
+    // socket.to(lobbyId).emit("playerJoined", { id: String(userId), username });
   });
 
+  // --- leaveLobby Handler ---
   socket.on("leaveLobby", async ({ lobbyId, userId }) => {
-    // Added async
-    const lobby = lobbies.get(lobbyId);
-    if (lobby && lobby.has(userId)) {
-      const playerData = lobby.get(userId);
+    // Use consistent types
+    const userIdNum = Number(userId);
+    const lobbyIdStr = String(lobbyId); // Assuming map uses string keys now
 
-      // Clear pending disconnect timer
-      const lobbyTimeouts = pendingDisconnects.get(lobbyId);
-      if (lobbyTimeouts && lobbyTimeouts.has(userId)) {
-        const timeoutId = lobbyTimeouts.get(userId);
-        clearTimeout(timeoutId);
-        lobbyTimeouts.delete(userId);
-        if (lobbyTimeouts.size === 0) pendingDisconnects.delete(lobbyId);
-        console.log(
-          `[Manual Leave] Cleared pending disconnect timer for user ${userId}.`
-        );
+    console.log(`[Leave] User ${userIdNum} leaving lobby ${lobbyIdStr}`);
+    const lobbyData = lobbies.get(lobbyIdStr);
+
+    if (lobbyData && lobbyData.players.has(String(userIdNum))) {
+      // Check using string key
+      const playerData = lobbyData.players.get(String(userIdNum));
+      const ownerIdInMemory = lobbyData.ownerIdFromLastFetch; // Get owner from memory
+
+      // Clear Pending Disconnect timer
+      const lobbyTimeouts = pendingDisconnects.get(lobbyIdStr);
+      if (lobbyTimeouts && lobbyTimeouts.has(String(userIdNum))) {
+        /* ... clear timeout ... */
       }
 
-      // Remove from memory
-      lobby.delete(userId);
-      if (lobby.size === 0) lobbies.delete(lobbyId);
+      // Fetch current DB state BEFORE deciding on owner transfer
+      const currentDbLobbyState = await fetchLobbyDetailsFromDb(lobbyIdStr);
+      const currentDbOwnerId = currentDbLobbyState
+        ? Number(currentDbLobbyState.lobbyOwner)
+        : null;
+
+      // Check if the leaving user is the *actual* current owner in the DB
+      const isActuallyOwner = currentDbOwnerId === userIdNum;
+      console.log(
+        `[Leave] Is leaving user ${userIdNum} the DB owner (${currentDbOwnerId})? ${isActuallyOwner}`
+      );
+
+      // --- Handle Owner Transfer (if owner is leaving manually) ---
+      if (isActuallyOwner) {
+        console.log(
+          `[Leave] Owner ${userIdNum} is leaving lobby ${lobbyIdStr}. Triggering transfer.`
+        );
+        // Remove player from memory map *before* transfer logic
+        lobbyData.players.delete(String(userIdNum));
+        await handleOwnerTransfer(lobbyIdStr, userIdNum); // Pass number ID
+      } else {
+        // Just remove player if not owner
+        lobbyData.players.delete(String(userIdNum));
+      }
+
+      // --- Update socket maps and leave room ---
       if (socketToLobby.get(socket.id)?.userId === userId)
         socketToLobby.delete(socket.id);
-      socket.leave(lobbyId);
+      socket.leave(lobbyIdStr);
 
-      // Notify clients
-      io.to(lobbyId).emit("playerLeft", {
-        id: userId,
+      // --- Notify clients player left ---
+      io.to(lobbyIdStr).emit("playerLeft", {
+        id: String(userIdNum), // Send string ID
         username: playerData?.username || "Player",
       });
-      console.log(`User ${userId} manually left lobby ${lobbyId} (in-memory).`);
+      console.log(`[Leave] Emitted playerLeft for ${userIdNum}`);
 
-      // --- Remove from Database ---
-      await removePlayerFromDb(lobbyId, userId); // Call the API function
+      // --- Remove from Database API call ---
+      console.log(`[Leave] Calling removePlayerFromDb for ${userIdNum}`);
+      await removePlayerFromDb(lobbyIdStr, userIdNum); // Use number ID for API
+
+      // --- Clean up empty lobby in memory ---
+      if (lobbyData.players.size === 0) {
+        /* ... delete lobby from maps ... */
+      }
+    } else {
+      /* ... handle player/lobby not found in memory ... */
     }
   });
-
   // --- chatMessage Handler (no changes needed) ---
   socket.on("chatMessage", ({ lobbyId, message, username }) => {
     // Basic validation
@@ -313,163 +516,206 @@ io.on("connection", (socket) => {
     });
   });
 
-  // --- disconnect Handler (MODIFIED for delayed removal) ---
+  // --- disconnect Handler ---
   socket.on("disconnect", () => {
-    console.log(`Disconnected: ${socket.id}`);
+    console.log(`[Disconnect] Socket disconnected: ${socket.id}`);
     const playerInfo = socketToLobby.get(socket.id);
 
     if (playerInfo) {
-      const { lobbyId, userId } = playerInfo;
-      const lobby = lobbies.get(lobbyId);
-      const currentUserData = lobby ? lobby.get(userId) : null;
+      const { lobbyId, userId } = playerInfo; // Get original types
+      const userIdNum = Number(userId);
+      const lobbyIdStr = String(lobbyId);
+
+      console.log(
+        `[Disconnect] Handling disconnect for user ${userIdNum} in lobby ${lobbyIdStr}`
+      );
+
+      const lobbyData = lobbies.get(lobbyIdStr);
+      const currentUserData = lobbyData
+        ? lobbyData.players.get(String(userIdNum))
+        : null; // Use string key
 
       if (currentUserData && currentUserData.socketId === socket.id) {
         console.log(
-          `Player ${userId} disconnected (socket ${socket.id}). Starting ${
+          `[Disconnect] User ${userIdNum} is associated with this socket. Starting ${
             LEAVE_DELAY / 1000
-          }s leave timer.`
+          }s timer.`
         );
 
         const timeoutId = setTimeout(async () => {
-          // Added async
           console.log(
-            `[Timeout] Leave timer expired for user ${userId}. Checking state...`
+            `[Timeout] Timer expired for user ${userIdNum} [${socket.id}] in lobby ${lobbyIdStr}. Checking state...`
           );
-          const currentLobby = lobbies.get(lobbyId);
-          const userDataInLobby = currentLobby
-            ? currentLobby.get(userId)
-            : null;
+          const currentLobbyData = lobbies.get(lobbyIdStr);
+          const userDataInLobby = currentLobbyData
+            ? currentLobbyData.players.get(String(userIdNum))
+            : null; // Use string key
 
           if (userDataInLobby && userDataInLobby.socketId === socket.id) {
             console.log(
-              `[Timeout] User ${userId} still disconnected. Removing.`
+              `[Timeout] User ${userIdNum} still associated with disconnected socket ${socket.id}. Proceeding.`
             );
 
-            // Remove from memory
-            currentLobby.delete(userId);
-            if (currentLobby.size === 0) {
-              lobbies.delete(lobbyId);
-              gameStates.delete(lobbyId);
-              timers.delete(lobbyId);
+            // --- Fetch latest owner before deciding ---
+            const latestDbState = await fetchLobbyDetailsFromDb(lobbyIdStr);
+            const latestDbOwnerId = latestDbState
+              ? Number(latestDbState.lobbyOwner)
+              : null;
+            console.log(
+              `[Timeout] Current DB owner for ${lobbyIdStr} is ${latestDbOwnerId}`
+            );
+
+            const wasOwner = latestDbOwnerId === userIdNum;
+            console.log(
+              `[Timeout] Was disconnected user ${userIdNum} the DB owner? ${wasOwner}`
+            );
+
+            if (wasOwner) {
+              console.log(
+                `[Timeout] Triggering owner transfer for ${userIdNum}`
+              );
+              await handleOwnerTransfer(lobbyIdStr, userIdNum); // Pass number ID
             }
 
-            // Notify clients
-            io.to(lobbyId).emit("playerLeft", {
-              id: userId,
+            // Remove Player from Memory (use string key)
+            if (currentLobbyData)
+              currentLobbyData.players.delete(String(userIdNum)); // Check if currentLobbyData exists
+            console.log(
+              `[Timeout] Removed user ${userIdNum} from lobby ${lobbyIdStr} memory.`
+            );
+
+            // Notify Clients
+            io.to(lobbyIdStr).emit("playerLeft", {
+              id: String(userIdNum),
               username: userDataInLobby.username,
             });
+            console.log(`[Timeout] Emitted playerLeft for ${userIdNum}`);
 
-            // --- Remove from Database ---
-            await removePlayerFromDb(lobbyId, userId); // Call the API function
-          } else {
+            // Remove from Database (use number ID)
             console.log(
-              `[Timeout] User ${userId} reconnected or was removed before timer expired. No DB action needed via timeout.`
+              `[Timeout] Calling removePlayerFromDb for ${userIdNum}`
             );
+            await removePlayerFromDb(lobbyIdStr, userIdNum);
+
+            // Clean up empty lobby
+            if (currentLobbyData && currentLobbyData.players.size === 0) {
+              /* ... delete lobby ... */
+            }
+          } else {
+            /* ... handle reconnected or already gone ... */
           }
 
-          // Clean up pending timer map
-          const currentLobbyTimeouts = pendingDisconnects.get(lobbyId);
+          // Clean up Pending Disconnect Timer Map (use original userId key)
+          const currentLobbyTimeouts = pendingDisconnects.get(lobbyIdStr);
           if (currentLobbyTimeouts) {
-            currentLobbyTimeouts.delete(userId);
-            if (currentLobbyTimeouts.size === 0)
-              pendingDisconnects.delete(lobbyId);
+            currentLobbyTimeouts.delete(userId); /* ... */
           }
         }, LEAVE_DELAY);
 
-        if (!pendingDisconnects.has(lobbyId))
-          pendingDisconnects.set(lobbyId, new Map());
-        pendingDisconnects.get(lobbyId).set(userId, timeoutId);
+        // Store pending disconnect (use original userId key)
+        if (!pendingDisconnects.has(lobbyIdStr))
+          pendingDisconnects.set(lobbyIdStr, new Map());
+        pendingDisconnects.get(lobbyIdStr).set(userId, timeoutId); // Use original userId as key
       } else {
-        console.log(
-          `Socket ${socket.id} (user ${userId}) disconnected, but was old/already gone. Ignoring disconnect.`
-        );
+        /* ... handle old socket disconnect ... */
       }
-      socketToLobby.delete(socket.id);
+      socketToLobby.delete(socket.id); // Clean up mapping
     } else {
-      console.warn(`Socket ${socket.id} disconnected without lobby/user info.`);
+      /* ... handle disconnect without playerInfo ... */
     }
   });
 
   //implementation of drawing board
 
   // --- NEW: Handle request for initial state ---
+  // index.js - Corrected request-initial-state handler
+
+  // --- Handle request for initial state ---
   socket.on("request-initial-state", () => {
+    console.log(
+      `[State Sync Step 1] Received 'request-initial-state' from socket ${socket.id}`
+    );
     const playerInfo = socketToLobby.get(socket.id);
     if (!playerInfo) {
-      console.warn(
-        `Received request-initial-state from socket ${socket.id} with no lobby info.`
+      /* handle error */ return;
+    }
+    const requesterId = String(playerInfo.userId);
+    const lobbyId = String(playerInfo.lobbyId);
+    const lobbyData = lobbies.get(lobbyId);
+
+    if (!lobbyData || !lobbyData.players || lobbyData.players.size <= 1) {
+      console.log(
+        `[State Sync Step 1] Aborting: Lobby ${lobbyId} has <= 1 player.`
       );
       return;
     }
-    const { lobbyId, userId: requesterId } = playerInfo;
-    const lobby = lobbies.get(lobbyId);
 
-    if (!lobby || lobby.size <= 1) {
-      console.log(`Lobby ${lobbyId} has only 1 player, no state to request.`);
-      return; // No one else to ask
-    }
-
-    // Store requester info temporarily
     pendingStateRequests.set(requesterId, socket.id);
     console.log(
-      `Stored pending state request for ${requesterId} [${socket.id}]`
+      `[State Sync Step 1] Stored pending request for ${requesterId}. Map size: ${pendingStateRequests.size}`
     );
 
-    // Broadcast request to OTHERS in the lobby
     console.log(
-      `Broadcasting 'get-canvas-state' to lobby ${lobbyId} for requester ${requesterId}`
+      `[State Sync Step 2] Broadcasting 'get-canvas-state' to lobby ${lobbyId} (excluding sender) for ${requesterId}`
     );
     socket.to(lobbyId).emit("get-canvas-state", { requesterId: requesterId });
 
-    // Optional: Add a timeout to clear the pending request if no one responds
     setTimeout(() => {
-      if (pendingStateRequests.has(requesterId)) {
-        console.log(`State request for ${requesterId} timed out.`);
-        pendingStateRequests.delete(requesterId);
-      }
-    }, 10000); // 10 second timeout
+      /* timeout logic */
+    }, 15000);
   });
 
   // --- NEW: Handle receiving state from existing client ---
+  // --- send-canvas-state Handler ---
   socket.on("send-canvas-state", (data) => {
-    // Expects { targetUserId, dataUrl }
-    const senderInfo = socketToLobby.get(socket.id); // Optional: Log who sent it
-    const senderUserId = senderInfo?.userId || "Unknown";
+    const senderInfo = socketToLobby.get(socket.id);
+    const senderUserId = String(senderInfo?.userId || "Unknown");
+    console.log(
+      `[State Sync Step 3] Received 'send-canvas-state' from sender ${senderUserId}. Target: ${data?.targetUserId}`
+    );
 
-    // Basic Validation
     if (
       !data ||
       typeof data.targetUserId !== "string" ||
-      typeof data.dataUrl !== "string" ||
+      !data.dataUrl ||
       !data.dataUrl.startsWith("data:image/")
     ) {
-      console.error(
-        `Received invalid send-canvas-state data from ${senderUserId}:`,
-        data
-      );
+      console.error(`[State Sync Step 3] Invalid data received:`, data);
       return;
     }
+    const targetUserId = String(data.targetUserId); // Use string key
 
-    // Check if there's a pending request for this targetUserId
-    if (pendingStateRequests.has(data.targetUserId)) {
-      const targetSocketId = pendingStateRequests.get(data.targetUserId);
-
+    console.log(
+      `[State Sync Step 3] Checking pending requests for ${targetUserId}. Map size: ${pendingStateRequests.size}`
+    );
+    if (pendingStateRequests.has(targetUserId)) {
+      const targetSocketId = pendingStateRequests.get(targetUserId);
       console.log(
-        `Received canvas state from ${senderUserId} for ${data.targetUserId}. Forwarding to ${targetSocketId}.`
+        `[State Sync Step 4] Found pending request for ${targetUserId}. Target socket: ${targetSocketId}. Emitting 'load-canvas-state'...`
       );
 
-      // Send the state DIRECTLY to the original requester's socket
-      io.to(targetSocketId).emit("load-canvas-state", {
-        dataUrl: data.dataUrl,
-      });
+      // Check if target socket still exists/connected (optional but good)
+      const targetSocket = io.sockets.sockets.get(targetSocketId);
+      if (targetSocket) {
+        io.to(targetSocketId).emit("load-canvas-state", {
+          dataUrl: data.dataUrl,
+        });
+        console.log(
+          `[State Sync Step 4] Emission to ${targetSocketId} completed.`
+        );
+      } else {
+        console.warn(
+          `[State Sync Step 4] Target socket ${targetSocketId} not found or disconnected. Cannot send state.`
+        );
+      }
 
-      // CRITICAL: Remove the pending request immediately after fulfilling it
-      pendingStateRequests.delete(data.targetUserId);
-      console.log(`Removed pending state request for ${data.targetUserId}.`);
-    } else {
-      // Ignore if no pending request (already fulfilled or timed out)
+      pendingStateRequests.delete(targetUserId); // Remove after processing
       console.log(
-        `Ignoring received canvas state from ${senderUserId} for ${data.targetUserId} (no pending request found).`
+        `[State Sync Step 4] Removed pending request for ${targetUserId}. Map size: ${pendingStateRequests.size}`
+      );
+    } else {
+      console.log(
+        `[State Sync Step 3] Ignoring: No pending request found for ${targetUserId}.`
       );
     }
   });

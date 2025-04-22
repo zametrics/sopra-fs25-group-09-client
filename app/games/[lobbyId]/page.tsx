@@ -4,7 +4,7 @@ import React, { FC, useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useApi } from "@/hooks/useApi";
 import { Button, Spin, message, Modal } from "antd";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import withAuth from "@/hooks/withAuth";
 import io, { Socket } from "socket.io-client";
 import { useDraw } from "@/hooks/useDraw";
