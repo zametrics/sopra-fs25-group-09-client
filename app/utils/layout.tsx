@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
-import { Button, Input, message } from 'antd';
-import { Socket } from 'socket.io-client';
-import { useApi } from '@/hooks/useApi';
+import React, { useEffect, useState, useRef } from "react";
+import { Button, Input, message } from "antd";
+import { Socket } from "socket.io-client";
+import { useApi } from "@/hooks/useApi";
 
 interface LobbyData {
   id: number;
@@ -36,17 +36,30 @@ interface LayoutProps {
   lobby: LobbyData | null;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, socket, lobbyId, currentUserId, localAvatarUrl, lobby }) => {
+const Layout: React.FC<LayoutProps> = ({
+  children,
+  socket,
+  lobbyId,
+  currentUserId,
+  localAvatarUrl,
+  lobby,
+}) => {
   const apiService = useApi();
   const [players, setPlayers] = useState<PlayerData[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState<string>('');
+  const [chatInput, setChatInput] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [loading, setLoading] = useState<boolean>(true);
 
   const colorPool: string[] = [
-    '#e6194b', '#3cb44b', '#4363d8', '#f58231',
-    '#911eb4', '#42d4f4', '#f032e6', '#1a1aff', '#008080',
+    "#e6194b",
+    "#3cb44b",
+    "#4363d8",
+    "#f58231",
+    "#911eb4",
+    "#42d4f4",
+    "#f032e6",
+    "#1a1aff",
+    "#008080",
   ];
 
   const usernameColorsRef = useRef<{ [key: string]: string }>({});
@@ -54,7 +67,7 @@ const Layout: React.FC<LayoutProps> = ({ children, socket, lobbyId, currentUserI
   function getUsernameColor(username: string): string {
     const usernameColors = usernameColorsRef.current;
 
-    if (!username || typeof username !== 'string') return 'black';
+    if (!username || typeof username !== "string") return "black";
 
     if (usernameColors[username]) {
       return usernameColors[username];
@@ -67,7 +80,7 @@ const Layout: React.FC<LayoutProps> = ({ children, socket, lobbyId, currentUserI
     const newColor =
       availableColors.length > 0
         ? availableColors[Math.floor(Math.random() * availableColors.length)]
-        : '#' + Math.floor(Math.random() * 16777215).toString(16);
+        : "#" + Math.floor(Math.random() * 16777215).toString(16);
 
     usernameColors[username] = newColor;
     return newColor;
@@ -76,21 +89,21 @@ const Layout: React.FC<LayoutProps> = ({ children, socket, lobbyId, currentUserI
   // Fetch initial players and handle socket events
   useEffect(() => {
     const fetchLobbyPlayers = async () => {
-      setLoading(true);
       try {
         const response = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
         if (response.playerIds && response.playerIds.length > 0) {
           const playerPromises = response.playerIds.map((id: number) =>
-            apiService.get<PlayerData>(`/users/${id}`).catch(() => ({ id, username: 'Guest' } as PlayerData))
+            apiService
+              .get<PlayerData>(`/users/${id}`)
+              .catch(() => ({ id, username: "Guest" } as PlayerData))
           );
           const playerData = await Promise.all(playerPromises);
           setPlayers(playerData as PlayerData[]);
         }
       } catch (error) {
-        console.error('Error fetching lobby players:', error);
-        message.error('Failed to load players');
+        console.error("Error fetching lobby players:", error);
+        message.error("Failed to load players");
       } finally {
-        setLoading(false);
       }
     };
 
@@ -99,7 +112,7 @@ const Layout: React.FC<LayoutProps> = ({ children, socket, lobbyId, currentUserI
     }
 
     if (socket) {
-      socket.on('lobbyState', ({ players }) => {
+      socket.on("lobbyState", ({ players }) => {
         setPlayers(
           players.map((p: { id: string; username: string }) => ({
             id: p.id,
@@ -108,15 +121,15 @@ const Layout: React.FC<LayoutProps> = ({ children, socket, lobbyId, currentUserI
         );
       });
 
-      socket.on('chatMessage', (message: ChatMessage) => {
+      socket.on("chatMessage", (message: ChatMessage) => {
         setMessages((prev) => [...prev, message]);
       });
 
-      socket.on('playerJoined', () => {
+      socket.on("playerJoined", () => {
         fetchLobbyPlayers();
       });
 
-      socket.on('playerLeft', (leftPlayer: PlayerData) => {
+      socket.on("playerLeft", (leftPlayer: PlayerData) => {
         setPlayers((prev) => prev.filter((p) => p.id !== leftPlayer.id));
         fetchLobbyPlayers();
       });
@@ -124,24 +137,26 @@ const Layout: React.FC<LayoutProps> = ({ children, socket, lobbyId, currentUserI
 
     return () => {
       if (socket) {
-        socket.off('lobbyState');
-        socket.off('chatMessage');
-        socket.off('playerJoined');
-        socket.off('playerLeft');
+        socket.off("lobbyState");
+        socket.off("chatMessage");
+        socket.off("playerJoined");
+        socket.off("playerLeft");
       }
     };
   }, [lobbyId, socket, apiService]);
 
   // Scroll to latest message
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const sendMessage = () => {
     if (chatInput.trim() && socket) {
-      const username = players.find((p) => p.id.toString() === currentUserId)?.username;
-      socket.emit('chatMessage', { lobbyId, message: chatInput, username });
-      setChatInput('');
+      const username = players.find(
+        (p) => p.id.toString() === currentUserId
+      )?.username;
+      socket.emit("chatMessage", { lobbyId, message: chatInput, username });
+      setChatInput("");
     }
   };
 
@@ -155,11 +170,17 @@ const Layout: React.FC<LayoutProps> = ({ children, socket, lobbyId, currentUserI
           {players.map((player) => (
             <div
               key={player.id}
-              className={`player-entry ${player.id.toString() === currentUserId ? 'player-entry-own' : ''}`}
+              className={`player-entry ${
+                player.id.toString() === currentUserId ? "player-entry-own" : ""
+              }`}
             >
               <div className="player-info">
                 <img
-                  src={player.id.toString() === currentUserId ? localAvatarUrl : '/icons/avatar.png'}
+                  src={
+                    player.id.toString() === currentUserId
+                      ? localAvatarUrl
+                      : "/icons/avatar.png"
+                  }
                   alt="Avatar"
                   className="player-avatar"
                 />
@@ -177,7 +198,10 @@ const Layout: React.FC<LayoutProps> = ({ children, socket, lobbyId, currentUserI
         <div className="chat-messages">
           {messages.map((msg, index) => (
             <div key={index} className="chat-message">
-              <span style={{ color: getUsernameColor(msg.username) }} className="chat-username">
+              <span
+                style={{ color: getUsernameColor(msg.username) }}
+                className="chat-username"
+              >
                 {msg.username}:
               </span>
               <span className="chat-text"> {msg.message}</span>
@@ -194,7 +218,9 @@ const Layout: React.FC<LayoutProps> = ({ children, socket, lobbyId, currentUserI
             placeholder="Type your message here!"
           />
           <Button className="chat-send-button" onClick={sendMessage}>
-            <span role="img" aria-label="send">📨</span>
+            <span role="img" aria-label="send">
+              📨
+            </span>
           </Button>
         </div>
       </div>

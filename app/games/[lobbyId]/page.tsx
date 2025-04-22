@@ -3,13 +3,13 @@
 import React, { FC, useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useApi } from "@/hooks/useApi";
-import { Button, Spin, message, Input, Modal } from "antd";
+import { Button, Spin, message, Modal } from "antd";
 import { useRouter } from "next/navigation";
 import withAuth from "@/hooks/withAuth";
 import io, { Socket } from "socket.io-client";
 import { useDraw } from "@/hooks/useDraw";
 import { drawLine } from "@/utils/drawLine";
-import Layout from '@/utils/layout';
+import Layout from "@/utils/layout";
 
 interface LobbyData {
   id: number;
@@ -20,11 +20,6 @@ interface LobbyData {
   drawTime: number;
   lobbyOwner: number;
   language: string;
-}
-
-interface PlayerData {
-  id: number;
-  username: string;
 }
 
 interface WordOption {
@@ -126,6 +121,10 @@ interface SyncCanvasData {
   dataUrl: string; // Send canvas state as Data URL
 }
 
+// --- NEW: Define constants for session storage keys ---
+const DISCONNECT_TIMEOUT_ID_KEY = "disconnectTimeoutId";
+const DISCONNECT_LOBBY_ID_KEY = "disconnectLobbyId";
+
 const LobbyPage: FC = ({}) => {
   const [activeTool, setActiveTool] = useState<Tool>("brush"); // Default to brush
   const [brushSize, setBrushSize] = useState<number>(brushSizes.size2); // Default size
@@ -139,10 +138,9 @@ const LobbyPage: FC = ({}) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false); // Prevent multiple initial loads
 
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [color,setColor] = useState<string>('#000000')
-  const [isColorPickerVisible, setIsColorPickerVisible] = useState<boolean>(false);
+  const [color, setColor] = useState<string>("#000000");
+  const [isColorPickerVisible, setIsColorPickerVisible] =
+    useState<boolean>(false);
   const colorPickerRef = useRef<HTMLDivElement>(null); // Ref for click outside detection
   const colorButtonRef = useRef<HTMLButtonElement>(null); // Ref for the trigger button
   const [historyStack, setHistoryStack] = useState<ImageData[]>([]); // --- State for Undo History ---
@@ -159,7 +157,8 @@ const LobbyPage: FC = ({}) => {
   const [customCursorPos, setCustomCursorPos] = useState({ x: 0, y: 0 });
   const [isCustomCursorVisible, setIsCustomCursorVisible] = useState(false);
   const [useCustomElementCursor, setUseCustomElementCursor] = useState(false); // Flag to control which cursor system to use
-  const [isLeaveModalVisible, setIsLeaveModalVisible] = useState<boolean>(false);
+  const [isLeaveModalVisible, setIsLeaveModalVisible] =
+    useState<boolean>(false);
 
   const [timer, setTimer] = useState<number | null>(null);
   const [currentRound, setCurrentRound] = useState(69);
@@ -177,21 +176,20 @@ const LobbyPage: FC = ({}) => {
         console.log("Skipping word fetch: lobby not loaded yet");
         return;
       }
-      
-      
+
       const language = lobby.language;
       const wordType = lobby.type;
 
       console.log(`Fetching words: lang=${language}, type=${wordType}`);
-      
+
       try {
         const response = await apiService.get<string[]>(
           `/api/words/gpt?lang=${language}&type=${wordType}&count=3`
         );
-        
+
         if (response && Array.isArray(response)) {
           console.log("API response:", response);
-          const options = response.map(word => ({ word, selected: false }));
+          const options = response.map((word) => ({ word, selected: false }));
           setWordOptions(options);
           setShowWordSelection(true);
         } else {
@@ -200,7 +198,7 @@ const LobbyPage: FC = ({}) => {
           setWordOptions([
             { word: "apple", selected: false },
             { word: "banana", selected: false },
-            { word: "cherry", selected: false }
+            { word: "cherry", selected: false },
           ]);
           setShowWordSelection(true);
         }
@@ -210,7 +208,7 @@ const LobbyPage: FC = ({}) => {
         setWordOptions([
           { word: "apple", selected: false },
           { word: "banana", selected: false },
-          { word: "cherry", selected: false }
+          { word: "cherry", selected: false },
         ]);
         setShowWordSelection(true);
       }
@@ -220,47 +218,50 @@ const LobbyPage: FC = ({}) => {
       setWordOptions([
         { word: "apple", selected: false },
         { word: "banana", selected: false },
-        { word: "cherry", selected: false }
+        { word: "cherry", selected: false },
       ]);
       setShowWordSelection(true);
     }
   }, [lobby, apiService]);
 
-  const handleWordSelect = useCallback((selectedIndex: number) => {
-    if (selectedIndex < 0 || selectedIndex >= wordOptions.length) {
-      console.error("Invalid word selection index:", selectedIndex);
-      return;
-    }
-  
-    // Update the selected state
-    const updatedOptions = wordOptions.map((option, index) => ({
-      ...option,
-      selected: index === selectedIndex
-    }));
-    
-    setWordOptions(updatedOptions);
-    
-    // Set the selected word
-    const word = wordOptions[selectedIndex].word;
-    setSelectedWord(word);
-    
-    // Emit the selected word to other players via socket
-    if (socket) {
-      console.log(`Emitting selected word "${word}" to other players`);
-      socket.emit('word-selected', { 
-        lobbyId, 
-        word 
-      });
-    }
-    
-    // Hide word selection after a short delay
-    setTimeout(() => {
-      setShowWordSelection(false);
-    }, 1000);
-  }, [wordOptions, socket, lobbyId]);
+  const handleWordSelect = useCallback(
+    (selectedIndex: number) => {
+      if (selectedIndex < 0 || selectedIndex >= wordOptions.length) {
+        console.error("Invalid word selection index:", selectedIndex);
+        return;
+      }
+
+      // Update the selected state
+      const updatedOptions = wordOptions.map((option, index) => ({
+        ...option,
+        selected: index === selectedIndex,
+      }));
+
+      setWordOptions(updatedOptions);
+
+      // Set the selected word
+      const word = wordOptions[selectedIndex].word;
+      setSelectedWord(word);
+
+      // Emit the selected word to other players via socket
+      if (socket) {
+        console.log(`Emitting selected word "${word}" to other players`);
+        socket.emit("word-selected", {
+          lobbyId,
+          word,
+        });
+      }
+
+      // Hide word selection after a short delay
+      setTimeout(() => {
+        setShowWordSelection(false);
+      }, 1000);
+    },
+    [wordOptions, socket, lobbyId]
+  );
 
   // const wordToGuess = selectedWord || "noword";
-  
+
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     // Get mouse position relative to the page
     setCustomCursorPos({ x: e.pageX, y: e.pageY });
@@ -522,7 +523,7 @@ const LobbyPage: FC = ({}) => {
   useEffect(() => {
     const canvas = canvasElementRef.current;
     if (!canvas) return;
-    
+
     let newCursorStyle = "crosshair"; // Default if no tool active or custom element used
     let useCustomElement = false; // Reset flag
 
@@ -574,8 +575,8 @@ const LobbyPage: FC = ({}) => {
         const response = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
         setLobby(response as LobbyData);
       } catch (error) {
-        console.error('Error fetching lobby:', error);
-        message.error('Failed to load lobby information');
+        console.error("Error fetching lobby:", error);
+        message.error("Failed to load lobby information");
       } finally {
         setLoading(false);
       }
@@ -589,59 +590,85 @@ const LobbyPage: FC = ({}) => {
   useEffect(() => {
     if (socket && lobby && lobby.drawTime) {
       console.log("Auto-starting timer on page load, lobbyId:", lobbyId);
-      socket.emit("startTimer", { 
+      socket.emit("startTimer", {
         lobbyId,
-        drawTime: lobby.drawTime
+        drawTime: lobby.drawTime,
       });
     }
   }, [socket, lobby, lobbyId]);
 
+  const showLeaveConfirmation = () => {
+    setIsLeaveModalVisible(true);
+  };
 
- const goBack = () => {
-    router.push('/home');
- };
+  // --- Refactor leave logic into a stable function ---
+  const performLeaveLobby = useCallback(
+    async (redirect = true) => {
+      if (!currentUserId || !lobbyId || !socket) {
+        console.warn("Attempted to leave lobby without necessary info.");
+        if (redirect) router.push("/home");
+        return;
+      }
 
- const showLeaveConfirmation = () => {
-  setIsLeaveModalVisible(true);
-};
+      console.log(
+        `Performing leave action for user ${currentUserId} from lobby ${lobbyId}`
+      );
+      setLoading(true); // Optional: indicate leaving action
 
-const handleLeaveLobby = async () => {
-  if (!currentUserId || !lobbyId) {
-    router.push('/home');
-    return;
-  }
+      try {
+        // Notify backend first
+        await apiService.put(
+          `/lobbies/${lobbyId}/leave?playerId=${currentUserId}`,
+          {}
+        );
+        console.log(
+          `Backend notified of user ${currentUserId} leaving lobby ${lobbyId}`
+        );
 
-  try {
-    setLoading(true);
-    
-    // Remove player from lobby in database
-    // Adding an empty object as the second parameter to satisfy the put method signature
-    await apiService.put(`/lobbies/${lobbyId}/leave?playerId=${currentUserId}`, {});
-    
-    // Notify other players via socket
-    if (socket) {
-      socket.emit('leaveLobby', { 
-        lobbyId, 
-        userId: currentUserId 
-      });
+        // Then notify other players via socket
+        socket.emit("leaveLobby", { lobbyId, userId: currentUserId });
+        console.log(
+          `Socket event 'leaveLobby' emitted for user ${currentUserId}`
+        );
+
+        if (redirect) {
+          message.success("You have left the lobby");
+          router.push("/home");
+        }
+      } catch (error) {
+        console.error("Error leaving lobby:", error);
+        if (redirect) {
+          message.error("Failed to leave lobby cleanly, redirecting anyway");
+          router.push("/home");
+        }
+      } finally {
+        setLoading(false);
+        setIsLeaveModalVisible(false); // Ensure modal closes if open
+        // Clean up disconnect timer info from session storage if it exists
+        sessionStorage.removeItem(DISCONNECT_TIMEOUT_ID_KEY);
+        sessionStorage.removeItem(DISCONNECT_LOBBY_ID_KEY);
+      }
+    },
+    [apiService, currentUserId, lobbyId, router]
+  ); // Dependencies for the leave action
+
+  const handleLeaveLobby = () => {
+    // Clear any pending automatic disconnect timer *before* manually leaving
+    const timeoutId = sessionStorage.getItem(DISCONNECT_TIMEOUT_ID_KEY);
+    if (timeoutId) {
+      console.log(
+        "Clearing pending auto-disconnect timer due to manual leave."
+      );
+      clearTimeout(Number(timeoutId));
+      sessionStorage.removeItem(DISCONNECT_TIMEOUT_ID_KEY);
+      sessionStorage.removeItem(DISCONNECT_LOBBY_ID_KEY);
     }
-    
-    message.success('You have left the lobby');
-    router.push('/home');
-  } catch (error) {
-    console.error('Error leaving lobby:', error);
-    message.error('Failed to leave lobby properly, redirecting anyway');
-    router.push('/home');
-  } finally {
-    setLoading(false);
+    performLeaveLobby(true); // Perform the leave action with redirection
+  };
+
+  const handleCancelLeave = () => {
     setIsLeaveModalVisible(false);
-  }
-};
-
-const handleCancelLeave = () => {
-  setIsLeaveModalVisible(false);
-};
-
+  };
 
   // --- Color Picker Toggle Handler ---
   const toggleColorPicker = () => {
@@ -761,30 +788,61 @@ const handleCancelLeave = () => {
   useEffect(() => {
     let isMounted = true;
     let socketIo: Socket | null = null;
+    const disconnectTimeoutId: NodeJS.Timeout | null = null;
 
-
-    const fetchCurrentUsername = async () => {
-      try {
-        const userData = await apiService.get<{ id: number; username: string }>(`/users/${currentUserId}`);
-        return userData.username;
-      } catch (error) {
-        console.error('Error fetching username:', error);
-        return 'Guest';
-      }
-    };
-    
     //http://localhost:3001 --- "https://socket-server-826256454260.europe-west1.run.app/" { path: "/api/socket" }
-    const setupSocket = async () => {
-      socketIo = io(
-        "http://localhost:3001/",
-        { path: "/api/socket" }
-      ); // Use your server URL
+    const connectAndSetupSocket = async () => {
+      // --- Check for pending disconnect on mount ---
+      const storedTimeoutId = sessionStorage.getItem(DISCONNECT_TIMEOUT_ID_KEY);
+      const storedLobbyId = sessionStorage.getItem(DISCONNECT_LOBBY_ID_KEY);
+
+      if (storedTimeoutId && storedLobbyId && storedLobbyId === lobbyId) {
+        console.log(
+          `[Mount] Found pending disconnect timer (${storedTimeoutId}) for this lobby (${lobbyId}). Clearing it.`
+        );
+        clearTimeout(Number(storedTimeoutId));
+        sessionStorage.removeItem(DISCONNECT_TIMEOUT_ID_KEY);
+        sessionStorage.removeItem(DISCONNECT_LOBBY_ID_KEY);
+      } else if (storedTimeoutId || storedLobbyId) {
+        // Clean up potentially stale entries if lobbyId doesn't match
+        console.log(
+          "[Mount] Cleaning up stale disconnect timer info from session storage."
+        );
+        sessionStorage.removeItem(DISCONNECT_TIMEOUT_ID_KEY);
+        sessionStorage.removeItem(DISCONNECT_LOBBY_ID_KEY);
+      }
+
+      socketIo = io("http://localhost:3001/", { path: "/api/socket" }); // Use your server URL
       setSocket(socketIo);
 
+      if (isMounted) {
+        setSocket(socketIo); // Set the socket state
+      } else {
+        // If component unmounted before socket connected, disconnect immediately
+        socketIo.disconnect();
+        return;
+      }
+
       // --- Join Logic ---
-      const username = await fetchCurrentUsername();
-      socketIo.emit("joinLobby", { lobbyId, userId: currentUserId, username }); // Uses existing server handler
-      console.log("Emitted joinLobby");
+      try {
+        const userData = await apiService.get<{ id: number; username: string }>(
+          `/users/${currentUserId}`
+        );
+        const username = userData.username || "Guest";
+        socketIo.emit("joinLobby", {
+          lobbyId,
+          userId: currentUserId,
+          username,
+        });
+        console.log("Emitted joinLobby");
+      } catch (error) {
+        console.error("Error fetching username for join:", error);
+        socketIo.emit("joinLobby", {
+          lobbyId,
+          userId: currentUserId,
+          username: "Guest",
+        }); // Join as guest on error
+      }
 
       // --- Request initial state AFTER joining ---
       if (!isCanvasInitialized && isMounted) {
@@ -792,18 +850,31 @@ const handleCancelLeave = () => {
         socketIo.emit("request-initial-state");
       }
 
+      // --- Setup all socket event listeners ---
+      socketIo.on("connect", () => {
+        console.log("Socket connected:", socketIo?.id);
+      });
+      socketIo.on("disconnect", (reason) => {
+        console.log("Socket disconnected:", reason);
+        if (isMounted) {
+          // Maybe show a message or attempt reconnect depending on the reason
+          message.warning("Disconnected from server.");
+          setSocket(null); // Update state
+        }
+      });
+
       // --- Listener for receiving the final initial state ---
       socketIo.on("timerUpdate", (newTime: number) => {
         //console.log("Received timer update:", newTime);
         setTimer(newTime);
       });
 
-      socketIo.on('word-selected', (data) => {
-        console.log('Received selected word from another player:', data.word);
-        
+      socketIo.on("word-selected", (data) => {
+        console.log("Received selected word from another player:", data.word);
+
         // Update the selected word state
         setSelectedWord(data.word);
-        
+
         // Hide the word selection modal if it's visible
         setShowWordSelection(false);
       });
@@ -813,22 +884,24 @@ const handleCancelLeave = () => {
         try {
           // Only try to fetch words if the lobby has been loaded
           if (lobby) {
-            fetchWordOptions(); 
+            fetchWordOptions();
           } else {
             console.log("Skipping word fetch: lobby not loaded yet");
           }
         } catch (error) {
-          console.error("Error during fetchWordOptions from roundEnded event:", error);
+          console.error(
+            "Error during fetchWordOptions from roundEnded event:",
+            error
+          );
         }
       });
-      
-      socketIo.on('gameUpdate', (gameData) => {
-        console.log('Received game update:', gameData);
+
+      socketIo.on("gameUpdate", (gameData) => {
+        console.log("Received game update:", gameData);
         if (gameData.currentRound) setCurrentRound(gameData.currentRound);
         if (gameData.numOfRounds) setNumOfRounds(gameData.numOfRounds);
       });
-    
-      
+
       socketIo.on("load-canvas-state", (data: LoadCanvasStateData) => {
         if (!isCanvasInitialized && data.dataUrl && isMounted) {
           console.log("Received load-canvas-state. Loading canvas...");
@@ -954,51 +1027,87 @@ const handleCancelLeave = () => {
         }
       });
 
-
-      // First word fetching
-      try {
-        if (lobby) {
-          console.log("Fetching initial words for first round");
-          fetchWordOptions();
-        }
-      } catch (error) {
-        console.error("Error fetching initial words:", error);
+      // Fetch initial words if needed
+      if (
+        lobby &&
+        !wordOptions.length &&
+        !showWordSelection &&
+        !selectedWord &&
+        isMounted
+      ) {
+        console.log("Fetching initial words after socket setup");
+        fetchWordOptions();
       }
 
-      // --- Initial empty canvas state ---
+      // Save initial canvas state if needed
       if (
         canvasElementRef.current &&
         historyStack.length === 0 &&
-        !isCanvasInitialized
+        !isCanvasInitialized &&
+        isMounted
       ) {
         saveCanvasState();
       }
-
     };
-    setupSocket();
+    connectAndSetupSocket();
 
-    // --- Cleanup ---
     return () => {
-      isMounted = false;
+      console.log("[Unmount] GamePage cleanup running...");
+      isMounted = false; // Mark as unmounted
+
+      // --- REMOVE Timer Logic ---
+      // const timeoutId = setTimeout(...); // DELETE THIS
+      // sessionStorage.setItem(DISCONNECT_TIMEOUT_ID_KEY, String(timeoutId)); // DELETE THIS
+      // sessionStorage.setItem(DISCONNECT_LOBBY_ID_KEY, lobbyId); // DELETE THIS
+      // disconnectTimeoutId = timeoutId; // DELETE THIS
+      console.log(
+        `[Unmount] Client-side timer logic removed. Server handles disconnect delay.`
+      );
+
+      // --- Original Socket Cleanup ---
       if (socketIo) {
-        // Unregister all listeners
-        socketIo.off("load-canvas-state");
-        socketIo.off("get-canvas-state");
-        socketIo.off("clear");
-        socketIo.off("fill-area");
-        socketIo.off("sync-canvas");
-        socketIo.off('gameUpdate');
-        socketIo.off("roundEnded");
+        console.log("[Unmount] Disconnecting socket...");
+        socketIo.off("connect");
+        socketIo.off("disconnect");
         socketIo.off("timerUpdate");
         socketIo.off("word-selected");
-        // ... unregister other drawing listeners ...
+        socketIo.off("roundEnded");
+        socketIo.off("gameUpdate");
+        socketIo.off("load-canvas-state");
+        socketIo.off("get-canvas-state");
+        socketIo.off("draw-line-batch");
+        socketIo.off("clear");
+        socketIo.off("draw-end");
+        socketIo.off("fill-area");
+        socketIo.off("sync-canvas");
+        socketIo.off("playerLeft");
         socketIo.disconnect();
       }
-      setSocket(null);
+      setSocket(null); // Clear socket state
+
+      // Clear the locally tracked timeout ID if the component unmounts *before* the timeout fires
+      // This prevents trying to clear a timeout that doesn't exist if cleanup runs twice somehow
+      if (disconnectTimeoutId) {
+        // NOTE: Do NOT clear the timeout here. The timer *should* run if the user stays away.
+        // We only clear it on re-mount if they come back.
+      }
     };
-    // Only include dependencies that, if changed, require the effect to re-run (like lobbyId)
-    // Callbacks defined with useCallback outside usually don't need to be deps unless their own deps change.
-  }, [lobbyId, apiService, currentUserId, loadCanvasFromDataUrl, fetchWordOptions]); // `loadCanvasFromDataUrl` is stable
+    // Rerun effect if lobbyId changes (navigating between different game pages)
+    // Add other stable dependencies like apiService, fetchWordOptions if necessary
+    // IMPORTANT: performLeaveLobby is now stable due to useCallback, so it can be a dependency
+    //            if needed, but it's mainly used in the timeout/cleanup.
+  }, [
+    lobbyId,
+    apiService,
+    currentUserId,
+    isCanvasInitialized,
+    loadCanvasFromDataUrl,
+    fetchWordOptions,
+    saveCanvasState,
+    performLeaveLobby,
+  ]);
+  // Note: Removed 'lobby' from deps here to avoid re-running socket setup on every lobby state change.
+  // Fetching words depends on lobby, so it's handled conditionally inside or in fetchWordOptions.
 
   // --- Local Clear Function ---
   const socketClearCanvas = useCallback(() => {
@@ -1014,25 +1123,43 @@ const handleCancelLeave = () => {
     saveCanvasState(); // Save the blank state
   }, [socket, saveCanvasState]);
 
-  // Loading screen
-  if (loading) {
+  // --- Keep rendering logic (Loading, Not Found, Main Game UI) ---
+  if (loading && !lobby) {
+    // Show loading only if lobby isn't fetched yet
     return (
-      <Layout socket={socket} lobbyId={lobbyId} currentUserId={currentUserId} localAvatarUrl={localAvatarUrl} lobby={lobby}>
+      <Layout
+        socket={socket}
+        lobbyId={lobbyId}
+        currentUserId={currentUserId}
+        localAvatarUrl={localAvatarUrl}
+        lobby={lobby}
+      >
         <div className="game-box">
-          Loading...
+          <Spin size="large" /> Loading Game...
         </div>
       </Layout>
     );
   }
 
-  // No loading screen
-  if (!lobby) {
+  if (!lobby && !loading) {
+    // Show not found only after loading attempt fails
     return (
-      <Layout socket={socket} lobbyId={lobbyId} currentUserId={currentUserId} localAvatarUrl={localAvatarUrl} lobby={null}>
-        <div className='login-register-box'>
-          <h1 className='players-chat-title' style={{marginTop: -10, marginBottom: 30, fontSize: 50}}>Lobby Not Found</h1>
-          <h2 className='players-chat-title'>Lobby {`#${lobbyId}`}</h2>
-          <Button className="green-button" onClick={() => router.push('/home')}>
+      <Layout
+        socket={socket}
+        lobbyId={lobbyId}
+        currentUserId={currentUserId}
+        localAvatarUrl={localAvatarUrl}
+        lobby={null}
+      >
+        <div className="login-register-box">
+          <h1
+            className="players-chat-title"
+            style={{ marginTop: -10, marginBottom: 30, fontSize: 50 }}
+          >
+            Game Not Found
+          </h1>
+          <h2 className="players-chat-title">Lobby {`#${lobbyId}`}</h2>
+          <Button className="green-button" onClick={() => router.push("/home")}>
             Back to home
           </Button>
         </div>
@@ -1059,42 +1186,61 @@ const handleCancelLeave = () => {
   };
 
   return (
-    <Layout socket={socket} lobbyId={lobbyId} currentUserId={currentUserId} localAvatarUrl={localAvatarUrl} lobby={lobby}>
+    <Layout
+      socket={socket}
+      lobbyId={lobbyId}
+      currentUserId={currentUserId}
+      localAvatarUrl={localAvatarUrl}
+      lobby={lobby}
+    >
       {" "}
       {/* <-- START React Fragment */}
       <div style={fillCursorStyle} />
       <div className="page-background">
-
         {/* Game Box */}
         <div className="game-box">
-        <div className="timer-area" style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 10 }}>
-        <div className="timer-container">
-          <svg className="timer-circle" viewBox="0 0 100 100">
-            <circle className="timer-circle-bg" cx="50" cy="50" r="45" />
-            <circle 
-              className="timer-circle-progress" 
-              cx="50" 
-              cy="50" 
-              r="45" 
-              style={{
-                strokeDashoffset: timer !== null ? 
-                  283 - (283 * timer / (lobby?.drawTime || 60)) : 283
-              }}
-            />
-          </svg>
-          <div className="timer-content">
-            <span className="timer-value">{timer !== null ? timer : "--"}</span>
-            <span className="timer-label">seconds</span>
+          <div
+            className="timer-area"
+            style={{
+              position: "absolute",
+              top: "20px",
+              left: "20px",
+              zIndex: 10,
+            }}
+          >
+            <div className="timer-container">
+              <svg className="timer-circle" viewBox="0 0 100 100">
+                <circle className="timer-circle-bg" cx="50" cy="50" r="45" />
+                <circle
+                  className="timer-circle-progress"
+                  cx="50"
+                  cy="50"
+                  r="45"
+                  style={{
+                    strokeDashoffset:
+                      timer !== null
+                        ? 283 - (283 * timer) / (lobby?.drawTime || 60)
+                        : 283,
+                  }}
+                />
+              </svg>
+              <div className="timer-content">
+                <span className="timer-value">
+                  {timer !== null ? timer : "--"}
+                </span>
+                <span className="timer-label">seconds</span>
+              </div>
+            </div>
+            <div className="round-content">
+              <span className="currentRound">Round: {currentRound || 69}</span>
+              <span className="allRound">/{numOfRounds || 420}</span>
+            </div>
           </div>
-        </div>
-        <div className="round-content">
-          <span className="currentRound">Round: {currentRound || 69}</span>
-          <span className="allRound">/{numOfRounds || 420}</span>
-        </div>
-      </div>
           <h1 className="drawzone-logo-2-8rem">DRAWZONE</h1>
           <h2 className="drawzone-subtitle-1-1rem">ART BATTLE ROYALE</h2>
-          <button className="leave-game-button" onClick={showLeaveConfirmation}>LEAVE GAME</button>
+          <button className="leave-game-button" onClick={showLeaveConfirmation}>
+            LEAVE GAME
+          </button>
           {/* <Button
             onClick={() => {
               console.log("Start Timer clicked, lobbyId:", lobbyId);
@@ -1110,7 +1256,6 @@ const handleCancelLeave = () => {
           >
             Start Timer
           </Button> */}
-
           {/* Added a class */}
           {/* Word Display Area */}
           <div className="word-display-area">
@@ -1279,40 +1424,39 @@ const handleCancelLeave = () => {
           {/* End drawing-tools-arrangement */}
         </div>{" "}
         {/* End game-box */}
-
         {/* Leave Confirmation Modal */}
         <Modal
-           title={<div className="leave-modal-title">Leave Lobby</div>}
-           open={isLeaveModalVisible}
-           onOk={handleLeaveLobby}
-           onCancel={handleCancelLeave}
-           okText="Yes, Leave"
-           cancelText="Cancel"
-           centered
-           closeIcon={<div className="leave-modal-close">✕</div>}
-           className="leave-modal-container"
-           okButtonProps={{
-             className: "leave-modal-confirm-button",
-             style: {
+          title={<div className="leave-modal-title">Leave Lobby</div>}
+          open={isLeaveModalVisible}
+          onOk={handleLeaveLobby}
+          onCancel={handleCancelLeave}
+          okText="Yes, Leave"
+          cancelText="Cancel"
+          centered
+          closeIcon={<div className="leave-modal-close">✕</div>}
+          className="leave-modal-container"
+          okButtonProps={{
+            className: "leave-modal-confirm-button",
+            style: {
               background: "#ff3b30",
               borderColor: "#e02d22",
               color: "white",
             },
-           }}
-           cancelButtonProps={{
-             className: "leave-modal-cancel-button",
-             style: {
+          }}
+          cancelButtonProps={{
+            className: "leave-modal-cancel-button",
+            style: {
               backgroundColor: "#f5f5f5",
               borderColor: "#d9d9d9",
               color: "#333",
             },
-           }}
-         >
-           <p className="leave-modal-message">
-             Are you sure you want to leave this lobby?
-           </p>
-         </Modal>
-         {showWordSelection && (
+          }}
+        >
+          <p className="leave-modal-message">
+            Are you sure you want to leave this lobby?
+          </p>
+        </Modal>
+        {showWordSelection && (
           <div className="word-selection-overlay">
             <div className="word-selection-container">
               <h2>Select a word to draw:</h2>
@@ -1320,7 +1464,9 @@ const handleCancelLeave = () => {
                 {wordOptions.map((option, index) => (
                   <button
                     key={index}
-                    className={`word-option ${option.selected ? 'selected' : ''}`}
+                    className={`word-option ${
+                      option.selected ? "selected" : ""
+                    }`}
                     onClick={() => handleWordSelect(index)}
                   >
                     {option.word}
