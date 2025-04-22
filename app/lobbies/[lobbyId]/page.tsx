@@ -64,33 +64,45 @@ const LobbyPage: React.FC = () => {
   }, [lobbyId, apiService]);
 
   // Socket setup
-  useEffect(() => {
-    const socketIo = io('http://localhost:3001/', {
-      path: '/api/socket',
-    });
-    setSocket(socketIo);
+  //http://localhost:3001 --- "https://socket-server-826256454260.europe-west1.run.app/" { path: "/api/socket" }
+useEffect(() => {
+  const socketIo = io('http://localhost:3001/', {
+    path: '/api/socket',
+  });
+  setSocket(socketIo);
 
-    const fetchCurrentUsername = async () => {
-      try {
-        const userData = await apiService.get<{ id: number; username: string }>(`/users/${currentUserId}`);
-        return userData.username;
-      } catch (error) {
-        console.error('Error fetching username:', error);
-        return 'Guest';
-      }
-    };
+  const fetchCurrentUsername = async () => {
+    try {
+      const userData = await apiService.get<{ id: number; username: string }>(`/users/${currentUserId}`);
+      return userData.username;
+    } catch (error) {
+      console.error('Error fetching username:', error);
+      return 'Guest';
+    }
+  };
 
-    const joinLobby = async () => {
-      const username = await fetchCurrentUsername();
-      socketIo.emit('joinLobby', { lobbyId, userId: currentUserId, username });
-    };
+  const joinLobby = async () => {
+    const username = await fetchCurrentUsername();
+    socketIo.emit('joinLobby', { lobbyId, userId: currentUserId, username });
+  };
 
-    joinLobby();
+  joinLobby();
 
-    return () => {
-      socketIo.disconnect();
-    };
-  }, [lobbyId, currentUserId, apiService]);
+  // Listen for gameStarting event to redirect all players
+  socketIo.on('gameStarting', ({ lobbyId: receivedLobbyId }) => {
+    if (receivedLobbyId === lobbyId) {
+      apiService.put(
+        `/lobbies/${lobbyId}/join?playerId=${currentUserId}`,
+        {}
+      );
+      router.push(`/games/${lobbyId}`);
+    }
+  });
+
+  return () => {
+    socketIo.disconnect();
+  };
+}, [lobbyId, currentUserId, apiService, router]);
 
   function copyLobbyCode() {
     navigator.clipboard.writeText(lobbyId).then(() => {

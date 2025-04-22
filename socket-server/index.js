@@ -38,6 +38,12 @@ const timers = new Map(); // Declare this once globally
 io.on('connection', (socket) => {
   console.log(`Connected: ${socket.id}`);
 
+  socket.on('gameStarting', ({ lobbyId, settings }) => {
+    console.log(`Game starting for lobby ${lobbyId}`);
+    // Broadcast to all clients in the lobby, including the sender
+    io.to(lobbyId).emit('gameStarting', { lobbyId });
+  });
+
 
 const playerInfo = socketToLobby.get(socket.id);
   if (playerInfo) {

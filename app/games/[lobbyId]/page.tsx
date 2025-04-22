@@ -9,6 +9,7 @@ import withAuth from "@/hooks/withAuth";
 import io, { Socket } from "socket.io-client";
 import { useDraw } from "@/hooks/useDraw";
 import { drawLine } from "@/utils/drawLine";
+import Layout from '@/utils/layout';
 
 interface LobbyData {
   id: number;
@@ -30,12 +31,6 @@ interface WordOption {
   word: string;
   selected: boolean;
 }
-
-// interface ChatMessage {
-//   username: string;
-//   message: string;
-//   timestamp: string;
-// }
 
 type Point = { x: number; y: number };
 
@@ -140,12 +135,11 @@ const LobbyPage: FC = ({}) => {
   const router = useRouter();
   const [lobby, setLobby] = useState<LobbyData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [players, setPlayers] = useState<PlayerData[]>([]);
   // old socket implementation
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false); // Prevent multiple initial loads
-  //const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState<string>("");
+
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [color,setColor] = useState<string>('#000000')
   const [isColorPickerVisible, setIsColorPickerVisible] = useState<boolean>(false);
@@ -579,19 +573,9 @@ const LobbyPage: FC = ({}) => {
       try {
         const response = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
         setLobby(response as LobbyData);
-
-        if (response.playerIds && response.playerIds.length > 0) {
-          const playerPromises = response.playerIds.map((id: number) =>
-            apiService
-              .get<PlayerData>(`/users/${id}`)
-              .catch(() => ({ id, username: "Unknown Player" } as PlayerData))
-          );
-          const playerData = await Promise.all(playerPromises);
-          setPlayers(playerData as PlayerData[]);
-        }
       } catch (error) {
-        console.error("Error fetching lobby:", error);
-        message.error("Failed to load lobby information");
+        console.error('Error fetching lobby:', error);
+        message.error('Failed to load lobby information');
       } finally {
         setLoading(false);
       }
@@ -612,73 +596,7 @@ const LobbyPage: FC = ({}) => {
     }
   }, [socket, lobby, lobbyId]);
 
-  // old socket implementation
-  //test http://localhost:3001/
-  //https://socket-server-826256454260.europe-west1.run.app/
-  //  useEffect(() => {
-  //    const socketIo = io('http://localhost:3001/', {
-  //      path: '/api/socket',
-  //    });
-  //    setSocket(socketIo);
-  //// Get current user's username from players state or fetch it
-  //const currentUsername = players.find((p) => p.id === Number(currentUserId))?.username ||"unknwon";
-  //
-  //// Join lobby with userId and username
-  //socketIo.emit('joinLobby', { lobbyId, userId: currentUserId, username: currentUsername });
-  //
-  //
-  //// Listen for chat messages
-  //socketIo.on('chatMessage', (message: ChatMessage) => {
-  //  setMessages((prev) => [...prev, message]);
-  //});
-  //
-  //// Listen for player joining
-  //socketIo.on('playerJoined', (newPlayer: PlayerData) => {
-  //  setPlayers((prev) => {
-  //    const existingPlayer = prev.find((p) => p.id === newPlayer.id);
-  //    if (existingPlayer) {
-  //      // Update existing player if username changes (e.g., on reconnect)
-  //      return prev.map((p) => (p.id === newPlayer.id ? { ...p, username: newPlayer.username } : p));
-  //    }
-  //    return [...prev, newPlayer];
-  //  });
-  //});
-  //
-  //  // Listen for player leaving
-  //  socketIo.on('playerLeft', (leftPlayer: PlayerData) => {
-  //    setPlayers((prev) => prev.filter((p) => p.id !== leftPlayer.id));
-  //  });
-  //
-  //}, [lobbyId, currentUserId]);
-  //
 
-// old chat code 
-//
- // // Scroll to the latest message
- // useEffect(() => {
- //   messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
- // }, [messages]);
-//
- //  // --- NEW useEffect for Click Outside Color Picker ---
- //  useEffect(() => {
- //   const handleClickOutside = (event: MouseEvent) => {
- //     if (
- //       isColorPickerVisible &&
- //       colorPickerRef.current &&
- //       !colorPickerRef.current.contains(event.target as Node) &&
- //       colorButtonRef.current && // Check if the button ref exists
- //       !colorButtonRef.current.contains(event.target as Node) // Check if the click was on the button itself
- //     ) {
- //       setIsColorPickerVisible(false);
- //     }
- //   };
-//
- //   document.addEventListener('mousedown', handleClickOutside);
- //   return () => {
- //     document.removeEventListener('mousedown', handleClickOutside);
- //   };
- // }, [isColorPickerVisible]); // Re-run when visibility changes
- // 
  const goBack = () => {
     router.push('/home');
  };
@@ -723,26 +641,7 @@ const handleLeaveLobby = async () => {
 const handleCancelLeave = () => {
   setIsLeaveModalVisible(false);
 };
-//
- // const sendMessage = () => {
- //   if (chatInput.trim() && socket) {
- //     const username = players.find((p) => p.id === lobby?.lobbyOwner)?.username || 'You';
- //     socket.emit('chatMessage', { lobbyId, message: chatInput, username });
- //     setChatInput('');
- //   }
- // };
-  
-  // const colorPool: string[] = [
-  //   '#e6194b', // kräftiges Rot
-  //   '#3cb44b', // kräftiges Grün
-  //   '#4363d8', // kräftiges Blau
-  //   '#f58231', // kräftiges Orange
-  //   '#911eb4', // dunkles Violett
-  //   '#42d4f4', // kräftiges Türkis
-  //   '#f032e6', // sattes Pink
-  //   '#1a1aff', // Royal Blue
-  //   '#008080', // Teal
-  // ];
+
 
   // --- Color Picker Toggle Handler ---
   const toggleColorPicker = () => {
@@ -863,18 +762,17 @@ const handleCancelLeave = () => {
     let isMounted = true;
     let socketIo: Socket | null = null;
 
-    // Helper to fetch username (replace with your actual implementation)
-    const fetchCurrentUsername = async (): Promise<string> => {
+
+    const fetchCurrentUsername = async () => {
       try {
-        // Assuming you have a way to get the username, maybe from apiService or localStorage
-        const userData = await apiService.get<PlayerData>(
-          `/users/${currentUserId}`
-        );
-        return userData?.username || "Player";
-      } catch {
-        return "Player";
+        const userData = await apiService.get<{ id: number; username: string }>(`/users/${currentUserId}`);
+        return userData.username;
+      } catch (error) {
+        console.error('Error fetching username:', error);
+        return 'Guest';
       }
     };
+    
     //http://localhost:3001 --- "https://socket-server-826256454260.europe-west1.run.app/" { path: "/api/socket" }
     const setupSocket = async () => {
       socketIo = io(
@@ -1056,14 +954,6 @@ const handleCancelLeave = () => {
         }
       });
 
-      // Handle initial lobby state if needed (e.g., for players already present)
-      socketIo.on("lobbyState", (lobbyData: { players: PlayerData[] }) => {
-        // console.log("Received initial lobby state:", lobbyData);
-        // Update players list if necessary
-        setPlayers(lobbyData.players);
-        // You could potentially pre-populate the remoteUsersLastPointRef map here
-        // if you had info about ongoing drawings, but usually starting fresh is fine.
-      });
 
       // First word fetching
       try {
@@ -1124,32 +1014,29 @@ const handleCancelLeave = () => {
     saveCanvasState(); // Save the blank state
   }, [socket, saveCanvasState]);
 
-  //Loading screen
+  // Loading screen
   if (loading) {
     return (
-      <div className="page-background">
-        <Spin size="large" tip="Loading lobby information..." />
-      </div>
+      <Layout socket={socket} lobbyId={lobbyId} currentUserId={currentUserId} localAvatarUrl={localAvatarUrl} lobby={lobby}>
+        <div className="game-box">
+          Loading...
+        </div>
+      </Layout>
     );
   }
 
-  //No loading screen
+  // No loading screen
   if (!lobby) {
     return (
-      <div className="page-background">
-        <div className="login-register-box">
-          <h1
-            className="players-chat-title"
-            style={{ marginTop: -10, marginBottom: 30, fontSize: 50 }}
-          >
-            Game Not Found
-          </h1>
-          <h2 className="players-chat-title">Lobby {`#${lobbyId}`}</h2>
-          <Button className="green-button" onClick={goBack}>
+      <Layout socket={socket} lobbyId={lobbyId} currentUserId={currentUserId} localAvatarUrl={localAvatarUrl} lobby={null}>
+        <div className='login-register-box'>
+          <h1 className='players-chat-title' style={{marginTop: -10, marginBottom: 30, fontSize: 50}}>Lobby Not Found</h1>
+          <h2 className='players-chat-title'>Lobby {`#${lobbyId}`}</h2>
+          <Button className="green-button" onClick={() => router.push('/home')}>
             Back to home
           </Button>
         </div>
-      </div>
+      </Layout>
     );
   }
 
@@ -1172,41 +1059,12 @@ const handleCancelLeave = () => {
   };
 
   return (
-    <>
+    <Layout socket={socket} lobbyId={lobbyId} currentUserId={currentUserId} localAvatarUrl={localAvatarUrl} lobby={lobby}>
       {" "}
       {/* <-- START React Fragment */}
       <div style={fillCursorStyle} />
       <div className="page-background">
-        <div className="player-box">
-          <h1 className="players-chat-title">
-            PLAYERS ({players.length}/{lobby.numOfMaxPlayers})
-          </h1>
-          <div className="player-list">
-            {players.map((player) => (
-              <div
-                key={player.id}
-                className={`player-entry ${
-                  player.id.toString() === currentUserId
-                    ? "player-entry-own"
-                    : ""
-                }`}
-              >
-                <div className="player-info">
-                  <img
-                    src={
-                      player.id.toString() === currentUserId
-                        ? localAvatarUrl
-                        : "/icons/avatar.png"
-                    }
-                    alt="Avatar"
-                    className="player-avatar"
-                  />
-                  <span>{player.username || "Unknown Player"}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+
         {/* Game Box */}
         <div className="game-box">
         <div className="timer-area" style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 10 }}>
@@ -1421,36 +1279,7 @@ const handleCancelLeave = () => {
           {/* End drawing-tools-arrangement */}
         </div>{" "}
         {/* End game-box */}
-        {/* Chat Box */}
-        <div className="chat-box">
-          <h1 className="players-chat-title">CHAT</h1>
 
-          <div className="chat-messages">
-            {/*{messages.map((msg, index) => (
-          <div key={index} className="chat-message">
-            <span style={{ color: getUsernameColor(msg.username) }} className="chat-username">
-              {msg.username}:
-            </span>
-            <span className="chat-text"> {msg.message}</span>
-          </div>
-        ))}*/}
-            <div ref={messagesEndRef} />
-          </div>
-
-          <div className="chat-input-area">
-            <Input
-              className="chat-input"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Type your message here!"
-            />
-            <Button className="chat-send-button">
-              <span role="img" aria-label="send">
-                📨
-              </span>
-            </Button>
-          </div>
-        </div>
         {/* Leave Confirmation Modal */}
         <Modal
            title={<div className="leave-modal-title">Leave Lobby</div>}
@@ -1502,7 +1331,7 @@ const handleCancelLeave = () => {
           </div>
         )}
       </div>
-    </>
+    </Layout>
   );
 };
 
