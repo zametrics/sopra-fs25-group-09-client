@@ -36,6 +36,11 @@ interface LayoutProps {
   lobby: LobbyData | null;
 }
 
+interface PlayerLeftData {
+  id: string | number; // ID might be string or number from server
+  username: string;
+}
+
 const Layout: React.FC<LayoutProps> = ({
   children,
   socket,
@@ -89,6 +94,7 @@ const Layout: React.FC<LayoutProps> = ({
   // Fetch initial players and handle socket events
   useEffect(() => {
     const fetchLobbyPlayers = async () => {
+      // ... (keep this function as is for initial load) ...
       try {
         const response = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
         if (response.playerIds && response.playerIds.length > 0) {
@@ -98,12 +104,19 @@ const Layout: React.FC<LayoutProps> = ({
               .catch(() => ({ id, username: "Guest" } as PlayerData))
           );
           const playerData = await Promise.all(playerPromises);
-          setPlayers(playerData as PlayerData[]);
+          // Ensure consistent types if necessary upon initial fetch
+          setPlayers(
+            playerData.map((p) => ({ ...p, id: Number(p.id) })) as PlayerData[]
+          );
+        } else {
+          setPlayers([]); // Clear players if lobby is empty
         }
       } catch (error) {
         console.error("Error fetching lobby players:", error);
-        message.error("Failed to load players");
+        // message.error("Failed to load players"); // Consider removing or making less intrusive
+        setPlayers([]); // Clear players on error
       } finally {
+        // Optional: handle loading state
       }
     };
 
@@ -112,26 +125,73 @@ const Layout: React.FC<LayoutProps> = ({
     }
 
     if (socket) {
-      socket.on("lobbyState", ({ players }) => {
-        setPlayers(
-          players.map((p: { id: string; username: string }) => ({
-            id: p.id,
-            username: p.username,
-          }))
-        );
-      });
+      // --- Lobby State Update (Usually on join) ---
+      socket.on(
+        "lobbyState",
+        ({
+          players: receivedPlayers,
+        }: {
+          players: { id: string; username: string }[];
+        }) => {
+          // Make sure the IDs are numbers, matching PlayerData interface
+          setPlayers(
+            receivedPlayers.map((p) => ({
+              id: Number(p.id), // Convert ID to number
+              username: p.username,
+            }))
+          );
+        }
+      );
 
+      // --- Chat Message Handling (No change needed) ---
       socket.on("chatMessage", (message: ChatMessage) => {
         setMessages((prev) => [...prev, message]);
       });
 
-      socket.on("playerJoined", () => {
-        fetchLobbyPlayers();
+      // --- Player Joined Handling (Optimized) ---
+      socket.on(
+        "playerJoined",
+        (newPlayer: { id: string | number; username: string }) => {
+          console.log("Player joined event received:", newPlayer);
+          setPlayers((prev) => {
+            // Ensure ID is treated consistently (e.g., as number)
+            const newPlayerId = Number(newPlayer.id);
+            // Avoid adding duplicates if already present
+            if (prev.some((p) => p.id === newPlayerId)) {
+              return prev;
+            }
+            // Add the new player
+            return [...prev, { id: newPlayerId, username: newPlayer.username }];
+          });
+          // fetchLobbyPlayers(); // REMOVED redundant fetch
+        }
+      );
+
+      // --- Player Left Handling (MODIFIED) ---
+      socket.on("playerLeft", (leftPlayer: PlayerLeftData) => {
+        console.log("Player left event received:", leftPlayer);
+        setPlayers((prev) => {
+          // Filter out the player who left. Compare IDs consistently.
+          // Convert both to string or number for reliable comparison.
+          const leftPlayerIdString = String(leftPlayer.id);
+          return prev.filter((p) => String(p.id) !== leftPlayerIdString);
+        });
+        // fetchLobbyPlayers(); // <<--- REMOVED THIS LINE ---<<
+        message.info(`${leftPlayer.username || "A player"} left the lobby.`); // Optional feedback
       });
 
-      socket.on("playerLeft", (leftPlayer: PlayerData) => {
-        setPlayers((prev) => prev.filter((p) => p.id !== leftPlayer.id));
-        fetchLobbyPlayers();
+      // --- Error handling ---
+      socket.on("connect_error", (err) => {
+        console.error("Socket connection error:", err);
+        message.error(`Connection failed: ${err.message}`, 5);
+      });
+
+      socket.on("disconnect", (reason) => {
+        console.log("Socket disconnected:", reason);
+        if (reason !== "io client disconnect") {
+          // Don't show warning on manual leave/nav away
+          message.warning("Lost connection to the server.", 3);
+        }
       });
     }
 
@@ -143,7 +203,7 @@ const Layout: React.FC<LayoutProps> = ({
         socket.off("playerLeft");
       }
     };
-  }, [lobbyId, socket, apiService]);
+  }, [lobbyId, socket, apiService, currentUserId]);
 
   // Scroll to latest message
   useEffect(() => {
@@ -164,20 +224,25 @@ const Layout: React.FC<LayoutProps> = ({
     <div className="page-background">
       <div className="player-box">
         <h1 className="players-chat-title">
-          PLAYERS ({players.length}/{lobby?.numOfMaxPlayers || 8})
+          PLAYERS ({players.length}/{lobby?.numOfMaxPlayers || "?"}){" "}
+          {/* Use ? if lobby might be null */}
         </h1>
         <div className="player-list">
           {players.map((player) => (
             <div
-              key={player.id}
+              key={player.id} // Use the number ID as key
               className={`player-entry ${
-                player.id.toString() === currentUserId ? "player-entry-own" : ""
+                // Compare consistently (e.g., both as strings)
+                String(player.id) === String(currentUserId)
+                  ? "player-entry-own"
+                  : ""
               }`}
             >
               <div className="player-info">
                 <img
                   src={
-                    player.id.toString() === currentUserId
+                    // Compare consistently
+                    String(player.id) === String(currentUserId)
                       ? localAvatarUrl
                       : "/icons/avatar.png"
                   }
@@ -186,6 +251,12 @@ const Layout: React.FC<LayoutProps> = ({
                 />
                 <span>{player.username}</span>
               </div>
+              {/* Optional: Add owner indicator based on lobby.lobbyOwner */}
+              {lobby && player.id === lobby.lobbyOwner && (
+                <span className="player-owner-indicator" title="Lobby Owner">
+                  👑
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -193,6 +264,7 @@ const Layout: React.FC<LayoutProps> = ({
 
       {children}
 
+      {/* ... Chat Box ... */}
       <div className="chat-box">
         <h1 className="players-chat-title">CHAT</h1>
         <div className="chat-messages">
