@@ -1491,3 +1491,18 @@ html body .page-background .word-option.selected {
   50% { transform: scale(1.05); }
   100% { transform: scale(1); }
 }
+
+.player-score-box {
+  background-color: #ff914d;
+  color: white;
+  font-weight: bold;
+  border-radius: 12px;
+  padding: 2px 8px;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 35px;
+  height: 35px;
+  font-size: 14px;
+}

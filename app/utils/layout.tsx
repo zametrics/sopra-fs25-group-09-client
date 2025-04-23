@@ -75,6 +75,7 @@ const Layout: React.FC<LayoutProps> = ({
   const [chatInput, setChatInput] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [currentWord, setCurrentWord] = useState<string>("");
+  const [scores, setScores] = useState<{ [key: number]: number }>({});
 
   const colorPool: string[] = [
     "#e6194b",
@@ -138,9 +139,8 @@ const Layout: React.FC<LayoutProps> = ({
   useEffect(() => {
     const fetchLobbyPlayersAndOwner = async () => {
       try {
-        // Fetch full lobby details initially
         const response = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-        setLobby(response); // Set the full lobby state
+        setLobby(response);
 
         if (response.playerIds && response.playerIds.length > 0) {
           const playerPromises = response.playerIds.map((id: number) =>
@@ -149,16 +149,27 @@ const Layout: React.FC<LayoutProps> = ({
               .catch(() => ({ id, username: "Guest" } as PlayerData))
           );
           const playerData = await Promise.all(playerPromises);
-          setPlayers(
-            playerData.map((p) => ({ ...p, id: Number(p.id) })) as PlayerData[]
-          );
+          const newPlayers = playerData.map((p) => ({ ...p, id: Number(p.id) })) as PlayerData[];
+          setPlayers(newPlayers);
+          // --- Initialize scores for all players ---
+          setScores((prev) => {
+            const newScores = { ...prev };
+            newPlayers.forEach((player) => {
+              if (!(player.id in newScores)) {
+                newScores[player.id] = 0;
+              }
+            });
+            return newScores;
+          });
         } else {
           setPlayers([]);
+          setScores({});
         }
       } catch (error) {
         console.error("Error fetching lobby details:", error);
         setPlayers([]);
-        setLobby(null); // Clear lobby on error
+        setScores({});
+        setLobby(null);
       }
     };
 
@@ -167,16 +178,23 @@ const Layout: React.FC<LayoutProps> = ({
     }
 
     if (socket) {
-      // --- Handle Full Lobby State Updates ---
       socket.on("lobbyState", (data: LobbyStateData & { currentPainterToken?: string | null }) => {
         console.log("Received lobbyState:", data);
-        setPlayers(
-          data.players.map((p) => ({
-            id: Number(p.id),
-            username: p.username,
-
-          }))
-        );
+        const newPlayers = data.players.map((p) => ({
+          id: Number(p.id),
+          username: p.username,
+        }));
+        setPlayers(newPlayers);
+        // --- Update scores to include new players ---
+        setScores((prev) => {
+          const newScores = { ...prev };
+          newPlayers.forEach((player) => {
+            if (!(player.id in newScores)) {
+              newScores[player.id] = 0;
+            }
+          });
+          return newScores;
+        });
         if (data.ownerId !== undefined && data.ownerId !== null) {
           updateLobbyState({ lobbyOwner: Number(data.ownerId) });
         }
@@ -189,27 +207,36 @@ const Layout: React.FC<LayoutProps> = ({
       socket.on(
         "playerJoined",
         (newPlayer: { id: string | number; username: string }) => {
-          // ... (keep existing optimized logic - ensure ID conversion is consistent) ...
           console.log("Player joined event received:", newPlayer);
           setPlayers((prev) => {
             const newPlayerId = Number(newPlayer.id);
             if (prev.some((p) => p.id === newPlayerId)) return prev;
-            return [...prev, { id: newPlayerId, username: newPlayer.username }];
+            const newPlayers = [...prev, { id: newPlayerId, username: newPlayer.username }];
+            // --- Initialize score for new player ---
+            setScores((prevScores) => ({
+              ...prevScores,
+              [newPlayerId]: 0,
+            }));
+            return newPlayers;
           });
         }
       );
 
       // --- Player Left ---
       socket.on("playerLeft", (leftPlayer: PlayerLeftData) => {
-        // ... (keep existing optimized logic - ensure ID conversion is consistent) ...
         console.log("Player left event received:", leftPlayer);
         setPlayers((prev) => {
-          const leftPlayerIdNumber = Number(leftPlayer.id); // Compare numbers
+          const leftPlayerIdNumber = Number(leftPlayer.id);
+          // --- Remove score for player who left ---
+          setScores((prevScores) => {
+            const newScores = { ...prevScores };
+            delete newScores[leftPlayerIdNumber];
+            return newScores;
+          });
           return prev.filter((p) => p.id !== leftPlayerIdNumber);
         });
         message.info(`${leftPlayer.username || "A player"} left the lobby.`);
       });
-
       // --- *** NEW: Handle Owner Change Event *** ---
       socket.on("lobbyOwnerChanged", (data: LobbyOwnerChangedData) => {
         console.log(
@@ -286,14 +313,25 @@ const Layout: React.FC<LayoutProps> = ({
         (p) => p.id.toString() === currentUserId
       )?.username;
 
-      if (chatInput === currentWord) { // Now chatInput (string) is compared to the resolved string
-        socket.emit("chatMessage", { lobbyId, message: `${username} GUESSED THE CORRECT WORD!`, username });
+      if (chatInput === currentWord) {
+        socket.emit("chatMessage", {
+          lobbyId,
+          message: `${username} GUESSED THE CORRECT WORD!`,
+          username,
+        });
+        // --- Increment score for the player ---
+        if (currentUserId) {
+          const playerId = Number(currentUserId);
+          setScores((prev) => ({
+            ...prev,
+            [playerId]: (prev[playerId] || 0) + 1,
+          }));
+        }
         setChatInput("");
-
-      } else{
+      } else {
         socket.emit("chatMessage", { lobbyId, message: chatInput, username });
         setChatInput("");
-    }
+      }
     }
   };
 
@@ -307,32 +345,29 @@ const Layout: React.FC<LayoutProps> = ({
         <div className="player-list">
           {players.map((player) => (
             <div
-              key={player.id} // Use number ID
-              className={`player-entry ${
-                // Use string for comparison with currentUserId from localStorage
-                String(player.id) === currentUserId ? "player-entry-own" : ""
-              }`}
-            >
-              <div className="player-info">
-                <img
-                  src={
-                    String(player.id) === currentUserId
-                      ? localAvatarUrl
-                      : "/icons/avatar.png"
-                  }
-                  alt="Avatar"
-                  className="player-avatar"
-                />
-                <span>{player.username}</span>
-              </div>
-              {/* Use local lobby state to check owner */}
-              {lobby && player.id === lobby.lobbyOwner && (
-                <span className="player-owner-indicator" title="Lobby Owner">
-                  👑
-                </span>
-              )}
-              
-            </div>
+            key={player.id}
+            className={`player-entry ${
+            String(player.id) === currentUserId ? "player-entry-own" : ""
+          }`}
+    >
+      <div className="player-info" style={{ display: "flex", alignItems: "center", gap: "8px", flexGrow: 1 }}>
+      <img
+        src={
+          String(player.id) === currentUserId
+            ? localAvatarUrl
+            : "/icons/avatar.png"
+        }
+        alt="Avatar"
+        className="player-avatar"
+      />
+      <span>{player.username}</span>
+      {lobby && player.id === lobby.lobbyOwner && (
+      <span className="player-owner-indicator" title="Lobby Owner">👑</span>
+    )}
+    </div>
+    <div className="player-score-box">{scores[player.id] || 0}</div> {/* <- Here's the new part */}
+  </div>
+
           ))}
         </div>
       </div>
