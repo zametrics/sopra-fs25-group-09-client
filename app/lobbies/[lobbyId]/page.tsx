@@ -18,6 +18,7 @@ interface LobbyData {
   drawTime: number;
   lobbyOwner: number;
   type: string;
+  currentPainterToken: string | null;
 }
 
 // Add interfaces from Layout if needed here too, or import them

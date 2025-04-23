@@ -14,6 +14,7 @@ interface LobbyData {
   drawTime: number;
   lobbyOwner: number;
   type: string;
+  currentPainterToken: string | null;
 }
 
 interface PlayerData {
@@ -166,18 +167,20 @@ const Layout: React.FC<LayoutProps> = ({
 
     if (socket) {
       // --- Handle Full Lobby State Updates ---
-      socket.on("lobbyState", (data: LobbyStateData) => {
+      socket.on("lobbyState", (data: LobbyStateData & { currentPainterToken?: string | null }) => {
         console.log("Received lobbyState:", data);
-        // Update players
         setPlayers(
           data.players.map((p) => ({
-            id: Number(p.id), // Convert back to number if needed locally
+            id: Number(p.id),
             username: p.username,
+
           }))
         );
-        // Update owner if provided
         if (data.ownerId !== undefined && data.ownerId !== null) {
           updateLobbyState({ lobbyOwner: Number(data.ownerId) });
+        }
+        if (data.currentPainterToken !== undefined) {
+          updateLobbyState({ currentPainterToken: data.currentPainterToken });
         }
       });
 
@@ -299,6 +302,7 @@ const Layout: React.FC<LayoutProps> = ({
                   👑
                 </span>
               )}
+              
             </div>
           ))}
         </div>

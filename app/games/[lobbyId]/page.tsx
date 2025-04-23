@@ -20,6 +20,7 @@ interface LobbyData {
   drawTime: number;
   lobbyOwner: number;
   language: string;
+  currentPainterToken: string | null;
 }
 
 interface WordOption {
@@ -126,6 +127,7 @@ const DISCONNECT_TIMEOUT_ID_KEY = "disconnectTimeoutId";
 const DISCONNECT_LOBBY_ID_KEY = "disconnectLobbyId";
 
 const LobbyPage: FC = ({}) => {
+  
   const [activeTool, setActiveTool] = useState<Tool>("brush"); // Default to brush
   const [brushSize, setBrushSize] = useState<number>(brushSizes.size2); // Default size
   const params = useParams();
@@ -148,6 +150,32 @@ const LobbyPage: FC = ({}) => {
   // const wordToGuess = "daniel"; //PLACEHOLDER WORD
   const currentUserId =
     typeof window !== "undefined" ? localStorage.getItem("userId") : "";
+
+    const raw = typeof window !== "undefined"
+    ? localStorage.getItem("token")
+    : null;
+    const [painterToken, setPainterToken] = useState<string | null>(null);
+  // parse and extract `.token`
+  const currentUserToken = raw
+    ? (JSON.parse(raw) as { token?: string }).token || null
+    : null;
+  //console.log("just the uuid:", currentUserToken);
+  const isCurrentUserPainter =
+  painterToken !== null &&
+  currentUserToken !== null &&
+  painterToken === currentUserToken;
+
+  
+
+// Debug logging
+useEffect(() => {
+  console.log("Painter Status:", {
+    isCurrentUserPainter,
+    currentPainterToken: lobby?.currentPainterToken,
+    currentUserToken,
+  });
+}, [isCurrentUserPainter, currentUserToken, lobby]);
+  
   const remoteUsersLastPointRef = useRef<Map<string, Point | null>>(new Map());
   const localAvatarUrl =
     typeof window !== "undefined"
@@ -167,10 +195,39 @@ const LobbyPage: FC = ({}) => {
   const [wordOptions, setWordOptions] = useState<WordOption[]>([]);
   const [showWordSelection, setShowWordSelection] = useState<boolean>(false);
   const [selectedWord, setSelectedWord] = useState<string>("");
+  
 
   const wordToGuess = selectedWord || "placeholder"; //PLACEHOLDER WORD
 
+  const triggerNextPainterSelection = useCallback(async () => {
+    console.log("triggerNextPainterSelection called at:", new Date().toISOString());
+    if (!lobbyId) {
+      console.error("Cannot select next painter: Lobby ID missing.");
+      return;
+    }
+    try {
+      const updatedLobby = await apiService.post<LobbyData>(
+        `/lobbies/${lobbyId}/nextPainter`,
+        {}
+      );
+      setLobby(updatedLobby);
+      console.log("Lobby updated with new painter:", updatedLobby.currentPainterToken);
+      if (!updatedLobby.currentPainterToken) {
+        console.warn("Backend returned null currentPainterToken");
+      }
+    } catch (error) {
+      console.error("Error selecting next painter:", error);
+      message.error("Failed to select next painter.");
+    }
+  }, [lobbyId, apiService]);
+
+  
   const fetchWordOptions = useCallback(async () => {
+    if (!isCurrentUserPainter) {
+      console.log("Skipping word fetch: User is not the current painter fetchWordOptions"); //only painter
+      return;
+    }
+
     try {
       if (!lobby) {
         console.log("Skipping word fetch: lobby not loaded yet");
@@ -259,6 +316,14 @@ const LobbyPage: FC = ({}) => {
     },
     [wordOptions, socket, lobbyId]
   );
+
+  useEffect(() => {
+    if (isCurrentUserPainter && !showWordSelection && !selectedWord) {
+      console.log("User became painter, fetching word options");
+      fetchWordOptions();
+    }
+  }, [isCurrentUserPainter, showWordSelection, selectedWord, fetchWordOptions]);
+  
 
   // const wordToGuess = selectedWord || "noword";
 
@@ -508,17 +573,29 @@ const LobbyPage: FC = ({}) => {
   // --- Combined MouseDown Handler (REMOVED saveCanvasState) ---
   const handleCanvasMouseDown = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
-      // NO saveCanvasState here. State is saved on action completion.
+      if (!isCurrentUserPainter) {
+        console.log("Drawing blocked: User is not the current painter");
+        return;
+      }
       if (activeTool === "brush") {
-        // Just initiate the drawing process via the hook
         onMouseDown(e);
       } else if (activeTool === "fill") {
-        // Fill handler will save state after completion
         handleFillMouseDown(e);
+      } else {
+        console.warn(`Unexpected activeTool value: ${activeTool}`);
       }
     },
-    [activeTool, onMouseDown, handleFillMouseDown]
-  ); // Removed saveCanvasState dependency
+    [activeTool, onMouseDown, handleFillMouseDown, isCurrentUserPainter]
+  );
+
+  useEffect(() => {
+    console.log("Painter Status:", {
+      isCurrentUserPainter,
+      currentPainterToken: lobby?.currentPainterToken,
+      currentUserToken,
+    });
+  }, [isCurrentUserPainter, currentUserToken, lobby]);
+
 
   useEffect(() => {
     const canvas = canvasElementRef.current;
@@ -568,24 +645,41 @@ const LobbyPage: FC = ({}) => {
   }, [activeTool, brushSize, color]);
 
   // Fetch lobby data
-  useEffect(() => {
-    const fetchLobby = async () => {
-      setLoading(true);
-      try {
-        const response = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-        setLobby(response as LobbyData);
-      } catch (error) {
-        console.error("Error fetching lobby:", error);
-        message.error("Failed to load lobby information");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Join then fetch lobby & pick a painter
+useEffect(() => {
+  const joinThenFetch = async () => {
+    setLoading(true);
+    try {
+      // 1) Tell the server this user is in the lobby
+      await apiService.put<LobbyData>(
+        `/lobbies/${lobbyId}/join?playerId=${currentUserId}`,
+        {}
+      );
 
-    if (lobbyId) {
-      fetchLobby();
+      // 2) Now fetch the updated lobby
+      let lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+      // 3) If there's no painter yet, select one
+      if (!lobbyData.currentPainterToken) {
+        lobbyData = await apiService.post<LobbyData>(
+          `/lobbies/${lobbyId}/nextPainter`,
+          {}
+        );
+      }
+      setLobby(lobbyData);
+      setPainterToken(lobbyData.currentPainterToken);
+
+    } catch (err) {
+      console.error("Error joining or fetching lobby:", err);
+      message.error("Could not join lobby.");
+    } finally {
+      setLoading(false);
     }
-  }, [lobbyId, apiService]);
+  };
+
+  if (lobbyId && currentUserId) {
+    joinThenFetch();
+  }
+}, [lobbyId, currentUserId, apiService]);
 
   useEffect(() => {
     if (socket && lobby && lobby.drawTime) {
@@ -880,27 +974,41 @@ const LobbyPage: FC = ({}) => {
       });
 
       socketIo.on("roundEnded", () => {
-        console.log("Round ended, fetching new words");
-        try {
-          // Only try to fetch words if the lobby has been loaded
-          if (lobby) {
-            fetchWordOptions();
-          } else {
-            console.log("Skipping word fetch: lobby not loaded yet");
-          }
-        } catch (error) {
-          console.error(
-            "Error during fetchWordOptions from roundEnded event:",
-            error
-          );
+        console.log("Round ended at:", new Date().toISOString());
+        setSelectedWord(""); // Clear current word
+        setShowWordSelection(false); // Hide word selection
+        if (isCurrentUserPainter) {
+          console.log("Current painter triggering next painter selection");
+          triggerNextPainterSelection();
+        } else {
+          console.log("Non-painter waiting for lobby update");
         }
       });
 
       socketIo.on("gameUpdate", (gameData) => {
-        console.log("Received game update:", gameData);
-        if (gameData.currentRound) setCurrentRound(gameData.currentRound);
-        if (gameData.numOfRounds) setNumOfRounds(gameData.numOfRounds);
+        console.log("Received gameUpdate:", gameData);
+      
+        // 1) new painter token?
+        if (gameData.currentPainterToken !== undefined) {
+          setLobby(prev =>
+            prev
+              ? { ...prev, currentPainterToken: gameData.currentPainterToken }
+              : prev
+          );
+          setPainterToken(gameData.currentPainterToken);
+        }
+      
+        // 2) new round?
+        if (gameData.currentRound !== undefined) {
+          setCurrentRound(gameData.currentRound);
+        }
+      
+        // 3) new total rounds?
+        if (gameData.numOfRounds !== undefined) {
+          setNumOfRounds(gameData.numOfRounds);
+        }
       });
+      
 
       socketIo.on("load-canvas-state", (data: LoadCanvasStateData) => {
         if (!isCanvasInitialized && data.dataUrl && isMounted) {
@@ -909,7 +1017,7 @@ const LobbyPage: FC = ({}) => {
         }
       });
 
-      // --- Listener to PROVIDE state if requested ---
+      // --- Listener to PROVIDE state if requested -[--
       socketIo.on("get-canvas-state", (data: GetCanvasStateData) => {
         // Check if this client should respond (e.g., not the requester themselves, although server handles this)
         // Also ensure canvas is ready and socket exists
