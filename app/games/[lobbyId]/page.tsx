@@ -300,6 +300,8 @@ useEffect(() => {
       const word = wordOptions[selectedIndex].word;
       setSelectedWord(word);
 
+      apiService.put<LobbyData>(`/lobbies/${lobbyId}/word`, word);
+
       // Emit the selected word to other players via socket
       if (socket) {
         console.log(`Emitting selected word "${word}" to other players`);
