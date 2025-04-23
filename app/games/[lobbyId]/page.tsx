@@ -154,27 +154,16 @@ const LobbyPage: FC = ({}) => {
     const raw = typeof window !== "undefined"
     ? localStorage.getItem("token")
     : null;
-    //const [painterToken, setPainterToken] = useState<string | null>(null);
+  
   // parse and extract `.token`
   const currentUserToken = raw
     ? (JSON.parse(raw) as { token?: string }).token || null
     : null;
   //console.log("just the uuid:", currentUserToken);
-  const isCurrentUserPainter = Boolean(
-    lobby?.currentPainterToken &&
-    lobby.currentPainterToken === currentUserToken
-  );
 
-  
 
-// Debug logging
-useEffect(() => {
-  console.log("Painter Status:", {
-    isCurrentUserPainter,
-    currentPainterToken: lobby?.currentPainterToken,
-    currentUserToken,
-  });
-}, [isCurrentUserPainter, currentUserToken, lobby]);
+
+  const [isCurrentUserPainter, setIsCurrentUserPainter] = useState<boolean>(false);
   
   const remoteUsersLastPointRef = useRef<Map<string, Point | null>>(new Map());
   const localAvatarUrl =
@@ -211,6 +200,8 @@ useEffect(() => {
         {}
       );
       setLobby(updatedLobby);
+
+
       console.log("Lobby updated with new painter:", updatedLobby.currentPainterToken);
       if (!updatedLobby.currentPainterToken) {
         console.warn("Backend returned null currentPainterToken");
@@ -224,44 +215,35 @@ useEffect(() => {
   
   const fetchWordOptions = useCallback(async () => {
     if (!isCurrentUserPainter) {
-      console.log("Skipping word fetch: User is not the current painter fetchWordOptions"); //only painter
+      console.log("Skipping word fetch: User is not the current painter");
       return;
     }
-
+    if (!lobby || !lobby.currentPainterToken) {
+      console.log("Skipping word fetch: Lobby or painter token not loaded");
+      return;
+    }
+    if (lobby.currentPainterToken !== currentUserToken) {
+      console.log("Skipping word fetch: Current user is not the painter");
+      return;
+    }
+  
     try {
-      if (!lobby) {
-        console.log("Skipping word fetch: lobby not loaded yet");
-        return;
-      }
-
       const language = lobby.language;
       const wordType = lobby.type;
-
+  
       console.log(`Fetching words: lang=${language}, type=${wordType}`);
-
-      try {
-        const response = await apiService.get<string[]>(
-          `/api/words/gpt?lang=${language}&type=${wordType}&count=3`
-        );
-
-        if (response && Array.isArray(response)) {
-          console.log("API response:", response);
-          const options = response.map((word) => ({ word, selected: false }));
-          setWordOptions(options);
-          setShowWordSelection(true);
-        } else {
-          console.error("Invalid response format for word options:", response);
-          // Fallback options if API call fails
-          setWordOptions([
-            { word: "apple", selected: false },
-            { word: "banana", selected: false },
-            { word: "cherry", selected: false },
-          ]);
-          setShowWordSelection(true);
-        }
-      } catch (apiError) {
-        console.error("API error fetching word options:", apiError);
-        // Fallback options if API call fails
+  
+      const response = await apiService.get<string[]>(
+        `/api/words/gpt?lang=${language}&type=${wordType}&count=3`
+      );
+  
+      if (response && Array.isArray(response)) {
+        console.log("API response:", response);
+        const options = response.map((word) => ({ word, selected: false }));
+        setWordOptions(options);
+        setShowWordSelection(true);
+      } else {
+        console.error("Invalid response format for word options:", response);
         setWordOptions([
           { word: "apple", selected: false },
           { word: "banana", selected: false },
@@ -269,9 +251,8 @@ useEffect(() => {
         ]);
         setShowWordSelection(true);
       }
-    } catch (outerError) {
-      console.error("Unexpected error in fetchWordOptions:", outerError);
-      // Ensure we don't crash the application
+    } catch (error) {
+      console.error("Error fetching word options:", error);
       setWordOptions([
         { word: "apple", selected: false },
         { word: "banana", selected: false },
@@ -279,7 +260,7 @@ useEffect(() => {
       ]);
       setShowWordSelection(true);
     }
-  }, [lobby, apiService]);
+  }, [lobby, apiService, isCurrentUserPainter, currentUserToken]);
 
   const handleWordSelect = useCallback(
     (selectedIndex: number) => {
@@ -652,22 +633,24 @@ useEffect(() => {
     const joinThenFetch = async () => {
       setLoading(true);
       try {
-        // 1) join
+        // 1) Join
         await apiService.put(`/lobbies/${lobbyId}/join?playerId=${currentUserId}`, {});
-  
-        // 2) fetch
+    
+        // 2) Fetch
         let lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-  
-        // 3) if no painter yet, pick one
-        if (!lobbyData.currentPainterToken) {
+    
+        // 3) If no painter yet and user is lobby owner, pick one
+        if (!lobbyData.currentPainterToken && lobbyData.lobbyOwner.toString() === currentUserId) {
           lobbyData = await apiService.post<LobbyData>(
             `/lobbies/${lobbyId}/nextPainter`,
             {}
           );
+
         }
-  
-        // **This sets lobby.currentPainterToken**
+        console.log(`NEW TOKEN :${lobbyData.currentPainterToken}`);       
+        // 4) Set lobby and painter status
         setLobby(lobbyData);
+        setIsCurrentUserPainter(lobbyData.currentPainterToken == currentUserToken);
       } catch (err) {
         console.error(err);
         message.error("Could not join lobby.");
@@ -675,9 +658,19 @@ useEffect(() => {
         setLoading(false);
       }
     };
-  
+    
     if (lobbyId && currentUserId) joinThenFetch();
-  }, [lobbyId, currentUserId, apiService]);
+  }, [lobbyId, currentUserId, apiService, currentUserToken]);
+
+  useEffect(() => {
+
+    if(lobby?.currentPainterToken == currentUserToken){
+      setIsCurrentUserPainter(true);
+  
+    } else {
+      setIsCurrentUserPainter(false);
+    }
+  }, [lobby, currentUserToken]);
 
   useEffect(() => {
     if (socket && lobby && lobby.drawTime) {
@@ -904,7 +897,8 @@ useEffect(() => {
         sessionStorage.removeItem(DISCONNECT_LOBBY_ID_KEY);
       }
 
-      socketIo = io("http://localhost:3001/", { path: "/api/socket" }); // Use your server URL
+      //http://localhost:3001 --- "https://socket-server-826256454260.europe-west1.run.app/" 
+      socketIo = io("https://socket-server-826256454260.europe-west1.run.app/", { path: "/api/socket" }); // Use your server URL
       setSocket(socketIo);
 
       if (isMounted) {
@@ -970,35 +964,49 @@ useEffect(() => {
         // Hide the word selection modal if it's visible
         setShowWordSelection(false);
       });
-
-      socketIo.on("roundEnded", () => {
+      socketIo.on("roundEnded", async () => {
         console.log("Round ended at:", new Date().toISOString());
         setSelectedWord(""); // Clear current word
         setShowWordSelection(false); // Hide word selection
+      
         if (isCurrentUserPainter) {
           console.log("Current painter triggering next painter selection");
-          triggerNextPainterSelection();
+          await triggerNextPainterSelection();
+          setIsCurrentUserPainter(false); // Assume non-painter until confirmed
+          // Emit an event to notify others that painter selection is complete
+          socketIo?.emit("painter-selection-complete", { lobbyId });
         } else {
-          console.log("Non-painter waiting for lobby update");
+          console.log("Non-painter waiting for painter selection");
+          // Wait for painter-selection-complete event instead of a fixed delay
         }
       });
+
+      // New listener for painter selection completion
+      socketIo.on("painter-selection-complete", async () => {
+        console.log("Received painter-selection-complete, fetching lobby state");
+        try {
+          const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+          console.log(`Fetched lobby ${lobbyId}, NEW TOKEN: ${lobbyData.currentPainterToken}`);
+          setLobby(lobbyData);
+          setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
+        } catch (err) {
+          console.error("Failed to fetch lobby:", err);
+          message.error("Could not update lobby state");
+        }
+      });
+      
 
       socketIo.on("gameUpdate", (gameData) => {
         console.log("Received gameUpdate:", gameData);
       
-        // 1) new painter token?
-        if (gameData.currentPainterToken !== undefined) {
-          setLobby(prev => prev
-            ? { ...prev, currentPainterToken: gameData.currentPainterToken }
-            : prev
-          );}
       
-        // 2) new round?
+        // Update other fields if present
+        if (gameData.playerIds) {
+          setLobby((prev) => (prev ? { ...prev, playerIds: gameData.playerIds } : prev));
+        }
         if (gameData.currentRound !== undefined) {
           setCurrentRound(gameData.currentRound);
         }
-      
-        // 3) new total rounds?
         if (gameData.numOfRounds !== undefined) {
           setNumOfRounds(gameData.numOfRounds);
         }
@@ -1559,26 +1567,24 @@ useEffect(() => {
             Are you sure you want to leave this lobby?
           </p>
         </Modal>
-        {showWordSelection && (
-          <div className="word-selection-overlay">
-            <div className="word-selection-container">
-              <h2>Select a word to draw:</h2>
-              <div className="word-options">
-                {wordOptions.map((option, index) => (
-                  <button
-                    key={index}
-                    className={`word-option ${
-                      option.selected ? "selected" : ""
-                    }`}
-                    onClick={() => handleWordSelect(index)}
-                  >
-                    {option.word}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        {isCurrentUserPainter && showWordSelection && (
+  <div className="word-selection-overlay">
+    <div className="word-selection-container">
+      <h2>Select a word to draw:</h2>
+      <div className="word-options">
+        {wordOptions.map((option, index) => (
+          <button
+            key={index}
+            className={`word-option ${option.selected ? "selected" : ""}`}
+            onClick={() => handleWordSelect(index)}
+          >
+            {option.word}
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
       </div>
     </Layout>
   );

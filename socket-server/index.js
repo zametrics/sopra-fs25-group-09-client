@@ -19,7 +19,8 @@ const io = new Server(server, {
   },
 });
 
-const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8080";
+//https://sopra-fs25-group-09-server.oa.r.appspot.com/   , http://localhost:8080
+const BACKEND_API_URL = process.env.BACKEND_API_URL || "https://sopra-fs25-group-09-server.oa.r.appspot.com/";
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args)); // Dynamic import
 
@@ -255,6 +256,12 @@ async function handleOwnerTransfer(lobbyId, disconnectedUserIdNum) {
 
 io.on("connection", (socket) => {
   console.log(`Connected: ${socket.id}`);
+
+  socket.on("painter-selection-complete", ({ lobbyId }) => {
+    // Notify all clients in the lobby that the painter selection is complete
+    io.to(lobbyId).emit("painter-selection-complete");
+  });
+
 
   socket.on("gameStarting", ({ lobbyId, settings }) => {
     console.log(`Game starting for lobby ${lobbyId}`);
