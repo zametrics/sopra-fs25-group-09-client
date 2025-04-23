@@ -154,16 +154,16 @@ const LobbyPage: FC = ({}) => {
     const raw = typeof window !== "undefined"
     ? localStorage.getItem("token")
     : null;
-    const [painterToken, setPainterToken] = useState<string | null>(null);
+    //const [painterToken, setPainterToken] = useState<string | null>(null);
   // parse and extract `.token`
   const currentUserToken = raw
     ? (JSON.parse(raw) as { token?: string }).token || null
     : null;
   //console.log("just the uuid:", currentUserToken);
-  const isCurrentUserPainter =
-  painterToken !== null &&
-  currentUserToken !== null &&
-  painterToken === currentUserToken;
+  const isCurrentUserPainter = Boolean(
+    lobby?.currentPainterToken &&
+    lobby.currentPainterToken === currentUserToken
+  );
 
   
 
@@ -324,7 +324,7 @@ useEffect(() => {
       console.log("User became painter, fetching word options");
       fetchWordOptions();
     }
-  }, [isCurrentUserPainter, showWordSelection, selectedWord, fetchWordOptions]);
+  }, [isCurrentUserPainter, showWordSelection, selectedWord]);
   
 
   // const wordToGuess = selectedWord || "noword";
@@ -648,40 +648,36 @@ useEffect(() => {
 
   // Fetch lobby data
   // Join then fetch lobby & pick a painter
-useEffect(() => {
-  const joinThenFetch = async () => {
-    setLoading(true);
-    try {
-      // 1) Tell the server this user is in the lobby
-      await apiService.put<LobbyData>(
-        `/lobbies/${lobbyId}/join?playerId=${currentUserId}`,
-        {}
-      );
-
-      // 2) Now fetch the updated lobby
-      let lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-      // 3) If there's no painter yet, select one
-      if (!lobbyData.currentPainterToken) {
-        lobbyData = await apiService.post<LobbyData>(
-          `/lobbies/${lobbyId}/nextPainter`,
-          {}
-        );
+  useEffect(() => {
+    const joinThenFetch = async () => {
+      setLoading(true);
+      try {
+        // 1) join
+        await apiService.put(`/lobbies/${lobbyId}/join?playerId=${currentUserId}`, {});
+  
+        // 2) fetch
+        let lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+  
+        // 3) if no painter yet, pick one
+        if (!lobbyData.currentPainterToken) {
+          lobbyData = await apiService.post<LobbyData>(
+            `/lobbies/${lobbyId}/nextPainter`,
+            {}
+          );
+        }
+  
+        // **This sets lobby.currentPainterToken**
+        setLobby(lobbyData);
+      } catch (err) {
+        console.error(err);
+        message.error("Could not join lobby.");
+      } finally {
+        setLoading(false);
       }
-      setLobby(lobbyData);
-      setPainterToken(lobbyData.currentPainterToken);
-
-    } catch (err) {
-      console.error("Error joining or fetching lobby:", err);
-      message.error("Could not join lobby.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (lobbyId && currentUserId) {
-    joinThenFetch();
-  }
-}, [lobbyId, currentUserId, apiService]);
+    };
+  
+    if (lobbyId && currentUserId) joinThenFetch();
+  }, [lobbyId, currentUserId, apiService]);
 
   useEffect(() => {
     if (socket && lobby && lobby.drawTime) {
@@ -992,13 +988,10 @@ useEffect(() => {
       
         // 1) new painter token?
         if (gameData.currentPainterToken !== undefined) {
-          setLobby(prev =>
-            prev
-              ? { ...prev, currentPainterToken: gameData.currentPainterToken }
-              : prev
-          );
-          setPainterToken(gameData.currentPainterToken);
-        }
+          setLobby(prev => prev
+            ? { ...prev, currentPainterToken: gameData.currentPainterToken }
+            : prev
+          );}
       
         // 2) new round?
         if (gameData.currentRound !== undefined) {
