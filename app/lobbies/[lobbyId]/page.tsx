@@ -123,7 +123,7 @@ const LobbyPage: React.FC = () => {
 
     console.log("[Socket] Setting up socket for lobby:", lobbyId);
     const socketIo = io(
-      process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001/",
+      process.env.NEXT_PUBLIC_SOCKET_URL || "https://sopra-fs25-group-09-server.oa.r.appspot.com/",
       {
         // Use env var
         path: "/api/socket",

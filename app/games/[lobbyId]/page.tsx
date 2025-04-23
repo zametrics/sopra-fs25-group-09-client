@@ -898,7 +898,7 @@ const LobbyPage: FC = ({}) => {
       }
 
       //http://localhost:3001 --- "https://socket-server-826256454260.europe-west1.run.app/" 
-      socketIo = io("https://socket-server-826256454260.europe-west1.run.app/", { path: "/api/socket" }); // Use your server URL
+      socketIo = io("https://sopra-fs25-group-09-server.oa.r.appspot.com/", { path: "/api/socket" }); // Use your server URL
       setSocket(socketIo);
 
       if (isMounted) {
