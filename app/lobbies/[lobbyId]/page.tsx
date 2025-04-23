@@ -112,11 +112,8 @@ const LobbyPage: React.FC = () => {
   }, []); // Empty dependency array - function is stable
 
   // Socket Connection and Listener Effect
-  // LobbyPage.tsx  –  useEffect zum Verbinden der Lobby-Seite
   useEffect(() => {
-    let socketIo: Socket | null = null;
-
-    // Abbruch, falls essentielle Daten fehlen
+    // Ensure lobbyId and currentUserId are available
     if (!lobbyId || !currentUserId) {
       console.warn(
         "LobbyPage: Missing lobbyId or currentUserId, skipping socket connection."
@@ -124,7 +121,18 @@ const LobbyPage: React.FC = () => {
       return;
     }
 
-    /* -------- Hilfs-Fn zuerst definieren -------- */
+    console.log("[Socket] Setting up socket for lobby:", lobbyId);
+    const socketIo = io(
+      process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001/",
+      {
+        // Use env var
+        path: "/api/socket",
+        // reconnectionAttempts: 5, // Optional: configure reconnection
+      }
+    );
+    setSocket(socketIo);
+
+    // Fetch username for join message
     const joinLobby = async () => {
       let username = "Guest";
       try {
@@ -138,48 +146,38 @@ const LobbyPage: React.FC = () => {
       console.log(
         `[Socket] Emitting joinLobby: lobbyId=${lobbyId}, userId=${currentUserId}, username=${username}`
       );
-      socketIo?.emit("joinLobby", { lobbyId, userId: currentUserId, username });
+      socketIo.emit("joinLobby", { lobbyId, userId: currentUserId, username });
     };
 
-    //https://socket-server-826256454260.europe-west1.run.app/
-    //http://localhost:3001
-
-    /* -------- Socket erstellen -------- */
-    console.log("[Socket] Setting up socket for lobby:", lobbyId);
-    socketIo = io("https://socket-server-826256454260.europe-west1.run.app/", {
-      path: "/api/socket",
-    }); // Use your server URL
-    setSocket(socketIo);
-
-    /* -- Falls Verbindung schon steht, SOFORT der Lobby beitreten -- */
-    if (socketIo.connected) {
-      joinLobby();
-    }
-
-    /* -- Fallback, falls 'connect' erst später feuert -- */
     socketIo.on("connect", () => {
       console.log("[Socket] Connected:", socketIo.id);
-      joinLobby();
+      joinLobby(); // Join lobby once connected
     });
 
-    /* -------- Listener, die den lokalen Lobby-State pflegen -------- */
+    // --- Listeners updating the LOCAL lobby state ---
+
+    // Listen for full state updates (might include owner)
     socketIo.on("lobbyState", (data: LobbyStateData) => {
       console.log("[Socket] Received lobbyState:", data);
       if (data.ownerId !== undefined && data.ownerId !== null) {
         updateLocalLobbyState({ lobbyOwner: Number(data.ownerId) });
       }
+      // Optionally update player list state here if needed, separate from Layout
     });
 
+    // Listen specifically for owner changes
     socketIo.on("lobbyOwnerChanged", (data: LobbyOwnerChangedData) => {
       console.log("[Socket] Received lobbyOwnerChanged:", data);
       updateLocalLobbyState({ lobbyOwner: Number(data.newOwnerId) });
+      // Optional: Show message only if the current user becomes owner?
       if (Number(data.newOwnerId) === currentUserIdNumber) {
-        message.success("You are now the lobby owner!");
+        message.success(`You are now the lobby owner!`);
       } else {
         message.info(`${data.newOwnerUsername} is now the lobby owner.`);
       }
     });
 
+    // Listen for game starting event
     socketIo.on("gameStarting", ({ lobbyId: receivedLobbyId }) => {
       if (receivedLobbyId === lobbyId) {
         console.log("[Socket] Received gameStarting event. Navigating...");
@@ -187,13 +185,14 @@ const LobbyPage: React.FC = () => {
       }
     });
 
-    /* -------- Standard-Handler -------- */
+    // --- Standard Socket Event Handlers ---
     socketIo.on("disconnect", (reason) => {
       console.log("[Socket] Disconnected:", reason);
+      // Maybe show a message if disconnect wasn't intentional
       if (reason !== "io client disconnect") {
         message.warning("Disconnected from server. Attempting to reconnect...");
       }
-      setSocket(null);
+      setSocket(null); // Clear socket state
     });
 
     socketIo.on("connect_error", (err) => {
@@ -205,22 +204,20 @@ const LobbyPage: React.FC = () => {
       setSocket(null);
     });
 
-    /* -------- Aufräumen -------- */
+    // Cleanup function
     return () => {
       console.log("[Socket] Cleaning up socket listeners and disconnecting.");
-      if (socketIo) {
-        socketIo.off("connect");
-        socketIo.off("lobbyState");
-        socketIo.off("lobbyOwnerChanged");
-        socketIo.off("gameStarting");
-        socketIo.off("disconnect");
-        socketIo.off("connect_error");
-        socketIo.disconnect();
-      }
-      setSocket(null);
+      socketIo.off("connect");
+      socketIo.off("lobbyState");
+      socketIo.off("lobbyOwnerChanged");
+      socketIo.off("gameStarting");
+      socketIo.off("disconnect");
+      socketIo.off("connect_error");
+      socketIo.disconnect();
+      setSocket(null); // Clear socket state on unmount
     };
-
-    /* -------- Abhängigkeiten -------- */
+    // Rerun effect if lobbyId or currentUserId changes (though usually they don't on this page)
+    // updateLocalLobbyState is stable due to useCallback
   }, [
     lobbyId,
     currentUserId,
