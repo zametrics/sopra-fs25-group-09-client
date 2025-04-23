@@ -74,6 +74,7 @@ const Layout: React.FC<LayoutProps> = ({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [currentWord, setCurrentWord] = useState<string>("");
 
   const colorPool: string[] = [
     "#e6194b",
@@ -230,6 +231,12 @@ const Layout: React.FC<LayoutProps> = ({
         message.error(`Connection failed: ${err.message}`, 5);
       });
 
+                  // --- NEW: Word Selected Listener ---
+      socket.on("word-selected", (data: { word: string }) => {
+        console.log(`Received word-selected for lobby ${lobbyId}: ${data.word}`);
+        setCurrentWord(data.word); // Update currentWord state
+      });
+
       socket.on("disconnect", (reason) => {
         console.log("Socket disconnected:", reason);
         if (reason !== "io client disconnect") {
@@ -248,11 +255,26 @@ const Layout: React.FC<LayoutProps> = ({
         socket.off("lobbyOwnerChanged"); // <-- Unregister new listener
         socket.off("chatMessage");
         socket.off("connect_error");
+        socket.off("word-selected"); // Unregister word-selected
         socket.off("disconnect");
       }
     };
     // Add updateLobbyState to dependencies
   }, [lobbyId, socket, apiService, currentUserId, updateLobbyState]);
+
+
+  /* EMERGENCY CODE DO NOT TOUCH LEAVE IT DONT CHANGE!
+  const fetchCurrentWord = async () => {
+    try {
+      const response = await apiService.get<string>(`/lobbies/${lobbyId}/word`);
+      setCurrentWord(response);
+    } catch (error) {
+      console.error("Failed to fetch current word:", error);
+    }
+  };
+
+  */
+
   // Scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -263,8 +285,15 @@ const Layout: React.FC<LayoutProps> = ({
       const username = players.find(
         (p) => p.id.toString() === currentUserId
       )?.username;
-      socket.emit("chatMessage", { lobbyId, message: chatInput, username });
-      setChatInput("");
+
+      if (chatInput === currentWord) { // Now chatInput (string) is compared to the resolved string
+        socket.emit("chatMessage", { lobbyId, message: `${username} GUESSED THE CORRECT WORD!`, username });
+        setChatInput("");
+
+      } else{
+        socket.emit("chatMessage", { lobbyId, message: chatInput, username });
+        setChatInput("");
+    }
     }
   };
 
