@@ -41,7 +41,10 @@ interface LayoutProps {
   // needs to react to the owner change for enabling/disabling controls.
   // If only the indicator in Layout needs updating, this isn't strictly necessary.
   onLobbyUpdate?: (updatedLobby: Partial<LobbyData>) => void;
+  isCurrentUserPainter: boolean;
+  currentUserToken: string | null
 }
+
 
 interface PlayerLeftData {
   id: string | number; // ID might be string or number from server
@@ -68,6 +71,8 @@ const Layout: React.FC<LayoutProps> = ({
   localAvatarUrl,
   lobby: initialLobby, // Rename prop to avoid conflict with state
   onLobbyUpdate, // Get the update function
+  isCurrentUserPainter,
+  currentUserToken,
 }) => {
   const apiService = useApi();
   const [players, setPlayers] = useState<PlayerData[]>([]);
@@ -363,6 +368,10 @@ const Layout: React.FC<LayoutProps> = ({
       <span>{player.username}</span>
       {lobby && player.id === lobby.lobbyOwner && (
       <span className="player-owner-indicator" title="Lobby Owner">👑</span>
+    )}
+    { lobby?.currentPainterToken === currentUserToken
+    && String(player.id) === currentUserId && (
+    <span className="player-painter-indicator" title="You’re painting">✏️</span>
     )}
     </div>
     <div className="player-score-box">{scores[player.id] || 0}</div> {/* <- Here's the new part */}

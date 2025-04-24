@@ -783,6 +783,11 @@ const LobbyPage: FC = ({}) => {
   // --- Undo Handler (with sync) ---
   const handleUndo = useCallback(() => {
     // ... (Implementation from previous step: local undo + emit sync-request) ...
+    if (!isCurrentUserPainter) {
+      console.log("Undo blocked: User is not the current painter.");
+      return;
+    } //makes sure only painter can undo
+
     if (historyStack.length === 0 || !socket) return;
     const canvas = canvasElementRef.current;
     if (!canvas) return;
@@ -967,6 +972,7 @@ const LobbyPage: FC = ({}) => {
         console.log("Round ended at:", new Date().toISOString());
         setSelectedWord(""); // Clear current word
         setShowWordSelection(false); // Hide word selection
+        socketClearCanvas();  //clear canvas
       
         if (isCurrentUserPainter) {
           console.log("Current painter triggering next painter selection");
@@ -1222,6 +1228,11 @@ const LobbyPage: FC = ({}) => {
   // --- Local Clear Function ---
   const socketClearCanvas = useCallback(() => {
     // ... (Implementation: emit clear, clear locally, saveCanvasState) ...
+    if (!isCurrentUserPainter) {
+      console.log("Clear blocked: User is not the current painter.");
+      return;
+    } //makes sure only painter can delete
+
     if (socket) {
       socket.emit("clear");
     }
@@ -1243,6 +1254,8 @@ const LobbyPage: FC = ({}) => {
         currentUserId={currentUserId}
         localAvatarUrl={localAvatarUrl}
         lobby={lobby}
+        isCurrentUserPainter={isCurrentUserPainter}
+        currentUserToken={currentUserToken}
       >
         <div className="game-box">
           <Spin size="large" /> Loading Game...
@@ -1260,6 +1273,8 @@ const LobbyPage: FC = ({}) => {
         currentUserId={currentUserId}
         localAvatarUrl={localAvatarUrl}
         lobby={null}
+        isCurrentUserPainter={isCurrentUserPainter}
+        currentUserToken={currentUserToken}
       >
         <div className="login-register-box">
           <h1
@@ -1302,6 +1317,8 @@ const LobbyPage: FC = ({}) => {
       currentUserId={currentUserId}
       localAvatarUrl={localAvatarUrl}
       lobby={lobby}
+      isCurrentUserPainter={isCurrentUserPainter}
+      currentUserToken={currentUserToken}
     >
       {" "}
       {/* <-- START React Fragment */}
