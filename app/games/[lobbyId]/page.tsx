@@ -1254,8 +1254,6 @@ const LobbyPage: FC = ({}) => {
         currentUserId={currentUserId}
         localAvatarUrl={localAvatarUrl}
         lobby={lobby}
-        isCurrentUserPainter={isCurrentUserPainter}
-        currentUserToken={currentUserToken}
       >
         <div className="game-box">
           <Spin size="large" /> Loading Game...
@@ -1273,8 +1271,6 @@ const LobbyPage: FC = ({}) => {
         currentUserId={currentUserId}
         localAvatarUrl={localAvatarUrl}
         lobby={null}
-        isCurrentUserPainter={isCurrentUserPainter}
-        currentUserToken={currentUserToken}
       >
         <div className="login-register-box">
           <h1
@@ -1317,8 +1313,7 @@ const LobbyPage: FC = ({}) => {
       currentUserId={currentUserId}
       localAvatarUrl={localAvatarUrl}
       lobby={lobby}
-      isCurrentUserPainter={isCurrentUserPainter}
-      currentUserToken={currentUserToken}
+     
     >
       {" "}
       {/* <-- START React Fragment */}
