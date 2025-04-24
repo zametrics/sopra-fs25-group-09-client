@@ -875,7 +875,6 @@ const LobbyPage: FC = ({}) => {
     let socketIo: Socket | null = null;
     const disconnectTimeoutId: NodeJS.Timeout | null = null;
 
-    //http://localhost:3001 --- "https://socket-server-826256454260.europe-west1.run.app/" { path: "/api/socket" }
     const connectAndSetupSocket = async () => {
       // --- Check for pending disconnect on mount ---
       const storedTimeoutId = sessionStorage.getItem(DISCONNECT_TIMEOUT_ID_KEY);
@@ -898,7 +897,7 @@ const LobbyPage: FC = ({}) => {
       }
 
       //http://localhost:3001 --- "https://socket-server-826256454260.europe-west1.run.app/" 
-      socketIo = io("http://localhost:3001/", { path: "/api/socket" }); // Use your server URL
+      socketIo = io("https://socket-server-826256454260.europe-west1.run.app/", { path: "/api/socket" }); // Use your server URL
       setSocket(socketIo);
 
       if (isMounted) {
