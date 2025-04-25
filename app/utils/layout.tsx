@@ -80,6 +80,7 @@ const Layout: React.FC<LayoutProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [currentWord, setCurrentWord] = useState<string>("");
   const [scores, setScores] = useState<{ [key: number]: number }>({});
+  const [isChatDisabled, setIsChatDisabled] = useState(false);
 
   const colorPool: string[] = [
     "#e6194b",
@@ -293,7 +294,7 @@ const currentUserToken = raw
           [playerId]: score,
         }));
       });
-      
+
     }
 
     
@@ -333,6 +334,8 @@ const currentUserToken = raw
   }, [messages]);
 
   const sendMessage = () => {
+    if(isChatDisabled) return;
+    
     if (chatInput.trim() && socket) {
       const username = players.find(
         (p) => p.id.toString() === currentUserId
@@ -359,6 +362,8 @@ const currentUserToken = raw
             score: newScore,
           });
         }
+
+        setIsChatDisabled(true);
         setChatInput("");
       } else {
         socket.emit("chatMessage", { lobbyId, message: chatInput, username });
@@ -430,21 +435,23 @@ const currentUserToken = raw
           <div ref={messagesEndRef} />
         </div>
         <div className="chat-input-area">
-          <Input
+        <Input
             className="chat-input"
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
             onPressEnter={sendMessage}
-            placeholder="Type your message here!"
+            placeholder={isChatDisabled ? "Chat disabled" : "Type your message here!"}
+            disabled={isChatDisabled} // Disable input when chat is disabled
           />
-          <Button className="chat-send-button" onClick={sendMessage}>
+          <Button className="chat-send-button" onClick={sendMessage} disabled={isChatDisabled} // Disable button when chat is disabled
+          >
             <span role="img" aria-label="send">
               📨
             </span>
           </Button>
         </div>
       </div>
-    </div>
+    </div> 
   );
 };
 
