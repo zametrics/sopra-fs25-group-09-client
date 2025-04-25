@@ -285,7 +285,18 @@ const currentUserToken = raw
           message.warning("Lost connection to the server.", 3);
         }
       });
+
+      socket.on("scoreUpdated", ({ playerId, score }) => {
+        console.log(`[Score] Received score update for player ${playerId}: ${score}`);
+        setScores((prev) => ({
+          ...prev,
+          [playerId]: score,
+        }));
+      });
+      
     }
+
+    
 
     // --- Cleanup ---
     return () => {
@@ -326,7 +337,7 @@ const currentUserToken = raw
       const username = players.find(
         (p) => p.id.toString() === currentUserId
       )?.username;
-
+  
       if (chatInput === currentWord) {
         socket.emit("chatMessage", {
           lobbyId,
@@ -336,10 +347,17 @@ const currentUserToken = raw
         // --- Increment score for the player ---
         if (currentUserId) {
           const playerId = Number(currentUserId);
+          const newScore = (scores[playerId] || 0) + 1;
           setScores((prev) => ({
             ...prev,
-            [playerId]: (prev[playerId] || 0) + 1,
+            [playerId]: newScore,
           }));
+          // --- Emit score update to server ---
+          socket.emit("updateScore", {
+            lobbyId,
+            playerId,
+            score: newScore,
+          });
         }
         setChatInput("");
       } else {

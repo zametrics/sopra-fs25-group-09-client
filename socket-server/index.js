@@ -262,6 +262,21 @@ io.on("connection", (socket) => {
     io.to(lobbyId).emit("painter-selection-complete");
   });
 
+  // Add this inside the io.on("connection", (socket) => { ... }) block, after existing socket event handlers
+
+socket.on("updateScore", ({ lobbyId, playerId, score }) => {
+  // Basic validation
+  if (!lobbyId || typeof playerId !== "number" || typeof score !== "number") {
+    console.error(`Invalid updateScore data from socket ${socket.id}:`, { lobbyId, playerId, score });
+    return;
+  }
+
+  console.log(`[Score] Updating score for player ${playerId} in lobby ${lobbyId} to ${score}`);
+  
+  // Broadcast score update to all clients in the lobby
+  io.to(lobbyId).emit("scoreUpdated", { playerId, score });
+});
+
 
   socket.on("gameStarting", ({ lobbyId, settings }) => {
     console.log(`Game starting for lobby ${lobbyId}`);
