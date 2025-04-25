@@ -1004,6 +1004,7 @@ const LobbyPage: FC = ({}) => {
         socketClearCanvas();
         setIsSelectingPainter(true); // NEW: Block navigation
 
+        console.log("asd","asd",lobby?.currentPainterToken, currentUserToken);
         if (lobby?.currentPainterToken === currentUserToken) {
           console.log("Current painter triggering next painter selection");
           try {
