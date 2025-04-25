@@ -81,6 +81,8 @@ const Layout: React.FC<LayoutProps> = ({
   const [currentWord, setCurrentWord] = useState<string>("");
   const [scores, setScores] = useState<{ [key: number]: number }>({});
   const [isChatDisabled, setIsChatDisabled] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+
 
   const colorPool: string[] = [
     "#e6194b",
@@ -297,6 +299,11 @@ const currentUserToken = raw
         }));
       });
 
+      socket.on("gameEnded", () => {
+        console.log("Game ended – showing leaderboard");
+        setShowLeaderboard(true);
+      });
+
     }
 
     
@@ -453,6 +460,44 @@ const currentUserToken = raw
           </Button>
         </div>
       </div>
+      { showLeaderboard && (
+        <div className="leaderboard-overlay">
+          <div className="leaderboard-container">
+            <h2 className="players-chat-title">🏆 Final Leaderboard</h2>
+            <div className="player-list">
+              {[...players]
+                .sort((a, b) => (scores[b.id] ?? 0) - (scores[a.id] ?? 0))
+                .map((player) => (
+                  <div
+                    key={player.id}
+                    className="player-entry"
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <img
+                        src={
+                          String(player.id) === currentUserId
+                            ? localAvatarUrl
+                            : "/icons/avatar.png"
+                        }
+                        alt="Avatar"
+                        className="player-avatar"
+                      />
+                      <span>{player.username}</span>
+                      {lobby && player.id === lobby.lobbyOwner && (
+                        <span className="player-owner-indicator" title="Lobby Owner">
+                          👑
+                        </span>
+                      )}
+                    </div>
+                    <div className="player-score-box">{scores[player.id] ?? 0}</div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div> 
   );
 };

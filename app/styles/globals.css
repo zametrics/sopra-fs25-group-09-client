@@ -1508,3 +1508,264 @@ html body .page-background .word-option.selected {
 }
 .player-painter-indicator { margin-left: 4px; }
 
+/* Game Leaderboard Styles */
+
+.leaderboard-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.leaderboard-container {
+  background-color: white;
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.leaderboard-title {
+  font-size: 28px;
+  color: #333;
+  text-align: center;
+  margin-bottom: 16px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+}
+
+.leaderboard-subtitle {
+  font-size: 20px;
+  color: #555;
+  text-align: center;
+  margin-bottom: 24px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.winner-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.winner-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.winner-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid gold;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.winner-name {
+  font-size: 22px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 4px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.winner-score {
+  font-size: 18px;
+  color: #4CAF50;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+}
+
+.leaderboard-scores {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.leaderboard-header {
+  display: grid;
+  grid-template-columns: 0.5fr 2fr 1fr;
+  background-color: #f5f5f5;
+  padding: 12px 16px;
+  font-weight: bold;
+  color: #555;
+  border-bottom: 1px solid #eee;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+}
+
+.rank-header, .player-header, .score-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.rank-header {
+  justify-content: center;
+}
+
+.score-header {
+  justify-content: center;
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 0.5fr 2fr 1fr;
+  padding: 12px 16px;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.2s;
+  font-family: 'Poppins', sans-serif;
+}
+
+.leaderboard-row:hover {
+  background-color: rgba(245, 245, 245, 0.5);
+}
+
+.leaderboard-row:last-child {
+  border-bottom: none;
+}
+
+.leaderboard-row:nth-child(1) .player-rank {
+  color: gold;
+  font-weight: bold;
+}
+
+.leaderboard-row:nth-child(2) .player-rank {
+  color: silver;
+  font-weight: bold;
+}
+
+.leaderboard-row:nth-child(3) .player-rank {
+  color: #cd7f32; /* bronze */
+  font-weight: bold;
+}
+
+.current-player-row {
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+.player-rank {
+  font-weight: bold;
+  color: #555;
+  text-align: center;
+  font-size: 16px;
+}
+
+.player-info {
+  display: flex;
+  align-items: center;
+}
+
+.player-avatar-small {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-right: 12px;
+  object-fit: cover;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.player-username {
+  font-weight: 500;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 150px;
+}
+
+.player-score {
+  font-weight: bold;
+  color: #4CAF50;
+  text-align: center;
+  font-size: 16px;
+}
+
+.leaderboard-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.leaderboard-actions button {
+  flex: 1;
+  height: 44px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.home-button {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.home-button:hover {
+  background-color: #e5e5e5;
+}
+
+.play-again-button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+}
+
+.play-again-button:hover {
+  background-color: #3d9140;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .leaderboard-container {
+    width: 95%;
+    padding: 16px;
+  }
+  
+  .leaderboard-title {
+    font-size: 24px;
+  }
+  
+  .leaderboard-subtitle {
+    font-size: 18px;
+  }
+  
+  .player-username {
+    max-width: 100px;
+  }
+}
