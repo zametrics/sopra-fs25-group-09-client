@@ -1346,8 +1346,8 @@ const LobbyPage: FC = ({}) => {
             Start Timer
           </Button> */}
           {/* Added a class */}
-          {/* Word Display Area */}
           <div className="word-display-area">
+          {isCurrentUserPainter ? (
             <span className="word-to-guess">
               {wordToGuess
                 .toLowerCase()
@@ -1358,7 +1358,19 @@ const LobbyPage: FC = ({}) => {
                   </span> // Handle spaces
                 ))}
             </span>
-          </div>
+          ) : (
+            <span className="word-to-guess">
+              {wordToGuess
+                .toLowerCase()
+                .split("")
+                .map((letter, index) => (
+                  <span key={index} className="word-letter">
+                    {" "}
+                  </span> // Replace each letter with a whitespace
+                ))}
+            </span>
+          )}
+        </div>
           {/* Drawing Canvas */}
           <canvas
             ref={combinedCanvasRef}
