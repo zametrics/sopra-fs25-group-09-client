@@ -667,6 +667,7 @@ const LobbyPage: FC = ({}) => {
         const updatedLobby = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
         setLoading(false);
         setLobby(updatedLobby);
+        console.log(`NEW TOKEN :${updatedLobby.currentPainterToken}`);
 
         if(updatedLobby.currentPainterToken == currentUserToken){
           setIsCurrentUserPainter(true);
