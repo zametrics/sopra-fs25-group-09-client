@@ -277,6 +277,8 @@ const currentUserToken = raw
       socket.on("word-selected", (data: { word: string }) => {
         console.log(`Received word-selected for lobby ${lobbyId}: ${data.word}`);
         setCurrentWord(data.word); // Update currentWord state
+        setIsChatDisabled(false);
+        setChatInput("");
       });
 
       socket.on("disconnect", (reason) => {
