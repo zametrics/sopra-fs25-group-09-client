@@ -998,11 +998,14 @@ const LobbyPage: FC = ({}) => {
 
       socketIo.on("roundEnded", async () => {
         console.log("Round ended at:", new Date().toISOString());
+        socketClearCanvas();
         setIsCurrentUserPainter(false);
         setSelectedWord("");
         setShowWordSelection(false);
-        socketClearCanvas();
         setIsSelectingPainter(true); // NEW: Block navigation
+
+        const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+        setLobby(lobbyData);
 
         console.log("asd","asd",lobby?.currentPainterToken, currentUserToken);
         if (lobby?.currentPainterToken === currentUserToken) {
