@@ -1013,7 +1013,7 @@ const LobbyPage: FC = ({}) => {
         setShowWordSelection(false); // Hide word selection
         socketClearCanvas();  //clear canvas
       
-        if (lobby?.currentPainterToken === currentUserToken) {
+        if (lobby?.currentPainterToken == currentUserToken) {
           console.log("Current painter triggering next painter selection");
           await triggerNextPainterSelection();
           // Emit an event to notify others that painter selection is complete
@@ -1262,7 +1262,7 @@ const LobbyPage: FC = ({}) => {
   // --- Local Clear Function ---
   const socketClearCanvas = useCallback(() => {
     // ... (Implementation: emit clear, clear locally, saveCanvasState) ...
-    if (!isCurrentUserPainter) {
+    if (lobby?.currentPainterToken != currentUserToken) {
       console.log("Clear blocked: User is not the current painter.");
       return;
     } //makes sure only painter can delete
