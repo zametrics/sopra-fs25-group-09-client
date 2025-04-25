@@ -649,7 +649,6 @@ const LobbyPage: FC = ({}) => {
         
         // 3) Set lobby and painter status
         setLobby(lobbyData);
-        console.log("I WAS TRIGGERED");
         setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
       } catch (err) {
         console.error("Join error:", err);
@@ -1009,11 +1008,12 @@ const LobbyPage: FC = ({}) => {
           console.log("Current painter triggering next painter selection");
           try {
             await triggerNextPainterSelection();
+            socketIo?.emit("painter-selection-complete", { lobbyId });
             const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+            console.log("emit painter-selection-complete");
+
             if (isMounted) {
               setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
-              socketIo?.emit("painter-selection-complete", { lobbyId });
-              console.log("emit painter-selection-complete");
             }
           } catch (err) {
             console.error("Error in triggerNextPainterSelection:", err);
