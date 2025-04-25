@@ -656,7 +656,7 @@ const LobbyPage: FC = ({}) => {
     const Trigger = async () => {
         
     
-        if (!lobby?.currentPainterToken && lobby?.lobbyOwner.toString() === currentUserId) {
+        if (!lobby?.currentPainterToken && lobby?.lobbyOwner.toString() == currentUserId) {
           const updatedLobby = await apiService.post<LobbyData>(
             `/lobbies/${lobbyId}/nextPainter`,
             {}
@@ -666,16 +666,17 @@ const LobbyPage: FC = ({}) => {
 
         } 
 
-        setLoading(false);
-
         
 
+  
         if(lobby?.currentPainterToken == currentUserToken){
           setIsCurrentUserPainter(true);
       
         } else {
           setIsCurrentUserPainter(false);
         }
+
+        setLoading(false);
     }
 
     if(!loading){
