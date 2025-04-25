@@ -647,6 +647,7 @@ const LobbyPage: FC = ({}) => {
         
         // 3) Set lobby and painter status
         setLobby(lobbyData);
+        console.log("I WAS TRIGGERED");
         setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
       } catch (err) {
         console.error("Join error:", err);
