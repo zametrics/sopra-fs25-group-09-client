@@ -300,6 +300,14 @@ const LobbyPage: FC = ({}) => {
     [wordOptions, socket, lobbyId]
   );
 
+  useEffect(() => {
+    if (isCurrentUserPainter && !showWordSelection && !selectedWord) {
+      console.log("User became painter, fetching word options");
+      fetchWordOptions();
+    }
+  }, [isCurrentUserPainter, showWordSelection, selectedWord]);
+  
+
   // const wordToGuess = selectedWord || "noword";
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1001,6 +1009,8 @@ const LobbyPage: FC = ({}) => {
       });
       socketIo.on("roundEnded", async () => {
         console.log("Round ended at:", new Date().toISOString());
+
+        setIsCurrentUserPainter(false);
         setSelectedWord(""); // Clear current word
         setShowWordSelection(false); // Hide word selection
         socketClearCanvas();  //clear canvas
@@ -1025,13 +1035,7 @@ const LobbyPage: FC = ({}) => {
           const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
           console.log(`Fetched lobby ${lobbyId}, NEW TOKEN: ${lobbyData.currentPainterToken}`);
           setLobby(lobbyData);
-
-          if(lobbyData.currentPainterToken === currentUserToken){
-
-          
-          fetchWordOptions();
-          setIsCurrentUserPainter(true);
-          }
+          setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
         } catch (err) {
           console.error("Failed to fetch lobby:", err);
           message.error("Could not update lobby state");
@@ -1252,7 +1256,7 @@ const LobbyPage: FC = ({}) => {
     //            if needed, but it's mainly used in the timeout/cleanup.
   }, [
     lobbyId,
-    setIsCurrentUserPainter
+    fetchWordOptions
   ]);
   // Note: Removed 'lobby' from deps here to avoid re-running socket setup on every lobby state change.
   // Fetching words depends on lobby, so it's handled conditionally inside or in fetchWordOptions.
