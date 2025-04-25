@@ -1185,17 +1185,7 @@ const LobbyPage: FC = ({}) => {
         }
       });
 
-      // Fetch initial words if needed
-      if (
-        lobby &&
-        !wordOptions.length &&
-        !showWordSelection &&
-        !selectedWord &&
-        isMounted
-      ) {
-        console.log("Fetching initial words after socket setup");
-        fetchWordOptions();
-      }
+
 
       // Save initial canvas state if needed
       if (
