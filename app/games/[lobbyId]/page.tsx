@@ -1252,13 +1252,7 @@ const LobbyPage: FC = ({}) => {
     //            if needed, but it's mainly used in the timeout/cleanup.
   }, [
     lobbyId,
-    apiService,
-    currentUserId,
-    isCanvasInitialized,
-    loadCanvasFromDataUrl,
-    fetchWordOptions,
-    saveCanvasState,
-    performLeaveLobby,
+    setIsCurrentUserPainter
   ]);
   // Note: Removed 'lobby' from deps here to avoid re-running socket setup on every lobby state change.
   // Fetching words depends on lobby, so it's handled conditionally inside or in fetchWordOptions.
