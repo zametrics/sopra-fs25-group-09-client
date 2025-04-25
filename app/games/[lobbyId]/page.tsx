@@ -928,7 +928,7 @@ const LobbyPage: FC = ({}) => {
         const userData = await apiService.get<{ id: number; username: string }>(
           `/users/${currentUserId}`
         );
-        const username = userData.username || "Guest";
+        const username = userData.username;
         socketIo.emit("joinLobby", {
           lobbyId,
           userId: currentUserId,
