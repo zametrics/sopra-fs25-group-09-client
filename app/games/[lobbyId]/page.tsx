@@ -637,7 +637,7 @@ const LobbyPage: FC = ({}) => {
         await apiService.put(`/lobbies/${lobbyId}/join?playerId=${currentUserId}`, {});
     
         // 2) Fetch
-        let lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+        const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
         
         console.log(`NEW TOKEN :${lobbyData.currentPainterToken}`);       
         // 3) Set lobby and painter status
@@ -664,7 +664,7 @@ const LobbyPage: FC = ({}) => {
 
         } 
 
-        let updatedLobby = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+        const updatedLobby = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
 
         if(updatedLobby.currentPainterToken == currentUserToken){
           setIsCurrentUserPainter(true);
