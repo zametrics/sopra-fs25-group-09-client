@@ -216,9 +216,9 @@ const LobbyPage: FC = ({}) => {
 
   
   const fetchWordOptions = useCallback(async () => {
-    console.log("THE WORD FETCHER: ", lobby?.currentPainterToken != currentUserToken)
-    
-    if (lobby?.currentPainterToken != currentUserToken) {
+    console.log("THE WORD FETCHER: ", lobby?.currentPainterToken !== currentUserToken);
+  
+    if (lobby?.currentPainterToken !== currentUserToken) {
       console.log("Skipping word fetch: User is not the current painter");
       return;
     }
@@ -246,6 +246,15 @@ const LobbyPage: FC = ({}) => {
         const options = response.map((word) => ({ word, selected: false }));
         setWordOptions(options);
         setShowWordSelection(true);
+  
+        // Start the timer after word options are set and UI is shown
+        if (socket && lobby.drawTime) {
+          console.log("Word options fetched, starting timer for lobby:", lobbyId);
+          socket.emit("startTimer", {
+            lobbyId,
+            drawTime: lobby.drawTime,
+          });
+        }
       } else {
         console.error("Invalid response format for word options:", response);
         setWordOptions([
@@ -254,6 +263,15 @@ const LobbyPage: FC = ({}) => {
           { word: "cherry", selected: false },
         ]);
         setShowWordSelection(true);
+  
+        // Start the timer even in fallback case
+        if (socket && lobby.drawTime) {
+          console.log("Fallback word options set, starting timer for lobby:", lobbyId);
+          socket.emit("startTimer", {
+            lobbyId,
+            drawTime: lobby.drawTime,
+          });
+        }
       }
     } catch (error) {
       console.error("Error fetching word options:", error);
@@ -263,8 +281,17 @@ const LobbyPage: FC = ({}) => {
         { word: "cherry", selected: false },
       ]);
       setShowWordSelection(true);
+  
+      // Start the timer even in error case
+      if (socket && lobby.drawTime) {
+        console.log("Error case: Fallback word options set, starting timer for lobby:", lobbyId);
+        socket.emit("startTimer", {
+          lobbyId,
+          drawTime: lobby.drawTime,
+        });
+      }
     }
-  }, [lobby, apiService, isCurrentUserPainter, currentUserToken]);
+  }, [lobby, apiService, currentUserToken, socket, lobbyId]);
 
   const handleWordSelect = useCallback(
     (selectedIndex: number) => {
@@ -309,8 +336,7 @@ const LobbyPage: FC = ({}) => {
       console.log("User became painter, fetching word options");
       fetchWordOptions();
     }
-  }, [isCurrentUserPainter, showWordSelection, selectedWord]);
-  
+  }, [isCurrentUserPainter, showWordSelection, selectedWord, fetchWordOptions]);
 
   // const wordToGuess = selectedWord || "noword";
 
@@ -715,14 +741,12 @@ const LobbyPage: FC = ({}) => {
   }, [lobby, lobbyId, currentUserId, currentUserToken, loading]);
 
   useEffect(() => {
+    // Remove the automatic timer start from here
+    // Optionally, you can add a log to confirm the socket and lobby are ready
     if (socket && lobby && lobby.drawTime) {
-      console.log("Auto-starting timer on page load, lobbyId:", lobbyId);
-      socket.emit("startTimer", {
-        lobbyId,
-        drawTime: lobby.drawTime,
-      });
+      console.log("Socket and lobby ready, waiting for word selection to start timer:", lobbyId);
     }
-  }, [socket, lobby, lobbyId]);
+  }, [socket, lobby, lobbyId])
 
   const showLeaveConfirmation = () => {
     setIsLeaveModalVisible(true);
@@ -1014,8 +1038,6 @@ const LobbyPage: FC = ({}) => {
           try {
             await triggerNextPainterSelection();
             socketIo?.emit("painter-selection-complete", { lobbyId });
-            const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-            setLobby(lobbyData)
             console.log("emit painter-selection-complete");
 
             if (isMounted) {
