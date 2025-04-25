@@ -210,7 +210,7 @@ const LobbyPage: FC = ({}) => {
       console.error("Error selecting next painter:", error);
       message.error("Failed to select next painter.");
     }
-  }, [lobbyId, apiService]);
+  }, []);
 
   
   const fetchWordOptions = useCallback(async () => {
@@ -1245,7 +1245,6 @@ const LobbyPage: FC = ({}) => {
     // IMPORTANT: performLeaveLobby is now stable due to useCallback, so it can be a dependency
     //            if needed, but it's mainly used in the timeout/cleanup.
   }, [
-    lobbyId,
     fetchWordOptions
   ]);
   // Note: Removed 'lobby' from deps here to avoid re-running socket setup on every lobby state change.
