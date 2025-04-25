@@ -699,10 +699,11 @@ const LobbyPage: FC = ({}) => {
         console.log("Skipping painter assignment:", { loading, lobby, lobbyId, currentUserId });
         return;
       }
-  
+      
       try {
         // Only assign painter if no painter exists and user is lobby owner
-        if (!lobby.currentPainterToken && lobby.lobbyOwner.toString() === currentUserId) {
+        const updatedLobby = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`)
+        if (!updatedLobby.currentPainterToken && lobby.lobbyOwner.toString() === currentUserId) {
           // Double-check server state to avoid stale data
           const currentLobby = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
           console.log("Pre-nextPainter lobby state:", {
