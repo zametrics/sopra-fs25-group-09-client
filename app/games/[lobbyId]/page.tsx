@@ -1008,7 +1008,7 @@ const LobbyPage: FC = ({}) => {
       });
       socketIo.on("roundEnded", async () => {
         console.log("Round ended at:", new Date().toISOString());
-         // Assume non-painter until confirmed
+        setIsCurrentUserPainter(false); // Assume non-painter until confirmed
         setSelectedWord(""); // Clear current word
         setShowWordSelection(false); // Hide word selection
         socketClearCanvas();  //clear canvas
