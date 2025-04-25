@@ -1022,6 +1022,7 @@ const LobbyPage: FC = ({}) => {
           const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
           setIsCurrentUserPainter(lobbyData.currentPainterToken == currentUserToken);
           socketIo?.emit("painter-selection-complete", { lobbyId });
+          console.log("emit painter-selection-complete");
         } else {
           console.log("Non-painter waiting for painter selection");
           // Wait for painter-selection-complete event instead of a fixed delay
