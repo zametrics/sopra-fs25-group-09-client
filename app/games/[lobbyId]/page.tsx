@@ -300,14 +300,6 @@ const LobbyPage: FC = ({}) => {
     [wordOptions, socket, lobbyId]
   );
 
-  useEffect(() => {
-    if (isCurrentUserPainter && !showWordSelection && !selectedWord) {
-      console.log("User became painter, fetching word options");
-      fetchWordOptions();
-    }
-  }, [isCurrentUserPainter, showWordSelection, selectedWord]);
-  
-
   // const wordToGuess = selectedWord || "noword";
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1009,7 +1001,6 @@ const LobbyPage: FC = ({}) => {
       });
       socketIo.on("roundEnded", async () => {
         console.log("Round ended at:", new Date().toISOString());
-        setIsCurrentUserPainter(false); // Assume non-painter until confirmed
         setSelectedWord(""); // Clear current word
         setShowWordSelection(false); // Hide word selection
         socketClearCanvas();  //clear canvas
@@ -1034,7 +1025,13 @@ const LobbyPage: FC = ({}) => {
           const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
           console.log(`Fetched lobby ${lobbyId}, NEW TOKEN: ${lobbyData.currentPainterToken}`);
           setLobby(lobbyData);
-          setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
+
+          if(lobbyData.currentPainterToken === currentUserToken){
+
+          
+          fetchWordOptions();
+          setIsCurrentUserPainter(true);
+          }
         } catch (err) {
           console.error("Failed to fetch lobby:", err);
           message.error("Could not update lobby state");
