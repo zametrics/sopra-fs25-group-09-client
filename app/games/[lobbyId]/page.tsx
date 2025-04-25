@@ -1012,7 +1012,7 @@ const LobbyPage: FC = ({}) => {
         setShowWordSelection(false); // Hide word selection
         socketClearCanvas();  //clear canvas
       
-        if (isCurrentUserPainter) {
+        if (lobby?.currentPainterToken === currentUserToken) {
           console.log("Current painter triggering next painter selection");
           await triggerNextPainterSelection();
           setIsCurrentUserPainter(false); // Assume non-painter until confirmed
