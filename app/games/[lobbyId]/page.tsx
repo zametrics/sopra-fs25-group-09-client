@@ -1005,10 +1005,9 @@ const LobbyPage: FC = ({}) => {
         setIsSelectingPainter(true); // NEW: Block navigation
 
         const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-        setLobby(lobbyData);
 
         console.log("asd","asd",lobby?.currentPainterToken, currentUserToken);
-        if (lobby?.currentPainterToken === currentUserToken) {
+        if (lobbyData?.currentPainterToken === currentUserToken) {
           console.log("Current painter triggering next painter selection");
           try {
             await triggerNextPainterSelection();
