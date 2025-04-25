@@ -657,19 +657,20 @@ const LobbyPage: FC = ({}) => {
         
     
         if (!lobby?.currentPainterToken && lobby?.lobbyOwner.toString() === currentUserId) {
-          await apiService.post<LobbyData>(
+          const updatedLobby = await apiService.post<LobbyData>(
             `/lobbies/${lobbyId}/nextPainter`,
             {}
           );
+          setLobby(updatedLobby);
+          console.log(`NEW TOKEN :${updatedLobby.currentPainterToken}`);
 
         } 
 
-        const updatedLobby = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
         setLoading(false);
-        setLobby(updatedLobby);
-        console.log(`NEW TOKEN :${updatedLobby.currentPainterToken}`);
 
-        if(updatedLobby.currentPainterToken == currentUserToken){
+        
+
+        if(lobby?.currentPainterToken == currentUserToken){
           setIsCurrentUserPainter(true);
       
         } else {
