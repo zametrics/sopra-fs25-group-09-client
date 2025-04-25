@@ -332,11 +332,11 @@ const LobbyPage: FC = ({}) => {
   );
 
   useEffect(() => {
-    if (isCurrentUserPainter && !showWordSelection && !selectedWord) {
+    if (isCurrentUserPainter && !showWordSelection && !selectedWord && !isSelectingPainter) {
       console.log("User became painter, fetching word options");
       fetchWordOptions();
     }
-  }, [isCurrentUserPainter, showWordSelection, selectedWord]);
+  }, [isCurrentUserPainter, showWordSelection, selectedWord, isSelectingPainter]);
 
   // const wordToGuess = selectedWord || "noword";
 
@@ -738,7 +738,7 @@ const LobbyPage: FC = ({}) => {
     if (!loading) {
       assignPainterIfNeeded();
     }
-  }, [lobbyId, currentUserId, currentUserToken, loading]);
+  }, [lobby, lobbyId, currentUserId, currentUserToken, loading]);
 
   useEffect(() => {
     // Remove the automatic timer start from here
