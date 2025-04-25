@@ -638,39 +638,49 @@ const LobbyPage: FC = ({}) => {
     
         // 2) Fetch
         let lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-    
-        // 3) If no painter yet and user is lobby owner, pick one
-        if (!lobbyData.currentPainterToken && lobbyData.lobbyOwner.toString() === currentUserId) {
-          lobbyData = await apiService.post<LobbyData>(
-            `/lobbies/${lobbyId}/nextPainter`,
-            {}
-          );
-
-        }
+        
         console.log(`NEW TOKEN :${lobbyData.currentPainterToken}`);       
-        // 4) Set lobby and painter status
+        // 3) Set lobby and painter status
         setLobby(lobbyData);
         setIsCurrentUserPainter(lobbyData.currentPainterToken == currentUserToken);
       } catch (err) {
         console.error(err);
         message.error("Could not join lobby.");
-      } finally {
-        setLoading(false);
-      }
+      } 
     };
     
     if (lobbyId && currentUserId) joinThenFetch();
   }, [lobbyId, currentUserId, apiService, currentUserToken]);
 
   useEffect(() => {
+    const Trigger = async () => {
+        
+    
+        if (!lobby?.currentPainterToken && lobby?.lobbyOwner.toString() === currentUserId) {
+          await apiService.post<LobbyData>(
+            `/lobbies/${lobbyId}/nextPainter`,
+            {}
+          );
 
-    if(lobby?.currentPainterToken == currentUserToken){
-      setIsCurrentUserPainter(true);
-  
-    } else {
-      setIsCurrentUserPainter(false);
+        } 
+
+        let updatedLobby = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+
+        if(updatedLobby.currentPainterToken == currentUserToken){
+          setIsCurrentUserPainter(true);
+      
+        } else {
+          setIsCurrentUserPainter(false);
+        }
     }
-  }, [lobby, currentUserToken]);
+
+    if(!loading){
+      Trigger();
+    }
+
+
+    setLoading(false);
+  }, [lobby]);
 
   useEffect(() => {
     if (socket && lobby && lobby.drawTime) {
