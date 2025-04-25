@@ -1008,7 +1008,7 @@ const LobbyPage: FC = ({}) => {
       });
       socketIo.on("roundEnded", async () => {
         console.log("Round ended at:", new Date().toISOString());
-        setIsCurrentUserPainter(false); // Assume non-painter until confirmed
+         // Assume non-painter until confirmed
         setSelectedWord(""); // Clear current word
         setShowWordSelection(false); // Hide word selection
         socketClearCanvas();  //clear canvas
@@ -1017,6 +1017,8 @@ const LobbyPage: FC = ({}) => {
           console.log("Current painter triggering next painter selection");
           await triggerNextPainterSelection();
           // Emit an event to notify others that painter selection is complete
+          const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+          setIsCurrentUserPainter(lobbyData.currentPainterToken == currentUserToken);
           socketIo?.emit("painter-selection-complete", { lobbyId });
         } else {
           console.log("Non-painter waiting for painter selection");
