@@ -648,7 +648,9 @@ const LobbyPage: FC = ({}) => {
         });
         
         // 3) Set lobby and painter status
-        setLobby(lobbyData);
+
+        if(!lobby?.currentPainterToken){setLobby(lobbyData);}
+        
         setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
       } catch (err) {
         console.error("Join error:", err);
@@ -695,9 +697,7 @@ const LobbyPage: FC = ({}) => {
               console.warn("Server returned null painter token for lobby:", lobbyId);
             }
             setLobby(updatedLobby);
-          } else {
-            setLobby(currentLobby); // Update with latest state
-          }
+          } 
         }
   
         // Set painter status based on latest lobby state
