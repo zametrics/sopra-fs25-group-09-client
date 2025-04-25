@@ -665,6 +665,8 @@ const LobbyPage: FC = ({}) => {
         } 
 
         const updatedLobby = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+        setLoading(false);
+        setLobby(updatedLobby);
 
         if(updatedLobby.currentPainterToken == currentUserToken){
           setIsCurrentUserPainter(true);
@@ -678,8 +680,6 @@ const LobbyPage: FC = ({}) => {
       Trigger();
     }
 
-
-    setLoading(false);
   }, [lobby]);
 
   useEffect(() => {
