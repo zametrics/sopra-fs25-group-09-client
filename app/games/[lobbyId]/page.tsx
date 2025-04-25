@@ -185,7 +185,7 @@ const LobbyPage: FC = ({}) => {
   const [showWordSelection, setShowWordSelection] = useState<boolean>(false);
   const [selectedWord, setSelectedWord] = useState<string>("");
   
-
+  const [isSelectingPainter, setIsSelectingPainter] = useState<boolean>(false);
   const wordToGuess = selectedWord || "placeholder"; //PLACEHOLDER WORD
 
   const triggerNextPainterSelection = useCallback(async () => {
@@ -300,13 +300,7 @@ const LobbyPage: FC = ({}) => {
     [wordOptions, socket, lobbyId]
   );
 
-  useEffect(() => {
-    if (isCurrentUserPainter && !showWordSelection && !selectedWord) {
-      console.log("User became painter, fetching word options");
-      fetchWordOptions();
-    }
-  }, [isCurrentUserPainter, showWordSelection, selectedWord]);
-  
+
 
   // const wordToGuess = selectedWord || "noword";
 
@@ -629,97 +623,69 @@ const LobbyPage: FC = ({}) => {
 
   // Fetch lobby data
   // Join then fetch lobby & pick a painter
-  useEffect(() => {
-    const joinThenFetch = async () => {
-      setLoading(true);
-      try {
-        // 1) Join
-        await apiService.put(`/lobbies/${lobbyId}/join?playerId=${currentUserId}`, {});
-    
-        // 2) Fetch
-        const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-        
-        console.log("Join fetch response:", {
-          lobbyId,
-          playerIds: lobbyData.playerIds,
-          currentPainterToken: lobbyData.currentPainterToken,
-        });
-        
-        // 3) Set lobby and painter status
+useEffect(() => {
+  const joinThenFetch = async () => {
+    setLoading(true);
+    try {
+      await apiService.put(`/lobbies/${lobbyId}/join?playerId=${currentUserId}`, {});
+      const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+      console.log("Join fetch response:", {
+        lobbyId,
+        playerIds: lobbyData.playerIds,
+        currentPainterToken: lobbyData.currentPainterToken,
+      });
+      if (isMounted.current) {
         setLobby(lobbyData);
-        console.log("I WAS TRIGGERED");
         setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
-      } catch (err) {
-        console.error("Join error:", err);
-
-      } finally {
+      }
+    } catch (err) {
+      console.error("Join error:", err);
+    } finally {
+      if (isMounted.current) {
         setLoading(false);
       }
-    };
-    
-    if (lobbyId && currentUserId) {
-      joinThenFetch();
     }
-  }, [lobbyId, currentUserId, currentUserToken]); // Removed apiService assuming it's stable
+  };
+  if (lobbyId && currentUserId) {
+    joinThenFetch();
+  }
+}, [lobbyId, currentUserId, currentUserToken]); // Removed apiService assuming it's stable
   
-  useEffect(() => {
-    const assignPainterIfNeeded = async () => {
-      if (loading || !lobby || !lobbyId || !currentUserId) {
-        console.log("Skipping painter assignment:", { loading, lobby, lobbyId, currentUserId });
-        return;
-      }
-  
-      try {
-        // Only assign painter if no painter exists and user is lobby owner
-        if (!lobby.currentPainterToken && lobby.lobbyOwner.toString() === currentUserId) {
-          // Double-check server state to avoid stale data
-          const currentLobby = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-          console.log("Pre-nextPainter lobby state:", {
-            lobbyId,
-            playerIds: currentLobby.playerIds,
-            currentPainterToken: currentLobby.currentPainterToken,
-          });
-  
-          if (!currentLobby.currentPainterToken && currentLobby.playerIds.length > 0) {
-            const updatedLobby = await apiService.post<LobbyData>(
-              `/lobbies/${lobbyId}/nextPainter`,
-              {}
-            );
-            console.log("Next painter response:", {
-              lobbyId,
-              playerIds: updatedLobby.playerIds,
-              currentPainterToken: updatedLobby.currentPainterToken,
-            });
-            if (!updatedLobby.currentPainterToken) {
-              console.warn("Server returned null painter token for lobby:", lobbyId);
-            }
+// Assign painter if needed
+useEffect(() => {
+  const assignPainterIfNeeded = async () => {
+    if (loading || !lobby || !lobbyId || !currentUserId) return;
+    try {
+      if (!lobby.currentPainterToken && lobby.lobbyOwner.toString() === currentUserId) {
+        const currentLobby = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+        if (!currentLobby.currentPainterToken && currentLobby.playerIds.length > 0) {
+          const updatedLobby = await apiService.post<LobbyData>(`/lobbies/${lobbyId}/nextPainter`, {});
+          if (isMounted.current) {
             setLobby(updatedLobby);
-          } else {
-            setLobby(currentLobby); // Update with latest state
           }
+        } else if (isMounted.current) {
+          setLobby(currentLobby);
         }
-  
-        // Set painter status based on latest lobby state
-        setIsCurrentUserPainter(lobby.currentPainterToken === currentUserToken);
-      } catch (err) {
-        console.error("Painter assignment error:", err);
       }
-    };
-  
-    if (!loading) {
-      assignPainterIfNeeded();
+      if (isMounted.current) {
+        setIsCurrentUserPainter(lobby.currentPainterToken === currentUserToken);
+      }
+    } catch (err) {
+      console.error("Painter assignment error:", err);
     }
-  }, [lobby, lobbyId, currentUserId, currentUserToken, loading]);
+  };
+  if (!loading) {
+    assignPainterIfNeeded();
+  }
+}, [lobby, lobbyId, currentUserId, currentUserToken, loading]);
 
-  useEffect(() => {
-    if (socket && lobby && lobby.drawTime) {
-      console.log("Auto-starting timer on page load, lobbyId:", lobbyId);
-      socket.emit("startTimer", {
-        lobbyId,
-        drawTime: lobby.drawTime,
-      });
-    }
-  }, [socket, lobby, lobbyId]);
+// Start timer
+useEffect(() => {
+  if (socket && lobby && lobby.drawTime) {
+    console.log("Auto-starting timer on page load, lobbyId:", lobbyId);
+    socket.emit("startTimer", { lobbyId, drawTime: lobby.drawTime });
+  }
+}, [socket, lobby, lobbyId]);
 
   const showLeaveConfirmation = () => {
     setIsLeaveModalVisible(true);
@@ -917,7 +883,6 @@ const LobbyPage: FC = ({}) => {
   useEffect(() => {
     let isMounted = true;
     let socketIo: Socket | null = null;
-    const disconnectTimeoutId: NodeJS.Timeout | null = null;
 
     const connectAndSetupSocket = async () => {
       // --- Check for pending disconnect on mount ---
@@ -932,7 +897,6 @@ const LobbyPage: FC = ({}) => {
         sessionStorage.removeItem(DISCONNECT_TIMEOUT_ID_KEY);
         sessionStorage.removeItem(DISCONNECT_LOBBY_ID_KEY);
       } else if (storedTimeoutId || storedLobbyId) {
-        // Clean up potentially stale entries if lobbyId doesn't match
         console.log(
           "[Mount] Cleaning up stale disconnect timer info from session storage."
         );
@@ -940,14 +904,12 @@ const LobbyPage: FC = ({}) => {
         sessionStorage.removeItem(DISCONNECT_LOBBY_ID_KEY);
       }
 
-      //http://localhost:3001 --- "https://socket-server-826256454260.europe-west1.run.app/" 
-      socketIo = io("https://socket-server-826256454260.europe-west1.run.app/", { path: "/api/socket" }); // Use your server URL
+      socketIo = io("https://socket-server-826256454260.europe-west1.run.app/", {
+        path: "/api/socket",
+      });
       setSocket(socketIo);
 
-      if (isMounted) {
-        setSocket(socketIo); // Set the socket state
-      } else {
-        // If component unmounted before socket connected, disconnect immediately
+      if (!isMounted) {
         socketIo.disconnect();
         return;
       }
@@ -957,11 +919,10 @@ const LobbyPage: FC = ({}) => {
         const userData = await apiService.get<{ id: number; username: string }>(
           `/users/${currentUserId}`
         );
-        const username = userData.username;
         socketIo.emit("joinLobby", {
           lobbyId,
           userId: currentUserId,
-          username,
+          username: userData.username,
         });
         console.log("Emitted joinLobby");
       } catch (error) {
@@ -970,114 +931,103 @@ const LobbyPage: FC = ({}) => {
           lobbyId,
           userId: currentUserId,
           username: "Guest",
-        }); // Join as guest on error
+        });
       }
 
-      // --- Request initial state AFTER joining ---
+      // --- Request initial state ---
       if (!isCanvasInitialized && isMounted) {
         console.log("Requesting initial canvas state...");
         socketIo.emit("request-initial-state");
       }
 
-      // --- Setup all socket event listeners ---
+      // --- Socket Event Listeners ---
       socketIo.on("connect", () => {
         console.log("Socket connected:", socketIo?.id);
       });
       socketIo.on("disconnect", (reason) => {
         console.log("Socket disconnected:", reason);
         if (isMounted) {
-          // Maybe show a message or attempt reconnect depending on the reason
           message.warning("Disconnected from server.");
-          setSocket(null); // Update state
         }
       });
 
-      // --- Listener for receiving the final initial state ---
       socketIo.on("timerUpdate", (newTime: number) => {
-        //console.log("Received timer update:", newTime);
         setTimer(newTime);
       });
 
       socketIo.on("word-selected", (data) => {
         console.log("Received selected word from another player:", data.word);
-
-        // Update the selected word state
         setSelectedWord(data.word);
-
-        // Hide the word selection modal if it's visible
         setShowWordSelection(false);
       });
+
       socketIo.on("roundEnded", async () => {
         console.log("Round ended at:", new Date().toISOString());
-
         setIsCurrentUserPainter(false);
-        setSelectedWord(""); // Clear current word
-        setShowWordSelection(false); // Hide word selection
-        socketClearCanvas();  //clear canvas
-      
-        if (lobby?.currentPainterToken == currentUserToken) {
+        setSelectedWord("");
+        setShowWordSelection(false);
+        socketClearCanvas();
+        setIsSelectingPainter(true); // NEW: Block navigation
+
+        if (lobby?.currentPainterToken === currentUserToken) {
           console.log("Current painter triggering next painter selection");
-          await triggerNextPainterSelection();
-          // Emit an event to notify others that painter selection is complete
-          const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-          setIsCurrentUserPainter(lobbyData.currentPainterToken == currentUserToken);
-          socketIo?.emit("painter-selection-complete", { lobbyId });
-          console.log("emit painter-selection-complete");
+          try {
+            await triggerNextPainterSelection();
+            const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+            if (isMounted) {
+              setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
+              socketIo?.emit("painter-selection-complete", { lobbyId });
+              console.log("emit painter-selection-complete");
+            }
+          } catch (err) {
+            console.error("Error in triggerNextPainterSelection:", err);
+            message.error("Failed to select next painter");
+          }
         } else {
           console.log("Non-painter waiting for painter selection");
-          // Wait for painter-selection-complete event instead of a fixed delay
         }
       });
 
-      // New listener for painter selection completion
       socketIo.on("painter-selection-complete", async () => {
         console.log("Received painter-selection-complete, fetching lobby state");
         try {
           const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
           console.log(`Fetched lobby ${lobbyId}, NEW TOKEN: ${lobbyData.currentPainterToken}`);
-          setLobby(lobbyData);
-          setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
+          if (isMounted) {
+            setLobby(lobbyData);
+            setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
+            setIsSelectingPainter(false); // NEW: Allow navigation
+          }
         } catch (err) {
           console.error("Failed to fetch lobby:", err);
           message.error("Could not update lobby state");
         }
       });
-      
 
       socketIo.on("gameUpdate", (gameData) => {
         console.log("Received gameUpdate:", gameData);
-      
-      
-        // Update other fields if present
-        if (gameData.playerIds) {
-          setLobby((prev) => (prev ? { ...prev, playerIds: gameData.playerIds } : prev));
-        }
-        if (gameData.currentRound !== undefined) {
-          setCurrentRound(gameData.currentRound);
-        }
-        if (gameData.numOfRounds !== undefined) {
-          setNumOfRounds(gameData.numOfRounds);
+        if (isMounted) {
+          setLobby((prev) =>
+            prev && gameData.playerIds
+              ? { ...prev, playerIds: gameData.playerIds }
+              : prev
+          );
+          setCurrentRound(gameData.currentRound ?? currentRound);
+          setNumOfRounds(gameData.numOfRounds ?? numOfRounds);
         }
       });
-      
 
       socketIo.on("load-canvas-state", (data: LoadCanvasStateData) => {
         if (!isCanvasInitialized && data.dataUrl && isMounted) {
           console.log("Received load-canvas-state. Loading canvas...");
-          loadCanvasFromDataUrl(data.dataUrl, true); // Load and reset history
+          loadCanvasFromDataUrl(data.dataUrl, true);
         }
       });
 
-      // --- Listener to PROVIDE state if requested -[--
       socketIo.on("get-canvas-state", (data: GetCanvasStateData) => {
-        // Check if this client should respond (e.g., not the requester themselves, although server handles this)
-        // Also ensure canvas is ready and socket exists
         if (canvasElementRef.current && socketIo) {
-          console.log(
-            `Received request to provide canvas state for ${data.requesterId}. Sending...`
-          );
-          const currentDataUrl =
-            canvasElementRef.current.toDataURL("image/png");
+          console.log(`Received request to provide canvas state for ${data.requesterId}. Sending...`);
+          const currentDataUrl = canvasElementRef.current.toDataURL("image/png");
           socketIo.emit("send-canvas-state", {
             targetUserId: data.requesterId,
             dataUrl: currentDataUrl,
@@ -1085,7 +1035,6 @@ const LobbyPage: FC = ({}) => {
         }
       });
 
-      // --- Listener for INCOMING draw batches ---
       socketIo.on("draw-line-batch", (data: DrawBatchEmitDataWithUser) => {
         console.log("received drawing information from socket server");
         const canvas = canvasElementRef.current;
@@ -1094,50 +1043,26 @@ const LobbyPage: FC = ({}) => {
         if (!ctx) return;
 
         const drawerUserId = data.userId;
+        const lastPointForUser = remoteUsersLastPointRef.current.get(drawerUserId) || null;
+        let prevPointForDrawing: Point | null = lastPointForUser;
 
-        // IMPORTANT: Normally, socket.to(lobbyId) excludes the sender.
-        // If your server logic changes to use io.to(lobbyId),
-        // you MUST uncomment the check below to avoid drawing your own lines twice.
-        // if (drawerUserId === currentUserId) {
-        //     // console.log("Ignoring own draw batch echo"); // Debug
-        //     return;
-        // }
+        if (!data.points || data.points.length === 0) return;
 
-        // Ensure points exist
-        if (!data.points || data.points.length === 0) {
-          // console.log(`Received empty batch from ${drawerUserId}, ignoring.`); // Debug
-          return;
-        }
-
-        // Retrieve the last known point for this specific user
-        const lastPointForUser =
-          remoteUsersLastPointRef.current.get(drawerUserId) || null;
-        let prevPointForDrawing: Point | null = lastPointForUser; // Start with the stored point
-
-        // console.log(`Drawing batch from ${drawerUserId}. Connecting from:`, prevPointForDrawing, `Points: ${data.points.length}`); // Debug
-
-        // Iterate through the received points and draw segments
         for (const currentPoint of data.points) {
-          // Draw the segment connecting the previous point to the current one
           drawLine({
-            prevPoint: prevPointForDrawing, // Use the evolving previous point
-            currentPoint: currentPoint,
+            prevPoint: prevPointForDrawing,
+            currentPoint,
             ctx,
             color: data.color,
             brushSize: data.brushSize,
           });
-          // Update the previous point for the *next* segment within this batch
           prevPointForDrawing = currentPoint;
         }
 
-        // --- CRUCIAL: Update the last known point for this user ---
-        // Store the very last point from this batch
         const finalPointInBatch = data.points[data.points.length - 1];
         remoteUsersLastPointRef.current.set(drawerUserId, finalPointInBatch);
-        // console.log(`Updated last point for ${drawerUserId} to:`, finalPointInBatch); // Debug
       });
 
-      // --- Listener for Clear (Save the cleared state locally) ---
       socketIo.on("clear", (data: ClearEmitData) => {
         console.log(`Received clear instruction from user ${data.userId}`);
         const canvas = canvasElementRef.current;
@@ -1145,30 +1070,21 @@ const LobbyPage: FC = ({}) => {
         if (!ctx || !canvas) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         remoteUsersLastPointRef.current.clear();
-        // Save the cleared state triggered by remote user
         saveCanvasState();
       });
 
-      // --- NEW: Listener for INCOMING Draw End ---
       socketIo.on("draw-end", (data: DrawEndData) => {
-        const enderUserId = data.userId;
-        // console.log(`Received draw-end from user ${enderUserId}`); // Debug
-        // Reset the last known point for this user, so the next line doesn't connect
-        remoteUsersLastPointRef.current.set(enderUserId, null);
-        // console.log(`Reset last point for ${enderUserId} to null`); // Debug
+        remoteUsersLastPointRef.current.set(data.userId, null);
       });
 
-      // --- Listener for Fill Area (Saves state after applying remote fill) ---
       socketIo.on("fill-area", (data: FillAreaDataWithUser) => {
         const canvas = canvasElementRef.current;
         const ctx = canvas?.getContext("2d", { willReadFrequently: true });
         if (!ctx) return;
         floodFill(ctx, data.x, data.y, data.color);
-        // Save state AFTER remote fill
         saveCanvasState();
       });
 
-      // --- Listener for Sync Canvas (Resets history with synced state) ---
       socketIo.on("sync-canvas", (data: SyncCanvasData) => {
         if (isMounted) {
           loadCanvasFromDataUrl(data.dataUrl, true);
@@ -1176,46 +1092,28 @@ const LobbyPage: FC = ({}) => {
       });
 
       socketIo.on("playerLeft", (leftPlayer: { id: number | string }) => {
-        // Use the type emitted by your server
-        const leftPlayerId = String(leftPlayer.id); // Ensure string key for map
+        const leftPlayerId = String(leftPlayer.id);
         if (remoteUsersLastPointRef.current.has(leftPlayerId)) {
           remoteUsersLastPointRef.current.delete(leftPlayerId);
-          console.log(
-            `Cleared last point state for user ${leftPlayerId} who left.`
-          );
+          console.log(`Cleared last point state for user ${leftPlayerId} who left.`);
         }
       });
 
-
-
-      // Save initial canvas state if needed
-      if (
-        canvasElementRef.current &&
-        historyStack.length === 0 &&
-        !isCanvasInitialized &&
-        isMounted
-      ) {
+      if (canvasElementRef.current && historyStack.length === 0 && !isCanvasInitialized && isMounted) {
         saveCanvasState();
       }
     };
+
     connectAndSetupSocket();
 
     return () => {
       console.log("[Unmount] GamePage cleanup running...");
-      isMounted = false; // Mark as unmounted
+      isMounted = false;
 
-      // --- REMOVE Timer Logic ---
-      // const timeoutId = setTimeout(...); // DELETE THIS
-      // sessionStorage.setItem(DISCONNECT_TIMEOUT_ID_KEY, String(timeoutId)); // DELETE THIS
-      // sessionStorage.setItem(DISCONNECT_LOBBY_ID_KEY, lobbyId); // DELETE THIS
-      // disconnectTimeoutId = timeoutId; // DELETE THIS
-      console.log(
-        `[Unmount] Client-side timer logic removed. Server handles disconnect delay.`
-      );
+      console.log("[Unmount] Client-side timer logic removed. Server handles disconnect delay.");
 
-      // --- Original Socket Cleanup ---
       if (socketIo) {
-        console.log("[Unmount] Disconnecting socket...");
+        console.log("[Unmount] Removing socket listeners...");
         socketIo.off("connect");
         socketIo.off("disconnect");
         socketIo.off("timerUpdate");
@@ -1230,27 +1128,17 @@ const LobbyPage: FC = ({}) => {
         socketIo.off("fill-area");
         socketIo.off("sync-canvas");
         socketIo.off("playerLeft");
-        socketIo.disconnect();
+        // NEW: Delay disconnection to allow event receipt
+        setTimeout(() => {
+          console.log("[Unmount] Disconnecting socket after delay...");
+          socketIo?.disconnect();
+        }, 1000); // 1-second delay
       }
-      setSocket(null); // Clear socket state
-
-      // Clear the locally tracked timeout ID if the component unmounts *before* the timeout fires
-      // This prevents trying to clear a timeout that doesn't exist if cleanup runs twice somehow
-      if (disconnectTimeoutId) {
-        // NOTE: Do NOT clear the timeout here. The timer *should* run if the user stays away.
-        // We only clear it on re-mount if they come back.
-      }
+      setSocket(null);
     };
-    // Rerun effect if lobbyId changes (navigating between different game pages)
-    // Add other stable dependencies like apiService, fetchWordOptions if necessary
-    // IMPORTANT: performLeaveLobby is now stable due to useCallback, so it can be a dependency
-    //            if needed, but it's mainly used in the timeout/cleanup.
-  }, [
-    fetchWordOptions
-  ]);
-  // Note: Removed 'lobby' from deps here to avoid re-running socket setup on every lobby state change.
-  // Fetching words depends on lobby, so it's handled conditionally inside or in fetchWordOptions.
-
+  }, [lobbyId, currentUserId, currentUserToken, isCanvasInitialized, loadCanvasFromDataUrl, saveCanvasState]); // NEW: Stable dependencies
+ 
+ 
   // --- Local Clear Function ---
   const socketClearCanvas = useCallback(() => {
     // ... (Implementation: emit clear, clear locally, saveCanvasState) ...
@@ -1269,6 +1157,21 @@ const LobbyPage: FC = ({}) => {
     remoteUsersLastPointRef.current.clear();
     saveCanvasState(); // Save the blank state
   }, [socket, saveCanvasState]);
+
+  useEffect(() => {
+    if (isSelectingPainter) {
+      console.log("Blocking navigation during painter selection");
+      const handleBeforePopState = () => {
+        console.log("Preventing navigation during painter selection");
+        return false; // Block navigation
+      };
+      window.history.pushState(null, "", window.location.href); // Prevent back/forward
+      window.addEventListener("popstate", handleBeforePopState);
+      return () => {
+        window.removeEventListener("popstate", handleBeforePopState);
+      };
+    }
+  }, [isSelectingPainter]);
 
   // --- Keep rendering logic (Loading, Not Found, Main Game UI) ---
   if (loading && !lobby) {
