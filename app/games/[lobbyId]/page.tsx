@@ -738,7 +738,7 @@ const LobbyPage: FC = ({}) => {
     if (!loading) {
       assignPainterIfNeeded();
     }
-  }, [lobby, lobbyId, currentUserId, currentUserToken, loading]);
+  }, [lobbyId, currentUserId, currentUserToken, loading]);
 
   useEffect(() => {
     // Remove the automatic timer start from here
