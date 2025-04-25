@@ -216,7 +216,9 @@ const LobbyPage: FC = ({}) => {
 
   
   const fetchWordOptions = useCallback(async () => {
-    if (!isCurrentUserPainter) {
+    console.log("THE WORD FETCHER: ", lobby?.currentPainterToken != currentUserToken)
+    
+    if (lobby?.currentPainterToken != currentUserToken) {
       console.log("Skipping word fetch: User is not the current painter");
       return;
     }
@@ -1005,7 +1007,7 @@ const LobbyPage: FC = ({}) => {
         setIsSelectingPainter(true); // NEW: Block navigation
 
         const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-
+        setLobby(lobbyData)
         console.log("asd","asd",lobbyData.currentPainterToken, currentUserToken);
         if (lobbyData.currentPainterToken === currentUserToken) {
           console.log("Current painter triggering next painter selection");
@@ -1013,6 +1015,7 @@ const LobbyPage: FC = ({}) => {
             await triggerNextPainterSelection();
             socketIo?.emit("painter-selection-complete", { lobbyId });
             const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+            setLobby(lobbyData)
             console.log("emit painter-selection-complete");
 
             if (isMounted) {
