@@ -717,7 +717,7 @@ const LobbyPage: FC = ({}) => {
         }
   
         // Set painter status based on latest lobby state
-        setIsCurrentUserPainter(lobby.currentPainterToken === currentUserToken);
+        setIsCurrentUserPainter(true);
       } catch (err) {
         console.error("Painter assignment error:", err);
       }
