@@ -1192,7 +1192,7 @@ useEffect(() => {
   // --- Local Clear Function ---
   const socketClearCanvas = useCallback(() => {
     // ... (Implementation: emit clear, clear locally, saveCanvasState) ...
-    if (lobby?.currentPainterToken != currentUserToken) {
+    if (!isCurrentUserPainter) {
       console.log("Clear blocked: User is not the current painter.");
       return;
     } //makes sure only painter can delete
