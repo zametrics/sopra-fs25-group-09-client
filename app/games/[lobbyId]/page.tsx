@@ -216,10 +216,10 @@ const LobbyPage: FC = ({}) => {
 
   
   const fetchWordOptions = useCallback(async () => {
-    console.log("THE WORD FETCHER: ", lobby?.currentPainterToken !== currentUserToken);
+    console.log("THE WORD FETCHER: ", isCurrentUserPainter);
   
-    if (lobby?.currentPainterToken !== currentUserToken) {
-      console.log("Skipping word fetch1: User is not the current painter",currentUserToken, lobby?.currentPainterToken );
+    if (isCurrentUserPainter) {
+      console.log("Skipping word fetch1: User is not the current painter");
       return;
     }
     if (!lobby || !lobby.currentPainterToken) {
