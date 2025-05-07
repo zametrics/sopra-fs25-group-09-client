@@ -247,14 +247,6 @@ const LobbyPage: FC = ({}) => {
         setWordOptions(options);
         setShowWordSelection(true);
   
-        // Start the timer after word options are set and UI is shown
-        if (socket && lobby.drawTime) {
-          console.log("Word options fetched, starting timer for lobby:", lobbyId);
-          socket.emit("startTimer", {
-            lobbyId,
-            drawTime: lobby.drawTime,
-          });
-        }
       } else {
         console.error("Invalid response format for word options:", response);
         setWordOptions([
@@ -264,14 +256,6 @@ const LobbyPage: FC = ({}) => {
         ]);
         setShowWordSelection(true);
   
-        // Start the timer even in fallback case
-        if (socket && lobby.drawTime) {
-          console.log("Fallback word options set, starting timer for lobby:", lobbyId);
-          socket.emit("startTimer", {
-            lobbyId,
-            drawTime: lobby.drawTime,
-          });
-        }
       }
     } catch (error) {
       console.error("Error fetching word options:", error);
@@ -282,16 +266,9 @@ const LobbyPage: FC = ({}) => {
       ]);
       setShowWordSelection(true);
   
-      // Start the timer even in error case
-      if (socket && lobby.drawTime) {
-        console.log("Error case: Fallback word options set, starting timer for lobby:", lobbyId);
-        socket.emit("startTimer", {
-          lobbyId,
-          drawTime: lobby.drawTime,
-        });
-      }
+
     }
-  }, [lobby, apiService, currentUserToken, socket, lobbyId]);
+  }, []);
 
   const handleWordSelect = useCallback(
     (selectedIndex: number) => {
@@ -317,26 +294,28 @@ const LobbyPage: FC = ({}) => {
       // Emit the selected word to other players via socket
       if (socket) {
         console.log(`Emitting selected word "${word}" to other players`);
+
         socket.emit("word-selected", {
           lobbyId,
           word,
         });
+
+        socket.emit("startTimer", {
+          lobbyId,
+          drawTime: lobby?.drawTime,
+        });
       }
 
-      // Hide word selection after a short delay
-      setTimeout(() => {
-        setShowWordSelection(false);
-      }, 1000);
     },
-    [wordOptions, socket, lobbyId]
+    []
   );
 
   useEffect(() => {
-    if (isCurrentUserPainter && !showWordSelection && !selectedWord && !isSelectingPainter) {
+    if (isCurrentUserPainter) {
       console.log("User became painter, fetching word options");
       fetchWordOptions();
     }
-  }, [isCurrentUserPainter, showWordSelection, selectedWord, isSelectingPainter]);
+  }, [isCurrentUserPainter]);
 
   // const wordToGuess = selectedWord || "noword";
 
@@ -688,10 +667,10 @@ const LobbyPage: FC = ({}) => {
       }
     };
     
-    if (lobbyId && currentUserId) {
+    if (currentUserId) {
       joinThenFetch();
     }
-  }, [lobbyId, currentUserId, currentUserToken]); // Removed apiService assuming it's stable
+  }, []); // Removed apiService assuming it's stable
   
   useEffect(() => {
     const assignPainterIfNeeded = async () => {
@@ -703,28 +682,36 @@ const LobbyPage: FC = ({}) => {
       try {
         // Only assign painter if no painter exists and user is lobby owner
         const updatedLobby = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`)
+        
         if (!updatedLobby.currentPainterToken && lobby.lobbyOwner.toString() === currentUserId) {
+
+          /*
           // Double-check server state to avoid stale data
           const currentLobby = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
           console.log("Pre-nextPainter lobby state:", {
             lobbyId,
             playerIds: currentLobby.playerIds,
             currentPainterToken: currentLobby.currentPainterToken,
-          });
+          });*/
+          
   
-          if (!currentLobby.currentPainterToken && currentLobby.playerIds.length > 0) {
+          if (!updatedLobby.currentPainterToken) {
             const updatedLobby = await apiService.post<LobbyData>(
               `/lobbies/${lobbyId}/nextPainter`,
               {}
             );
+            /*
             console.log("Next painter response:", {
               lobbyId,
               playerIds: updatedLobby.playerIds,
               currentPainterToken: updatedLobby.currentPainterToken,
             });
+            
             if (!updatedLobby.currentPainterToken) {
               console.warn("Server returned null painter token for lobby:", lobbyId);
             }
+
+            */
             setLobby(updatedLobby);
           } 
         }
@@ -739,7 +726,7 @@ const LobbyPage: FC = ({}) => {
     if (!loading) {
       assignPainterIfNeeded();
     }
-  }, [lobby, lobbyId, currentUserId, currentUserToken, loading]);
+  }, [loading]);
 
   useEffect(() => {
     // Remove the automatic timer start from here
@@ -1034,7 +1021,7 @@ const LobbyPage: FC = ({}) => {
 
         const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
         setLobby(lobbyData)
-        console.log("asd","asd",lobbyData.currentPainterToken, currentUserToken);
+        
         if (lobbyData.currentPainterToken === currentUserToken) {
           console.log("Current painter triggering next painter selection");
           try {
@@ -1056,11 +1043,10 @@ const LobbyPage: FC = ({}) => {
         try {
           const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
           console.log(`Fetched lobby ${lobbyId}, NEW TOKEN: ${lobbyData.currentPainterToken}`);
-          if (isMounted) {
-            setLobby(lobbyData);
-            setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
-            setIsSelectingPainter(false); // NEW: Allow navigation
-          }
+          setLobby(lobbyData);
+          setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
+          setIsSelectingPainter(false); // NEW: Allow navigation
+        
         } catch (err) {
           console.error("Failed to fetch lobby:", err);
           message.error("Could not update lobby state");
