@@ -219,15 +219,15 @@ const LobbyPage: FC = ({}) => {
     console.log("THE WORD FETCHER: ", lobby?.currentPainterToken !== currentUserToken);
   
     if (lobby?.currentPainterToken !== currentUserToken) {
-      console.log("Skipping word fetch: User is not the current painter");
+      console.log("Skipping word fetch1: User is not the current painter");
       return;
     }
     if (!lobby || !lobby.currentPainterToken) {
-      console.log("Skipping word fetch: Lobby or painter token not loaded");
+      console.log("Skipping word fetch2: Lobby or painter token not loaded");
       return;
     }
     if (lobby.currentPainterToken !== currentUserToken) {
-      console.log("Skipping word fetch: Current user is not the painter");
+      console.log("Skipping word fetch3: Current user is not the painter");
       return;
     }
   
