@@ -219,7 +219,7 @@ const LobbyPage: FC = ({}) => {
     console.log("THE WORD FETCHER: ", lobby?.currentPainterToken !== currentUserToken);
   
     if (lobby?.currentPainterToken !== currentUserToken) {
-      console.log("Skipping word fetch1: User is not the current painter");
+      console.log("Skipping word fetch1: User is not the current painter",currentUserToken, lobby?.currentPainterToken );
       return;
     }
     if (!lobby || !lobby.currentPainterToken) {
