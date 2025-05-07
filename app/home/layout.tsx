@@ -361,8 +361,6 @@ export default function HomeLayout({
         // Explicitly type joinError if possible
         console.error("Debug - Join error:", joinError);
         // More specific error messages based on potential API responses
-        const errorDetail =
-          "Failed to join the lobby. It might be full, already started, or you might already be in it.";
       }
     } catch (outerError) {
       console.error("Unexpected error during join:", outerError);
