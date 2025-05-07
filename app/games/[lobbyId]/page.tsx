@@ -1190,13 +1190,12 @@ useEffect(() => {
   }, [isSelectingPainter]);
 
   // --- Local Clear Function ---
-  const socketClearCanvas = useCallback(() => {
-    // ... (Implementation: emit clear, clear locally, saveCanvasState) ...
+  const socketClearCanvas = () => {
     if (!isCurrentUserPainter) {
       console.log("Clear blocked: User is not the current painter.");
       return;
-    } //makes sure only painter can delete
-
+    }
+  
     if (socket) {
       socket.emit("clear");
     }
@@ -1206,7 +1205,7 @@ useEffect(() => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     remoteUsersLastPointRef.current.clear();
     saveCanvasState(); // Save the blank state
-  }, [socket, saveCanvasState]);
+  };
 
   // --- Keep rendering logic (Loading, Not Found, Main Game UI) ---
   if (loading && !lobby) {
