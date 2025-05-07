@@ -703,7 +703,7 @@ useEffect(() => {
         setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
       }
 
-      setLoading(false);
+      setLoading(true);
 
     } catch (err) {
       console.error("Painter assignment error:", err);
