@@ -215,19 +215,15 @@ const LobbyPage: FC = ({}) => {
   }, []);
 
   
-  const fetchWordOptions = useCallback(async () => {
+  const fetchWordOptions = async () => {
     console.log("THE WORD FETCHER: ", isCurrentUserPainter);
   
-    if (isCurrentUserPainter) {
-      console.log("Skipping word fetch1: User is not the current painter");
+    if (!isCurrentUserPainter) {
+      console.log("Skipping word fetch: User is not the current painter");
       return;
     }
-    if (!lobby || !lobby.currentPainterToken) {
-      console.log("Skipping word fetch2: Lobby or painter token not loaded");
-      return;
-    }
-    if (lobby.currentPainterToken !== currentUserToken) {
-      console.log("Skipping word fetch3: Current user is not the painter");
+    if (!lobby) {
+      console.log("Skipping word fetch: Lobby not loaded");
       return;
     }
   
@@ -246,7 +242,6 @@ const LobbyPage: FC = ({}) => {
         const options = response.map((word) => ({ word, selected: false }));
         setWordOptions(options);
         setShowWordSelection(true);
-  
       } else {
         console.error("Invalid response format for word options:", response);
         setWordOptions([
@@ -255,7 +250,6 @@ const LobbyPage: FC = ({}) => {
           { word: "cherry", selected: false },
         ]);
         setShowWordSelection(true);
-  
       }
     } catch (error) {
       console.error("Error fetching word options:", error);
@@ -265,10 +259,16 @@ const LobbyPage: FC = ({}) => {
         { word: "cherry", selected: false },
       ]);
       setShowWordSelection(true);
-  
-
     }
-  }, []);
+  };
+  
+  // Trigger fetchWordOptions when isCurrentUserPainter changes
+  useEffect(() => {
+    if (isCurrentUserPainter) {
+      console.log("User became painter, fetching word options");
+      fetchWordOptions();
+    }
+  }, [isCurrentUserPainter]);
 
   const handleWordSelect = useCallback(
     (selectedIndex: number) => {
