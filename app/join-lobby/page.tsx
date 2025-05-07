@@ -25,6 +25,7 @@ interface Lobby {
   type: string;
   // Add hostUsername if available from backend, otherwise derive it
   hostUsername?: string; // optionaler Hostname aus User-Endpoint
+  status: number;
 }
 
 const LOBBIES_PER_PAGE = 6;
@@ -218,6 +219,7 @@ const JoinLobbyPage: React.FC = () => {
                 const hostUsername = lobby.hostUsername || "Loading...";
                 const currentPlayers = lobby.playerIds?.length || 0; // Safely get player count
                 const lobbyCode = lobby.id; // Assuming lobby.id is the code
+                const status = lobby.status;
 
                 return (
                   <div key={lobbyCode} className="lobby-entry-container">
@@ -226,7 +228,7 @@ const JoinLobbyPage: React.FC = () => {
                       <div className="lobby-list-info">
                         <span className="lobby-host-name">{hostUsername}</span>
                         <span className="lobby-status-text">
-                          WAITING FOR PLAYERS..
+                          {status === 0 ? "WAITING FOR PLAYERS.." : "IN GAME"}
                         </span>
                         <span className="lobby-player-count">{`${currentPlayers}/${lobby.numOfMaxPlayers}`}</span>
                       </div>

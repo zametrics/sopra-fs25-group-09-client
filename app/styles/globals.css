@@ -1750,6 +1750,93 @@ html body .page-background .word-option.selected {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
+.modal-no-open-lobbies .ant-modal-content {
+  background-color: #ffffff9f !important;
+  border-radius: 40px !important;
+  padding: 18px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
+  animation: fadeInModal 0.4s ease !important;
+  border: 2px solid rgb(255, 255, 255) !important;
+  backdrop-filter: blur(8px) !important;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.712) !important;
+
+}
+
+.ant-modal-mask {
+  backdrop-filter: blur(1px);
+  background-color: rgba(0, 0, 0, 0.3); /* leicht verdunkelt */
+}
+
+.modal-content-custom {
+  text-align: center !important;
+}
+
+.modal-title-custom {
+  background-color: rgb(255, 55, 55);
+  color: #ffffff;
+  border-radius: 1000;
+  font-size: 1.8rem;
+  font-weight: normal;
+  margin-bottom: 12px;
+  font-family: "Digitalt", sans-serif;
+  letter-spacing: 1;
+  -webkit-text-stroke:0.7px rgb(255, 55, 55);
+}
+
+.modal-text {
+  font-size: 1.5rem;
+  color: #222222;
+  margin-bottom: 10px;
+  padding-left: 20;
+  padding-right: 20;
+  padding-top: 10;
+  font-family: "Koulen";
+  
+
+}
+
+.modal-cancel-button {
+  background: linear-gradient(
+    45deg,
+    #929292 0%,
+    /* Heller Ton unten links */ #929292 49.9%,
+    #838383 50%,
+    /* Dunkler Ton oben rechts */ #838383 100%
+  ) !important;
+  height: 50 !important;
+  padding: 5px !important;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+  width: 120px !important;
+  font-size: 26px !important;
+  margin-top: -10px !important;
+  margin-bottom: 8px !important;
+}
+
+.modal-button-primary {
+  height: 60 !important;
+  padding: 5px !important;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+  width: 240px !important;
+  font-size: 30px !important;
+  margin-top: 10px !important;
+  margin-bottom: 25px !important;
+}
+
+/* Optional: Smooth fade-in animation */
+@keyframes fadeInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .leaderboard-container {

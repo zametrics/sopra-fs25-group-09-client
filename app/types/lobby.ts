@@ -1,5 +1,5 @@
 export interface Lobby {
-  id: string | null;
+  id: string;
   lobbyOwner: number | null;
   numOfMaxPlayers: number | null;
   playerIds: Int32Array | null;
@@ -7,4 +7,5 @@ export interface Lobby {
   numOfRounds: number;
   drawTime: number | null;
   type: string | null;
+  status: number;
 }

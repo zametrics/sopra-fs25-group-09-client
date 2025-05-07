@@ -7,6 +7,8 @@ import { message } from "antd";
 import { useApi } from "@/hooks/useApi";
 import { User } from "@/types/user";
 import { useBackgroundMusic } from "@/hooks/useBackgroundMusic";
+import { Lobby } from "@/types/lobby";
+import { Modal, Button} from "antd"; // Modal für Popup, Spin für Spinner
 
 // Exporting the HomeLayout component as default so that it can be imported easily in other files
 export default function HomeLayout({
@@ -54,6 +56,11 @@ export default function HomeLayout({
   // State to manage the current username, which is fetched from localStorage or initially set to an empty string
   const [username, setUsername] = useState<string>("");
 
+  // State for Quickplay Loading
+  const [quickPlayStatus, setQuickPlayStatus] = useState<"idle" | "searching" | "joining">("idle");
+  const [searchingDots, setSearchingDots] = useState(""); // Für die animierenden Punkte
+  const [isNoLobbyModalVisible, setIsNoLobbyModalVisible] = useState(false); // Modal für Fehler
+
   // This line retrieves the current user's ID from localStorage (only runs in the browser, so `typeof window !== "undefined"` is used to avoid SSR issues)
   const currentUserId =
     typeof window !== "undefined" ? localStorage.getItem("userId") : "";
@@ -96,6 +103,19 @@ export default function HomeLayout({
   }, [apiService, editUserId, username, localAvatarUrl]);
   //    Runs when editUserId, apiService, username, or localAvatarUrl changes
   //    It ensures the right data is shown when editing a profile
+
+  useEffect(() => {
+    if (quickPlayStatus !== "searching") return;
+  
+    const interval = setInterval(() => {
+      setSearchingDots((prev) => {
+        if (prev.length >= 3) return "";
+        return prev + ".";
+      });
+    }, 500);
+  
+    return () => clearInterval(interval);
+  }, [quickPlayStatus]);
 
   useEffect(() => {
     const profilePage = pathname.startsWith("/home/") && pathname !== "/home";
@@ -318,6 +338,71 @@ export default function HomeLayout({
     }
   };
 
+  const joinLobby = async (codeToJoin: string) => {
+    try {
+      const userIdStr = localStorage.getItem("userId");
+      const userId = userIdStr ? parseInt(JSON.parse(userIdStr), 10) : null;
+
+      if (!userId) {
+        console.error("Error: User not logged in")
+        return;
+      }
+
+      // Attempt to join
+      try {
+        await apiService.put(
+          `/lobbies/${codeToJoin}/join?playerId=${userId}`,
+          {}
+        );
+        setTimeout(() => {
+          router.push(`/lobbies/${codeToJoin}`);
+        }, 1000);
+      } catch (joinError) {
+        // Explicitly type joinError if possible
+        console.error("Debug - Join error:", joinError);
+        // More specific error messages based on potential API responses
+        const errorDetail =
+          "Failed to join the lobby. It might be full, already started, or you might already be in it.";
+      }
+    } catch (outerError) {
+      console.error("Unexpected error during join:", outerError);
+    }
+    // Removed finally block's state resets as they are handled within error/success paths
+  };
+
+  const handleQuickPlay = async () => {
+    if (quickPlayStatus !== "idle") return;
+    setQuickPlayStatus("searching");
+  
+    const MAX_ATTEMPTS = 10;
+    const INTERVAL_MS = 1000;
+  
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      try {
+        const lobbies = await apiService.get<Lobby[]>("/lobbies");
+        const openLobby = lobbies.find((lobby) => lobby.status === 0);
+  
+        if (openLobby) {
+          setQuickPlayStatus("joining");
+          await joinLobby(openLobby.id); // <-- nutzt bestehende Funktion
+          return;
+        }
+      } catch (error) {
+        console.error("Quickplay: error while polling lobbies", error);
+        break;
+      }
+  
+      await new Promise((resolve) => setTimeout(resolve, INTERVAL_MS));
+    }
+  
+    // Nach 10s keine Lobby gefunden
+    setQuickPlayStatus("idle");
+    setIsNoLobbyModalVisible(true);
+  };
+  
+
+
+
   return (
     <div className="page-background">
       {/* MUSIC CONTROLS */}
@@ -469,15 +554,54 @@ export default function HomeLayout({
 
           <div className="quickplay-box">
             <h2 className="quickplay-title">QUICKPLAY</h2>
-            <button
+            <Button
               className="green-button"
-              onClick={() => router.push("/quickplay")}
+              onClick={handleQuickPlay}
+              disabled={quickPlayStatus !== "idle"}
+              loading= {quickPlayStatus === "joining"}
             >
-              PLAY
-            </button>
+              {quickPlayStatus === "searching" && `Searching${searchingDots}`}
+              {quickPlayStatus === "idle" && "PLAY"}
+              {quickPlayStatus === "joining" && "JOINING"}
+            </Button>
           </div>
         </div>
       </div>
+      <Modal
+         className="modal-no-open-lobbies"
+         open={isNoLobbyModalVisible}
+         onOk={() => setIsNoLobbyModalVisible(false)}
+         onCancel={() => setIsNoLobbyModalVisible(false)}
+         centered
+         width={330}
+         closable={false}
+         footer={null}
+      >       
+         <div className="modal-content-custom">
+           <h2 className="modal-title-custom">NO LOBBIES FOUND</h2>
+           <p className="modal-text">
+              we couldnt find any open lobbies right now 🙁
+           </p>
+             <button
+               className="modal-button-primary green-button "
+               onClick={() => {
+                 setIsNoLobbyModalVisible(false);
+                 handleCreateLobby();
+               }}
+             >
+               Host Your Own
+             </button>
+             <button
+               className="modal-cancel-button green-button"
+               onClick={() => setIsNoLobbyModalVisible(false)}
+             >
+               Cancel
+             </button>
+         </div>
+      </Modal>
+
+
     </div>
+    
   );
 }
