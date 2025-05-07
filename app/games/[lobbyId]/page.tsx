@@ -671,7 +671,7 @@ const LobbyPage: FC = ({}) => {
   
 useEffect(() => {
   const assignPainterIfNeeded = async () => {
-    if (loading || !lobby || !lobbyId || !currentUserId) {
+    if (loading) {
       console.log("Skipping painter assignment:", { loading, lobby, lobbyId, currentUserId });
       return;
     }
