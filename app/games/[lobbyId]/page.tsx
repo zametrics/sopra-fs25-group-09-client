@@ -270,8 +270,7 @@ const LobbyPage: FC = ({}) => {
     }
   }, [isCurrentUserPainter]);
 
-  const handleWordSelect = useCallback(
-    (selectedIndex: number) => {
+  const handleWordSelect = (selectedIndex: number) => {
       if (selectedIndex < 0 || selectedIndex >= wordOptions.length) {
         console.error("Invalid word selection index:", selectedIndex);
         return;
@@ -305,10 +304,7 @@ const LobbyPage: FC = ({}) => {
           drawTime: lobby?.drawTime,
         });
       }
-
-    },
-    []
-  );
+    }
 
   useEffect(() => {
     if (isCurrentUserPainter) {
