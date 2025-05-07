@@ -999,8 +999,8 @@ useEffect(() => {
       });
 
       socketIo.on("roundEnded", async () => {
+        socket?.emit("clear");
         console.log("Round ended at:", new Date().toISOString());
-        socketClearCanvas();
         setIsCurrentUserPainter(false);
         setSelectedWord("");
         setShowWordSelection(false);
