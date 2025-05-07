@@ -672,48 +672,48 @@ const LobbyPage: FC = ({}) => {
     }
   }, []); // Removed apiService assuming it's stable
   
-  useEffect(() => {
-    const assignPainterIfNeeded = async () => {
-      if (loading || !lobby || !lobbyId || !currentUserId) {
-        console.log("Skipping painter assignment:", { loading, lobby, lobbyId, currentUserId });
-        return;
-      }
-  
-      try {
-        // Fetch the current lobby state
-        const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-  
-        // Only assign painter if no painter exists and user is lobby owner
-        if (!lobbyData.currentPainterToken && lobby.lobbyOwner.toString() === currentUserId) {
-          // Assign the next painter
-          const updatedLobby = await apiService.post<LobbyData>(
-            `/lobbies/${lobbyId}/nextPainter`,
-            {}
-          );
-  
-          // Update the lobby state
-          setLobby(updatedLobby);
-  
-          // Use the updatedLobby from the POST response to set painter status
-          console.log("Painter token check:", {
-            currentUserToken,
-            painterToken: updatedLobby.currentPainterToken,
-          });
-          setIsCurrentUserPainter(updatedLobby.currentPainterToken === currentUserToken);
-        } else {
-          // If no painter assignment is needed, use the fetched lobby data
-          setLobby(lobbyData);
-          setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
-        }
-      } catch (err) {
-        console.error("Painter assignment error:", err);
-      }
-    };
-  
-    if (!loading) {
-      assignPainterIfNeeded();
+useEffect(() => {
+  const assignPainterIfNeeded = async () => {
+    if (loading || !lobby || !lobbyId || !currentUserId) {
+      console.log("Skipping painter assignment:", { loading, lobby, lobbyId, currentUserId });
+      return;
     }
-  }, [loading, lobbyId, currentUserId, currentUserToken, lobby]);
+
+    try {
+      // Fetch the current lobby state
+      const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+
+      // Only assign painter if no painter exists and user is lobby owner
+      if (!lobbyData.currentPainterToken && lobby.lobbyOwner.toString() === currentUserId) {
+        // Assign the next painter
+        const updatedLobby = await apiService.post<LobbyData>(
+          `/lobbies/${lobbyId}/nextPainter`,
+          {}
+        );
+
+        // Update the lobby state
+        setLobby(updatedLobby);
+
+        // Use the updatedLobby from the POST response to set painter status
+        console.log("Painter token check:", {
+          currentUserToken,
+          painterToken: updatedLobby.currentPainterToken,
+        });
+        setIsCurrentUserPainter(updatedLobby.currentPainterToken === currentUserToken);
+      } else {
+        // If no painter assignment is needed, use the fetched lobby data
+        setLobby(lobbyData);
+        setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
+      }
+    } catch (err) {
+      console.error("Painter assignment error:", err);
+    }
+  };
+
+  if (!loading) {
+    assignPainterIfNeeded();
+  }
+}, [loading, lobbyId]);
 
   useEffect(() => {
     // Remove the automatic timer start from here
