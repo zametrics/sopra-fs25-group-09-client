@@ -700,6 +700,7 @@ useEffect(() => {
       } else {
         // If no painter assignment is needed, use the fetched lobby data
         setLobby(lobbyData);
+        console.log("Painter token checkasdhusdifhuisdhif:");
         setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
       }
 
