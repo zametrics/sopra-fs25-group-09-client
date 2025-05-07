@@ -702,6 +702,9 @@ useEffect(() => {
         setLobby(lobbyData);
         setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
       }
+
+      setLoading(false);
+
     } catch (err) {
       console.error("Painter assignment error:", err);
     }
@@ -710,7 +713,7 @@ useEffect(() => {
   if (!loading) {
     assignPainterIfNeeded();
   }
-}, [loading, lobbyId]);
+}, [loading]);
 
   useEffect(() => {
     // Remove the automatic timer start from here
