@@ -678,47 +678,33 @@ const LobbyPage: FC = ({}) => {
         console.log("Skipping painter assignment:", { loading, lobby, lobbyId, currentUserId });
         return;
       }
-      
+  
       try {
+        // Fetch the current lobby state
+        const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+  
         // Only assign painter if no painter exists and user is lobby owner
-        const updatedLobby = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`)
-        
-        if (!updatedLobby.currentPainterToken && lobby.lobbyOwner.toString() === currentUserId) {
-
-          /*
-          // Double-check server state to avoid stale data
-          const currentLobby = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-          console.log("Pre-nextPainter lobby state:", {
-            lobbyId,
-            playerIds: currentLobby.playerIds,
-            currentPainterToken: currentLobby.currentPainterToken,
-          });*/
-          
+        if (!lobbyData.currentPainterToken && lobby.lobbyOwner.toString() === currentUserId) {
+          // Assign the next painter
+          const updatedLobby = await apiService.post<LobbyData>(
+            `/lobbies/${lobbyId}/nextPainter`,
+            {}
+          );
   
-          if (!updatedLobby.currentPainterToken) {
-            const updatedLobby = await apiService.post<LobbyData>(
-              `/lobbies/${lobbyId}/nextPainter`,
-              {}
-            );
-            /*
-            console.log("Next painter response:", {
-              lobbyId,
-              playerIds: updatedLobby.playerIds,
-              currentPainterToken: updatedLobby.currentPainterToken,
-            });
-            
-            if (!updatedLobby.currentPainterToken) {
-              console.warn("Server returned null painter token for lobby:", lobbyId);
-            }
-
-            */
-            setLobby(updatedLobby);
-          } 
+          // Update the lobby state
+          setLobby(updatedLobby);
+  
+          // Use the updatedLobby from the POST response to set painter status
+          console.log("Painter token check:", {
+            currentUserToken,
+            painterToken: updatedLobby.currentPainterToken,
+          });
+          setIsCurrentUserPainter(updatedLobby.currentPainterToken === currentUserToken);
+        } else {
+          // If no painter assignment is needed, use the fetched lobby data
+          setLobby(lobbyData);
+          setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
         }
-  
-        // Set painter status based on latest lobby state
-        console.log("WHAT THE HELLION", currentUserToken, updatedLobby.currentPainterToken);
-        setIsCurrentUserPainter(updatedLobby.currentPainterToken === currentUserToken);
       } catch (err) {
         console.error("Painter assignment error:", err);
       }
@@ -727,7 +713,7 @@ const LobbyPage: FC = ({}) => {
     if (!loading) {
       assignPainterIfNeeded();
     }
-  }, [loading]);
+  }, [loading, lobbyId, currentUserId, currentUserToken, lobby]);
 
   useEffect(() => {
     // Remove the automatic timer start from here
