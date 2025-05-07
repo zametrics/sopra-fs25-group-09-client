@@ -35,6 +35,17 @@ const Unauthorized = () => {
     return null; // Prevent rendering on the server side
   }
 
+  const handleLogout = async () => {
+
+
+    // Clear the token and username from localStorage
+    localStorage.removeItem("token");
+    localStorage.removeItem("username");
+    localStorage.removeItem("userId");
+    router.push("/login")
+  };
+
+
   return (
     <div
       style={{
@@ -68,7 +79,7 @@ const Unauthorized = () => {
         <Button
           type="primary"
           style={{ marginTop: "1rem" }}
-          onClick={() => router.push("/login")}
+          onClick={handleLogout}
         >
           Back to Login
         </Button>
