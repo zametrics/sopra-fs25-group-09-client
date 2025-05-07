@@ -85,8 +85,8 @@ Note: If a team member fails to show continuous progress after using their Joker
 |                    | 25.04.2025  | https://github.com/zametrics/sopra-fs25-group-09-client/commit/5b52c0c776356c88a390385c0e4b12de141fad90          | After a correct guess, disables chat input and send button by setting `isChatDisabled`, clearing input, and applying `disabled` prop to chat controls.                                                                                           | Prevents spoilers post‐guess and preserves game integrity by restricting chat after word is guessed.                                |
 | **[@githubUser3]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
 |                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
-| **[@githubUser4]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
-|                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+| **@iliasw15** | 22.04.2025    | (https://github.com/zametrics/sopra-fs25-group-09-client/commit/a0d7292dd5114d0d7885f7606f85147ef0c56d11)          | Disconnects if someone leaves     | It fixes bug to have to muchunnecessary lobbies     |
+|                   | 20.04.2025    | (https://github.com/zametrics/sopra-fs25-group-09-client/commit/a0d7292dd5114d0d7885f7606f85147ef0c56d11)         | Delete button     | Important cause was an issue     |
 
 ---
 
