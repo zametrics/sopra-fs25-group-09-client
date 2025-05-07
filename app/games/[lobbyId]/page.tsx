@@ -293,6 +293,7 @@ const LobbyPage: FC = ({}) => {
       // Emit the selected word to other players via socket
       if (socket) {
         console.log(`Emitting selected word "${word}" to other players`);
+        setShowWordSelection(false);
 
         socket.emit("word-selected", {
           lobbyId,
