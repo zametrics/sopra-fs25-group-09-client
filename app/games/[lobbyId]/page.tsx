@@ -190,7 +190,7 @@ const LobbyPage: FC = ({}) => {
 
   const wordToGuess = selectedWord || "placeholder"; //PLACEHOLDER WORD
 
-  const triggerNextPainterSelection = useCallback(async () => {
+  const triggerNextPainterSelection = async () => {
     console.log("triggerNextPainterSelection called at:", new Date().toISOString());
     if (!lobbyId) {
       console.error("Cannot select next painter: Lobby ID missing.");
@@ -212,7 +212,7 @@ const LobbyPage: FC = ({}) => {
       console.error("Error selecting next painter:", error);
       message.error("Failed to select next painter.");
     }
-  }, []);
+  }
 
   
   const fetchWordOptions = async () => {
