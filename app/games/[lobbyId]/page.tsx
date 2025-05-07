@@ -681,7 +681,7 @@ useEffect(() => {
       const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
 
       // Only assign painter if no painter exists and user is lobby owner
-      if (!lobbyData.currentPainterToken && lobby.lobbyOwner.toString() === currentUserId) {
+      if (!lobbyData.currentPainterToken && lobby?.lobbyOwner.toString() === currentUserId) {
         // Assign the next painter
         const updatedLobby = await apiService.post<LobbyData>(
           `/lobbies/${lobbyId}/nextPainter`,
@@ -740,7 +740,7 @@ useEffect(() => {
       console.log(
         `Performing leave action for user ${currentUserId} from lobby ${lobbyId}`
       );
-      setLoading(true); // Optional: indicate leaving action
+      
 
       try {
         // Notify backend first
@@ -769,14 +769,13 @@ useEffect(() => {
           router.push("/home");
         }
       } finally {
-        setLoading(false);
         setIsLeaveModalVisible(false); // Ensure modal closes if open
         // Clean up disconnect timer info from session storage if it exists
         sessionStorage.removeItem(DISCONNECT_TIMEOUT_ID_KEY);
         sessionStorage.removeItem(DISCONNECT_LOBBY_ID_KEY);
       }
     },
-    [apiService, currentUserId, lobbyId, router]
+    []
   ); // Dependencies for the leave action
 
   const handleLeaveLobby = () => {
