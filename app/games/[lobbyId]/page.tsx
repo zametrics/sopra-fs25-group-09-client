@@ -717,8 +717,8 @@ const LobbyPage: FC = ({}) => {
         }
   
         // Set painter status based on latest lobby state
-        console.log("WHAT THE HELLION", currentUserToken, lobby.currentPainterToken);
-        setIsCurrentUserPainter(lobby.currentPainterToken === currentUserToken);
+        console.log("WHAT THE HELLION", currentUserToken, updatedLobby.currentPainterToken);
+        setIsCurrentUserPainter(updatedLobby.currentPainterToken === currentUserToken);
       } catch (err) {
         console.error("Painter assignment error:", err);
       }
