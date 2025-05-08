@@ -21,7 +21,7 @@ const io = new Server(server, {
 });
 
 //https://sopra-fs25-group-09-server.oa.r.appspot.com/   , http://localhost:8080
-const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8080";
+const BACKEND_API_URL = process.env.BACKEND_API_URL || "https://sopra-fs25-group-09-server.oa.r.appspot.com/";
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args)); // Dynamic import
 
@@ -461,69 +461,10 @@ io.on("connection", (socket) => {
       return;
     }
 
-    // Initialize or get game state for this lobby
-    if (!gameStates.has(lobbyId)) {
-      // Get numOfRounds from your lobby data
-      const lobby = lobbies.get(lobbyId);
-      //const lobbyOwnerSocket = [...lobby.values()].find(player => player.isOwner)?.socketId;
-
-      // Initialize game state
-      gameStates.set(lobbyId, {
-        currentRound: 1,
-        numOfRounds: 5, // Default value
-        drawTime: drawTime,
-      });
-
-      // Emit initial game state
-      io.to(lobbyId).emit("gameUpdate", {
-        currentRound: 1,
-        numOfRounds: 5, // Replace with actual lobby.numOfRounds when available
-      });
-    }
-
-    let gameState = gameStates.get(lobbyId);
-    let time = drawTime || 60; // Use provided drawTime or default to 60
-
-    const interval = setInterval(() => {
-      time--;
-      //console.log(`⏱️ Lobby ${lobbyId} timer: ${time}`);
-
-      const entry = timers.get(lobbyId);
-      if (entry) {
-        entry.time = time; // Store the updated value
-      }
-    
-      io.to(lobbyId).emit("timerUpdate", time);
-
-      if (time <= 0) {
-        console.log(`🔁 Timer reached 0 for lobby ${lobbyId}`);
-
-        // Update round
-        if (gameState.currentRound < gameState.numOfRounds) {
-          gameState.currentRound++;
-          gameStates.set(lobbyId, gameState);
-
-          // Emit round update
-          io.to(lobbyId).emit("gameUpdate", {
-            currentRound: gameState.currentRound,
-            numOfRounds: gameState.numOfRounds,
-          });
-
-          // Reset timer for next round
-          time = drawTime;
-          io.to(lobbyId).emit("roundEnded");
-        } else {
-          // Game over - all rounds completed
-          clearInterval(interval);
-          timers.delete(lobbyId);
-          gameStates.delete(lobbyId);
-
-          io.to(lobbyId).emit("gameEnded");
-        }
-      }
-    }, 1000);
-
-    timers.set(lobbyId, { time, interval });
+       // resume from pause or start fresh
+       const startAt = existing?.paused ? gameStates.get(lobbyId).drawTime : (drawTime || 60);
+       runTimer(lobbyId, startAt);
+   
   });
   
 

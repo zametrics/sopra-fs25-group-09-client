@@ -13,6 +13,7 @@ import Layout from "@/utils/layout";
 
 interface LobbyData {
   id: number;
+  currentWord: string;
   numOfMaxPlayers: number;
   playerIds: number[];
   type: string;
@@ -179,8 +180,8 @@ const LobbyPage: FC = ({}) => {
     useState<boolean>(false);
 
   const [timer, setTimer] = useState<number | null>(null);
-  const [currentRound, setCurrentRound] = useState(69);
-  const [numOfRounds, setNumOfRounds] = useState(420);
+  const [currentRound, setCurrentRound] = useState("*");
+  const [numOfRounds, setNumOfRounds] = useState("*");
 
   const [wordOptions, setWordOptions] = useState<WordOption[]>([]);
   const [showWordSelection, setShowWordSelection] = useState<boolean>(false);
@@ -218,7 +219,19 @@ const LobbyPage: FC = ({}) => {
   
   const fetchWordOptions = async () => {
     console.log("THE WORD FETCHER: ", isCurrentUserPainter);
-  
+    const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+    if(!lobbyData) {
+      console.error("Error: Couldnt connect to server")
+    }
+    //only allow word options if word hasnt been picked yet
+    console.log(lobbyData.currentWord);
+    console.log(typeof lobbyData.currentWord);
+    console.log(JSON.stringify(lobbyData.currentWord));
+    if(!(lobbyData.currentWord == "\"default_word\"" || lobbyData.currentWord == "default_word")) {
+      console.log("Skipping word fetch: User already picked a word", lobbyData.currentWord);
+      return;
+    }
+
     if (!isCurrentUserPainter) {
       console.log("Skipping word fetch: User is not the current painter");
       return;
@@ -265,13 +278,18 @@ const LobbyPage: FC = ({}) => {
   
   // Trigger fetchWordOptions when isCurrentUserPainter changes
   useEffect(() => {
-    if (isCurrentUserPainter) {
-      console.log("User became painter, fetching word options");
-      fetchWordOptions();
+    const asyncFetch = async () => {
+      if (isCurrentUserPainter) {
+        
+          console.log("User became painter, trying to fetch word options");
+
+          fetchWordOptions();
+      }
     }
+    asyncFetch();
   }, [isCurrentUserPainter]);
 
-  const handleWordSelect = (selectedIndex: number) => {
+  const handleWordSelect = async (selectedIndex: number) => {
       if (selectedIndex < 0 || selectedIndex >= wordOptions.length) {
         console.error("Invalid word selection index:", selectedIndex);
         return;
@@ -288,34 +306,34 @@ const LobbyPage: FC = ({}) => {
       // Set the selected word
       const word = wordOptions[selectedIndex].word;
       setSelectedWord(word);
-
-      apiService.put<LobbyData>(`/lobbies/${lobbyId}/word`, word);
+      await apiService.put<LobbyData>(`/lobbies/${lobbyId}/word`, word);
 
       // Emit the selected word to other players via socket
       if (socket) {
         console.log(`Emitting selected word "${word}" to other players`);
         setShowWordSelection(false);
+        socket.emit("clear");
+        //clear again locally cause of bugs
+        const canvas = canvasElementRef.current;
+        const ctx = canvas?.getContext("2d");
+        if (!ctx || !canvas) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        remoteUsersLastPointRef.current.clear();
+        saveCanvasState();
 
-        socket.emit("startTimer", {
+        await socket.emit("startTimer", {
           lobbyId,
           drawTime: lobby?.drawTime,
           numOfRounds: lobby?.numOfRounds,
         });
 
-        socket.emit("word-selected", {
+        await socket.emit("word-selected", {
           lobbyId,
           word,
         });
 
       }
     }
-
-  useEffect(() => {
-    if (isCurrentUserPainter) {
-      console.log("User became painter, fetching word options");
-      fetchWordOptions();
-    }
-  }, [isCurrentUserPainter]);
 
   // const wordToGuess = selectedWord || "noword";
 
@@ -582,7 +600,33 @@ const LobbyPage: FC = ({}) => {
   );
 
   useEffect(() => {
-    console.log("Painter Status:", {
+    const fetchLobbyInfos = async () => {
+      const lobbyState = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+    
+      if (!lobbyState) {
+        console.error("Server connection failed, could not fetch lobbystate");
+        return;
+      }
+    
+      // Bereinige die Quotes, wenn nötig
+      let cleanWord = lobbyState.currentWord;
+    
+      try {
+        // Nur parsen, wenn es tatsächlich ein JSON-String ist
+        cleanWord = JSON.parse(lobbyState.currentWord);
+      } catch (err) {
+        console.error(err);
+      }
+    
+      setSelectedWord(cleanWord);
+      console.log("Final wordToGuess:", cleanWord);
+      await socket?.emit("get-round-infos", lobbyId);
+    };
+
+    fetchLobbyInfos();
+
+      console.log("Painter Status:", {
+
       isCurrentUserPainter,
       currentPainterToken: lobby?.currentPainterToken,
       currentUserToken,
@@ -945,7 +989,7 @@ useEffect(() => {
       }
 
       // http://localhost:3001 https://socket-server-826256454260.europe-west1.run.app/
-      socketIo = io("http://localhost:3001", {
+      socketIo = io("https://socket-server-826256454260.europe-west1.run.app/", {
         path: "/api/socket",
       });
       setSocket(socketIo);
@@ -977,7 +1021,7 @@ useEffect(() => {
 
       // --- Request initial state ---
       if (!isCanvasInitialized && isMounted) {
-        console.log("Requesting initial canvas state...");
+        console.log("Requesting initial state...");
         socketIo.emit("request-initial-state");
       }
 
@@ -1003,8 +1047,7 @@ useEffect(() => {
       });
 
       socketIo.on("roundEnded", async () => {
-
-        socketIo?.emit("clear");
+        await apiService.put<LobbyData>(`/lobbies/${lobbyId}/word`, 'default_word');
     
         console.log("Round ended at:", new Date().toISOString());
         setIsCurrentUserPainter(false);
@@ -1067,7 +1110,7 @@ useEffect(() => {
       });
 
       socketIo.on("get-canvas-state", (data: GetCanvasStateData) => {
-        if (canvasElementRef.current && socketIo) {
+        if (canvasElementRef.current && socketIo && data.requesterId != currentUserId) {
           console.log(`Received request to provide canvas state for ${data.requesterId}. Sending...`);
           const currentDataUrl = canvasElementRef.current.toDataURL("image/png");
           socketIo.emit("send-canvas-state", {
@@ -1287,7 +1330,7 @@ useEffect(() => {
       {" "}
       {/* <-- START React Fragment */}
       <div style={fillCursorStyle} />
-      <div className="page-background">
+      <div>
         {/* Game Box */}
         <div className="game-box">
           <div
@@ -1323,8 +1366,8 @@ useEffect(() => {
               </div>
             </div>
             <div className="round-content">
-              <span className="currentRound">Round: {currentRound || 69}</span>
-              <span className="allRound">/{numOfRounds || 420}</span>
+              <span className="currentRound">Round: {currentRound || "*"}</span>
+              <span className="allRound">/{numOfRounds || "*"}</span>
             </div>
           </div>
           <h1 className="drawzone-logo-2-8rem">DRAWZONE</h1>
@@ -1349,30 +1392,37 @@ useEffect(() => {
           </Button> */}
           {/* Added a class */}
           <div className="word-display-area">
-          {isCurrentUserPainter ? (
-            <span className="word-to-guess">
-              {wordToGuess
-                .toLowerCase()
-                .split("")
-                .map((letter, index) => (
-                  <span key={index} className="word-letter">
-                    {letter === " " ? "\u00A0" : letter}
-                  </span> // Handle spaces
-                ))}
-            </span>
-          ) : (
-            <span className="word-to-guess">
-              {wordToGuess
-                .toLowerCase()
-                .split("")
-                .map((letter, index) => (
-                  <span key={index} className="word-letter">
-                    {" "}
-                  </span> // Replace each letter with a whitespace
-                ))}
-            </span>
-          )}
-        </div>
+            {isCurrentUserPainter ? (
+              <span className="word-to-guess">
+                {wordToGuess === "default_word"
+                  ? Array.from({ length: 3 }).map((_, index) => (
+                      <span key={index} className="word-letter">{"\u00A0"}</span>
+                    ))
+                  : wordToGuess
+                      .toLowerCase()
+                      .split("")
+                      .map((letter, index) => (
+                        <span key={index} className="word-letter">
+                          {letter === " " ? "\u00A0" : letter}
+                        </span>
+                      ))}
+              </span>
+            ) : (
+              <span className="word-to-guess">
+                {wordToGuess === "default_word"
+                  ? Array.from({ length: 3 }).map((_, index) => (
+                      <span key={index} className="word-letter">{"\u00A0"}</span>
+                    ))
+                  : wordToGuess
+                      .toLowerCase()
+                      .split("")
+                      .map((_, index) => (
+                        <span key={index} className="word-letter">{" "}</span>
+                      ))}
+              </span>
+            )}
+          </div>
+          
           {/* Drawing Canvas */}
           <canvas
             ref={combinedCanvasRef}
