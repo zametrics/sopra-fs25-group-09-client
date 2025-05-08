@@ -969,6 +969,17 @@ socket.on("chatAlert", ({ message, username }) => {
       runTimer(lobbyId, gs.drawTime);
     }
   });
+
+  socket.on("get-round-infos", (lobbyId) => {
+    const gs = gameStates.get(lobbyId);
+    if (!gs) return;             // should never happen
+
+    io.to(lobbyId).emit("gameUpdate", {
+      currentRound: gs.currentRound,
+      numOfRounds : gs.numOfRounds,
+    });
+  });
+
 });
 
 const PORT = process.env.PORT || 3001;
