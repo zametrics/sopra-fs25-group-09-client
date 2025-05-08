@@ -21,6 +21,7 @@ interface LobbyData {
   lobbyOwner: number;
   language: string;
   currentPainterToken: string | null;
+  status: number;
 }
 
 interface WordOption {
@@ -162,7 +163,7 @@ const LobbyPage: FC = ({}) => {
   //console.log("just the uuid:", currentUserToken);
 
 
-
+  
   const [isCurrentUserPainter, setIsCurrentUserPainter] = useState<boolean>(false);
   
   const remoteUsersLastPointRef = useRef<Map<string, Point | null>>(new Map());
@@ -295,15 +296,17 @@ const LobbyPage: FC = ({}) => {
         console.log(`Emitting selected word "${word}" to other players`);
         setShowWordSelection(false);
 
+        socket.emit("startTimer", {
+          lobbyId,
+          drawTime: lobby?.drawTime,
+          numOfRounds: lobby?.numOfRounds,
+        });
+
         socket.emit("word-selected", {
           lobbyId,
           word,
         });
 
-        socket.emit("startTimer", {
-          lobbyId,
-          drawTime: lobby?.drawTime,
-        });
       }
     }
 
@@ -351,6 +354,7 @@ const LobbyPage: FC = ({}) => {
     [socket, color, brushSize, activeTool]
   );
 
+  
   // --- Save Canvas State Function ---
   const saveCanvasState = useCallback(() => {
     const canvas = canvasElementRef.current;
@@ -940,8 +944,8 @@ useEffect(() => {
         sessionStorage.removeItem(DISCONNECT_LOBBY_ID_KEY);
       }
 
-      // http://localhost:3001
-      socketIo = io("https://socket-server-826256454260.europe-west1.run.app/", {
+      // http://localhost:3001 https://socket-server-826256454260.europe-west1.run.app/
+      socketIo = io("http://localhost:3001", {
         path: "/api/socket",
       });
       setSocket(socketIo);

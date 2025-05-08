@@ -2,6 +2,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
+const { cursorTo } = require("readline");
 
 // --- Load Environment Variables ---
 require("dotenv").config();
@@ -20,7 +21,7 @@ const io = new Server(server, {
 });
 
 //https://sopra-fs25-group-09-server.oa.r.appspot.com/   , http://localhost:8080
-const BACKEND_API_URL = process.env.BACKEND_API_URL || "https://sopra-fs25-group-09-server.oa.r.appspot.com/";
+const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8080";
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args)); // Dynamic import
 
@@ -54,6 +55,31 @@ async function fetchLobbyDetailsFromDb(lobbyId) {
   } catch (error) {
     console.error(
       `Network Error: Could not connect to API to fetch lobby details for ${lobbyId}. URL: ${url}`,
+      error
+    );
+    return null;
+  }
+}
+
+async function fetchTokenFromID(userID) {
+  const url = `${BACKEND_API_URL}/users/${userID}`;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(
+        `API Error: Failed to fetch token for ${userID}. Status: ${response.status}`
+      );
+      return null;
+    }
+    const userData = await response.json();
+    const token = userData.token
+    console.log(
+      `API Success: Fetched userDetails for ${userID}`
+    ); 
+    return token;
+  } catch (error) {
+    console.error(
+      `Network Error: Could not connect to API to fetch user details for ${userID}. URL: ${url}`,
       error
     );
     return null;
@@ -293,7 +319,7 @@ socket.on("updateScore", ({ lobbyId, playerId, score }) => {
     }
   }
 
-  socket.on("startTimer", async ({ lobbyId, drawTime }) => {
+  socket.on("startTimer", async ({ lobbyId, drawTime, numOfRounds }) => {
     console.log(`Start timer for lobby ${lobbyId} with drawTime: ${drawTime}s`);
 
     if (timers.has(lobbyId)) {
@@ -310,50 +336,78 @@ socket.on("updateScore", ({ lobbyId, playerId, score }) => {
       // Initialize game state
       gameStates.set(lobbyId, {
         currentRound: 1,
-        numOfRounds: 5, // Default value
+        numOfRounds: numOfRounds,
         drawTime: drawTime,
       });
 
       // Emit initial game state
       io.to(lobbyId).emit("gameUpdate", {
         currentRound: 1,
-        numOfRounds: 5, // Replace with actual lobby.numOfRounds when available
+        numOfRounds: numOfRounds,
       });
     }
 
     let gameState = gameStates.get(lobbyId);
     let time = drawTime || 60; // Use provided drawTime or default to 60
 
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
+      
+      let check = 0;
       time--;
       //console.log(`⏱️ Lobby ${lobbyId} timer: ${time}`);
       io.to(lobbyId).emit("timerUpdate", time);
 
       if (time <= 0) {
         console.log(`🔁 Timer reached 0 for lobby ${lobbyId}`);
-
-        // Update round
-        if (gameState.currentRound < gameState.numOfRounds) {
-          gameState.currentRound++;
-          gameStates.set(lobbyId, gameState);
-
-          // Emit round update
-          io.to(lobbyId).emit("gameUpdate", {
-            currentRound: gameState.currentRound,
-            numOfRounds: gameState.numOfRounds,
-          });
-
-          // Reset timer for next round
-          time = drawTime;
-          io.to(lobbyId).emit("roundEnded");
-        } else {
-          // Game over - all rounds completed
+        //check amount of players in db
+        const currentLobbyData = await fetchLobbyDetailsFromDb(lobbyId);
+        if(!currentLobbyData) {
           clearInterval(interval);
           timers.delete(lobbyId);
           gameStates.delete(lobbyId);
-
-          io.to(lobbyId).emit("gameEnded");
+          return
         }
+        let playerIds = (currentLobbyData.playerIds);
+        let painterHistoryTokens = (currentLobbyData.painterHistoryTokens);
+        for (const playerId of playerIds) {
+          const playerToken = await fetchTokenFromID(playerId);
+          if(!playerToken) {
+            return
+          }
+          if (!painterHistoryTokens.includes((playerToken))) {
+            check = 1;
+            console.log("has not yet drawn!")
+            break;
+          }
+        }
+
+        // Update round only if everyone got to paint
+        if(check == 1) {
+          time = drawTime;
+            io.to(lobbyId).emit("roundEnded");
+        }
+        else if ((gameState.currentRound < gameState.numOfRounds)) {
+            gameState.currentRound++;
+            gameStates.set(lobbyId, gameState);
+
+            // Emit round update
+            io.to(lobbyId).emit("gameUpdate", {
+              currentRound: gameState.currentRound,
+              numOfRounds: gameState.numOfRounds,
+            });
+
+            // Reset timer for next round
+            time = drawTime;
+            io.to(lobbyId).emit("roundEnded");
+          } 
+        else {
+            // Game over - all rounds completed
+            clearInterval(interval);
+            timers.delete(lobbyId);
+            gameStates.delete(lobbyId);
+
+            io.to(lobbyId).emit("gameEnded");
+          }
       }
     }, 1000);
 
