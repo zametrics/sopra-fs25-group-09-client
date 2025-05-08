@@ -86,6 +86,71 @@ async function fetchTokenFromID(userID) {
   }
 }
 
+async function handleTimeUp(lobbyId) {
+  console.log(`🔁 Timer reached 0 for lobby ${lobbyId}`);
+
+  const currentLobbyData = await fetchLobbyDetailsFromDb(lobbyId);
+  if (!currentLobbyData) {
+    timers.delete(lobbyId);
+    gameStates.delete(lobbyId);
+    return;
+  }
+
+  const { playerIds, painterHistoryTokens = [] } = currentLobbyData;
+
+  let someoneStillHasToPaint = false;
+  for (const playerId of playerIds) {
+    const token = await fetchTokenFromID(playerId);
+    if (!token) return;         // abort on DB error
+    if (!painterHistoryTokens.includes(token)) {
+      someoneStillHasToPaint = true;
+      break;
+    }
+  }
+
+  const gs = gameStates.get(lobbyId);
+  if (!gs) return;              // should never happen
+
+  if (someoneStillHasToPaint) {
+    io.to(lobbyId).emit("roundEnded");          // wait for a word
+  } else if (gs.currentRound < gs.numOfRounds) {
+    gs.currentRound++;
+    gameStates.set(lobbyId, gs);
+    io.to(lobbyId).emit("gameUpdate", {
+      currentRound: gs.currentRound,
+      numOfRounds : gs.numOfRounds,
+    });
+    io.to(lobbyId).emit("roundEnded");          // wait for a word
+  } else {
+    // all rounds finished – clean everything
+    timers.delete(lobbyId);
+    gameStates.delete(lobbyId);
+    io.to(lobbyId).emit("gameEnded");
+  }
+}
+
+/**
+ * Start (or restart) the one‑second countdown.
+ * When it hits 0 it pauses – you must call runTimer() again
+ * (we do that from “word-selected”).
+ */
+function runTimer(lobbyId, startTime) {
+  let time = startTime;
+  const interval = setInterval(async () => {
+    time--;
+    io.to(lobbyId).emit("timerUpdate", time);
+
+    if (time <= 0) {
+      clearInterval(interval);
+      const t = timers.get(lobbyId);
+      if (t) timers.set(lobbyId, { ...t, interval: null, paused: true, time: 0 });
+      await handleTimeUp(lobbyId);              // do round / game bookkeeping
+    }
+  }, 1_000);
+
+  timers.set(lobbyId, { time, interval, paused: false });
+}
+
 // --- NEW: Update Lobby Owner Function ---
 async function updateLobbyOwnerInDb(lobbyId, newOwnerId) {
   // IMPORTANT: Adjust the URL and method based on your actual API endpoint
@@ -321,98 +386,28 @@ socket.on("updateScore", ({ lobbyId, playerId, score }) => {
 
   socket.on("startTimer", async ({ lobbyId, drawTime, numOfRounds }) => {
     console.log(`Start timer for lobby ${lobbyId} with drawTime: ${drawTime}s`);
-
-    if (timers.has(lobbyId)) {
+  
+    // bootstrap gameState once
+    if (!gameStates.has(lobbyId)) {
+      gameStates.set(lobbyId, {
+        currentRound: 1,
+        numOfRounds : numOfRounds,
+        drawTime    : drawTime,
+      });
+      io.to(lobbyId).emit("gameUpdate", { currentRound: 1, numOfRounds });
+    }
+  
+    const existing = timers.get(lobbyId);
+    if (existing && !existing.paused) {
       console.log(`⏱️ Timer already running for lobby ${lobbyId}`);
       return;
     }
-
-    // Initialize or get game state for this lobby
-    if (!gameStates.has(lobbyId)) {
-      // Get numOfRounds from your lobby data
-      const lobby = lobbies.get(lobbyId);
-      //const lobbyOwnerSocket = [...lobby.values()].find(player => player.isOwner)?.socketId;
-
-      // Initialize game state
-      gameStates.set(lobbyId, {
-        currentRound: 1,
-        numOfRounds: numOfRounds,
-        drawTime: drawTime,
-      });
-
-      // Emit initial game state
-      io.to(lobbyId).emit("gameUpdate", {
-        currentRound: 1,
-        numOfRounds: numOfRounds,
-      });
-    }
-
-    let gameState = gameStates.get(lobbyId);
-    let time = drawTime || 60; // Use provided drawTime or default to 60
-
-    const interval = setInterval(async () => {
-      
-      let check = 0;
-      time--;
-      //console.log(`⏱️ Lobby ${lobbyId} timer: ${time}`);
-      io.to(lobbyId).emit("timerUpdate", time);
-
-      if (time <= 0) {
-        console.log(`🔁 Timer reached 0 for lobby ${lobbyId}`);
-        //check amount of players in db
-        const currentLobbyData = await fetchLobbyDetailsFromDb(lobbyId);
-        if(!currentLobbyData) {
-          clearInterval(interval);
-          timers.delete(lobbyId);
-          gameStates.delete(lobbyId);
-          return
-        }
-        let playerIds = (currentLobbyData.playerIds);
-        let painterHistoryTokens = (currentLobbyData.painterHistoryTokens);
-        for (const playerId of playerIds) {
-          const playerToken = await fetchTokenFromID(playerId);
-          if(!playerToken) {
-            return
-          }
-          if (!painterHistoryTokens.includes((playerToken))) {
-            check = 1;
-            console.log("has not yet drawn!")
-            break;
-          }
-        }
-
-        // Update round only if everyone got to paint
-        if(check == 1) {
-          time = drawTime;
-            io.to(lobbyId).emit("roundEnded");
-        }
-        else if ((gameState.currentRound < gameState.numOfRounds)) {
-            gameState.currentRound++;
-            gameStates.set(lobbyId, gameState);
-
-            // Emit round update
-            io.to(lobbyId).emit("gameUpdate", {
-              currentRound: gameState.currentRound,
-              numOfRounds: gameState.numOfRounds,
-            });
-
-            // Reset timer for next round
-            time = drawTime;
-            io.to(lobbyId).emit("roundEnded");
-          } 
-        else {
-            // Game over - all rounds completed
-            clearInterval(interval);
-            timers.delete(lobbyId);
-            gameStates.delete(lobbyId);
-
-            io.to(lobbyId).emit("gameEnded");
-          }
-      }
-    }, 1000);
-
-    timers.set(lobbyId, { time, interval });
+  
+    // resume from pause or start fresh
+    const startAt = existing?.paused ? gameStates.get(lobbyId).drawTime : (drawTime || 60);
+    runTimer(lobbyId, startAt);
   });
+  
 
   // --- REVISED joinLobby Handler ---
   socket.on("joinLobby", async ({ lobbyId, userId, username }) => {
@@ -936,8 +931,16 @@ socket.on("updateScore", ({ lobbyId, playerId, score }) => {
     const playerInfo = socketToLobby.get(socket.id);
     if (!playerInfo) return;
     const { lobbyId } = playerInfo;
-    // Broadcast to others
+  
+    // relay to everyone else (unchanged behaviour)
     socket.to(lobbyId).emit("word-selected", data);
+  
+    // resume the countdown if we were waiting
+    const t = timers.get(lobbyId);
+    const gs = gameStates.get(lobbyId);
+    if (t && t.paused && gs) {
+      runTimer(lobbyId, gs.drawTime);
+    }
   });
 });
 
