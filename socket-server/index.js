@@ -34,6 +34,8 @@ const gameStates = new Map();
 const timers = new Map();
 const pendingDisconnects = new Map();
 const LEAVE_DELAY = 5000;
+const playerScores = new Map(); // Map<lobbyId, Map<playerId, score>>
+
 
 // --- NEW: Fetch Lobby Details Function ---
 async function fetchLobbyDetailsFromDb(lobbyId) {
@@ -355,18 +357,74 @@ io.on("connection", (socket) => {
 
   // Add this inside the io.on("connection", (socket) => { ... }) block, after existing socket event handlers
 
-socket.on("updateScore", ({ lobbyId, playerId, score }) => {
-  // Basic validation
-  if (!lobbyId || typeof playerId !== "number" || typeof score !== "number") {
-    console.error(`Invalid updateScore data from socket ${socket.id}:`, { lobbyId, playerId, score });
-    return;
-  }
-
-  console.log(`[Score] Updating score for player ${playerId} in lobby ${lobbyId} to ${score}`);
+  socket.on("updateScore", ({ lobbyId, playerId }) => {
+    if (!lobbyId || typeof playerId !== "number") {
+      console.error(`Invalid updateScore data from socket ${socket.id}:`, { lobbyId, playerId });
+      return;
+    }
   
-  // Broadcast score update to all clients in the lobby
-  io.to(lobbyId).emit("scoreUpdated", { playerId, score });
-});
+    const timerEntry = timers.get(lobbyId);
+    if (!timerEntry || typeof timerEntry.time !== "number") {
+      console.error(`[Error] No valid timer for lobby ${lobbyId}`);
+      return;
+    }
+  
+    const score = timerEntry.time;
+  
+    // --- Add score to player ---
+    if (!playerScores.has(lobbyId)) playerScores.set(lobbyId, new Map());
+    const lobbyScores = playerScores.get(lobbyId);
+    const prevScore = lobbyScores.get(playerId) || 0;
+    const newScore = prevScore + score;
+    lobbyScores.set(playerId, newScore);
+  
+    console.log(`[Score] Player ${playerId} in lobby ${lobbyId} now has ${newScore} points`);
+  
+    io.to(lobbyId).emit("scoreUpdated", { playerId, score: newScore });
+  
+    // --- Drawer bonus ---
+    const lobby = lobbies.get(lobbyId);
+    if (!lobby || !lobby.currentPainterToken) {
+      console.warn(`[Bonus] No painter token found for lobby ${lobbyId}`);
+      return;
+    }
+  
+    // Reverse-lookup the playerId of the drawer using the token
+    let drawerId = null;
+    for (const [uid, data] of lobby.players.entries()) {
+      if (data.token === lobby.currentPainterToken) {
+        drawerId = Number(uid);
+        break;
+      }
+    }
+  
+    if (drawerId === null) {
+      console.warn(`[Bonus] Could not find drawer for token ${lobby.currentPainterToken}`);
+      return;
+    }
+  
+    if (drawerId === playerId) {
+      console.log(`[Bonus] Skipping bonus – drawer and guesser are the same (${playerId})`);
+      return;
+    }
+  
+    const drawerBonus = Math.floor(score / 4); // Or timerEntry.time / 4
+  
+    const drawerPrevScore = lobbyScores.get(drawerId) || 0;
+    const drawerNewScore = drawerPrevScore + drawerBonus;
+    lobbyScores.set(drawerId, drawerNewScore);
+  
+    console.log(`[Bonus] Drawer ${drawerId} gets ${drawerBonus} bonus. Total: ${drawerNewScore}`);
+    io.to(lobbyId).emit("scoreUpdated", {
+      playerId: drawerId,
+      score: drawerNewScore,
+    });
+  });
+  
+  
+  
+  
+  
 
 
   socket.on("gameStarting", ({ lobbyId, settings }) => {
@@ -402,10 +460,70 @@ socket.on("updateScore", ({ lobbyId, playerId, score }) => {
       console.log(`⏱️ Timer already running for lobby ${lobbyId}`);
       return;
     }
-  
-    // resume from pause or start fresh
-    const startAt = existing?.paused ? gameStates.get(lobbyId).drawTime : (drawTime || 60);
-    runTimer(lobbyId, startAt);
+
+    // Initialize or get game state for this lobby
+    if (!gameStates.has(lobbyId)) {
+      // Get numOfRounds from your lobby data
+      const lobby = lobbies.get(lobbyId);
+      //const lobbyOwnerSocket = [...lobby.values()].find(player => player.isOwner)?.socketId;
+
+      // Initialize game state
+      gameStates.set(lobbyId, {
+        currentRound: 1,
+        numOfRounds: 5, // Default value
+        drawTime: drawTime,
+      });
+
+      // Emit initial game state
+      io.to(lobbyId).emit("gameUpdate", {
+        currentRound: 1,
+        numOfRounds: 5, // Replace with actual lobby.numOfRounds when available
+      });
+    }
+
+    let gameState = gameStates.get(lobbyId);
+    let time = drawTime || 60; // Use provided drawTime or default to 60
+
+    const interval = setInterval(() => {
+      time--;
+      //console.log(`⏱️ Lobby ${lobbyId} timer: ${time}`);
+
+      const entry = timers.get(lobbyId);
+      if (entry) {
+        entry.time = time; // Store the updated value
+      }
+    
+      io.to(lobbyId).emit("timerUpdate", time);
+
+      if (time <= 0) {
+        console.log(`🔁 Timer reached 0 for lobby ${lobbyId}`);
+
+        // Update round
+        if (gameState.currentRound < gameState.numOfRounds) {
+          gameState.currentRound++;
+          gameStates.set(lobbyId, gameState);
+
+          // Emit round update
+          io.to(lobbyId).emit("gameUpdate", {
+            currentRound: gameState.currentRound,
+            numOfRounds: gameState.numOfRounds,
+          });
+
+          // Reset timer for next round
+          time = drawTime;
+          io.to(lobbyId).emit("roundEnded");
+        } else {
+          // Game over - all rounds completed
+          clearInterval(interval);
+          timers.delete(lobbyId);
+          gameStates.delete(lobbyId);
+
+          io.to(lobbyId).emit("gameEnded");
+        }
+      }
+    }, 1000);
+
+    timers.set(lobbyId, { time, interval });
   });
   
 
@@ -466,8 +584,9 @@ socket.on("updateScore", ({ lobbyId, playerId, score }) => {
     // --- Add/Update player in memory (use consistent key type, e.g., string) ---
     const userIdString = String(userId); // Use string key for map consistency
     const wasPlayerPresent = lobbyData.players.has(userIdString);
-    const previousPlayerData = lobbyData.players.get(userIdString);
-    lobbyData.players.set(userIdString, { socketId: socket.id, username });
+    const previousPlayerData = lobbyData.players.get(userIdString);  
+    const token = await fetchTokenFromID(userId); 
+    lobbyData.players.set(userIdString, { socketId: socket.id, username, token });
     lobbies.set(lobbyId, lobbyData); // Update map entry
 
     // --- Update socket mapping (use original types) ---
@@ -957,18 +1076,27 @@ socket.on("chatAlert", ({ message, username }) => {
   socket.on("word-selected", (data) => {
     const playerInfo = socketToLobby.get(socket.id);
     if (!playerInfo) return;
-    const { lobbyId } = playerInfo;
+    const { lobbyId, userId } = playerInfo;
   
-    // relay to everyone else (unchanged behaviour)
+    // Set the current painter token
+    const lobby = lobbies.get(lobbyId);
+    if (lobby && lobby.players.has(String(userId))) {
+      const painterToken = lobby.players.get(String(userId)).token;
+      lobby.currentPainterToken = painterToken;
+      console.log(`[Painter] Set currentPainterToken for lobby ${lobbyId} to ${painterToken}`);
+    }
+  
+    // Relay to everyone else
     socket.to(lobbyId).emit("word-selected", data);
   
-    // resume the countdown if we were waiting
+    // Resume the countdown if we were waiting
     const t = timers.get(lobbyId);
     const gs = gameStates.get(lobbyId);
     if (t && t.paused && gs) {
       runTimer(lobbyId, gs.drawTime);
     }
   });
+  
 
   socket.on("get-round-infos", (lobbyId) => {
     const gs = gameStates.get(lobbyId);
