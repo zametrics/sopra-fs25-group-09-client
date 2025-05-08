@@ -573,19 +573,46 @@ socket.on("updateScore", ({ lobbyId, playerId, score }) => {
     }
   });
   // --- chatMessage Handler (no changes needed) ---
-  socket.on("chatMessage", ({ lobbyId, message, username }) => {
-    // Basic validation
-    if (!lobbyId || typeof message !== "string" || message.trim() === "")
-      return;
-    const senderInfo = socketToLobby.get(socket.id);
-    const senderUsername = username || senderInfo?.username || "Guest"; // Prioritize passed username
+/**
+ * Broadcast to the whole lobby (current behaviour).
+ */
+socket.on("chatMessage", ({ lobbyId, message, username }) => {
+  if (!lobbyId || typeof message !== "string" || message.trim().length === 0) {
+    return;
+  }
 
-    io.to(lobbyId).emit("chatMessage", {
-      username: senderUsername,
-      message,
-      timestamp: new Date().toISOString(),
-    });
+  const senderInfo      = socketToLobby.get(socket.id);
+  const senderUsername  = username || senderInfo?.username || "Guest";
+
+  // 👇 everyone in the lobby (including the sender) receives this
+  io.to(lobbyId).emit("chatMessage", {
+    username : senderUsername,
+    message,
+    timestamp: new Date().toISOString(),
   });
+});
+
+/**
+ * Send a response ONLY to the client that triggered the event.
+ * Two equivalent ways are shown; pick one style and stick with it.
+ */
+socket.on("chatAlert", ({ message, username }) => {
+  // basic validation omitted for brevity
+
+  const senderInfo      = socketToLobby.get(socket.id);
+  const senderUsername  = username || senderInfo?.username || "";
+
+  // Option A – simplest and most common:
+  socket.emit("chatAlert", {
+    username : senderUsername,
+    message,
+    timestamp: new Date().toISOString(),
+  });
+
+  // ─────────────  OR  ─────────────
+  // Option B – does exactly the same thing, a bit more verbosely:
+  // io.to(socket.id).emit("chatAlert", { … });
+});
 
   // --- disconnect Handler ---
   socket.on("disconnect", () => {

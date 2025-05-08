@@ -82,6 +82,7 @@ const Layout: React.FC<LayoutProps> = ({
   const [scores, setScores] = useState<{ [key: number]: number }>({});
   const [isChatDisabled, setIsChatDisabled] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [lastSendMessage, setLastSendMessage] = useState<string>("");
 
 
   const colorPool: string[] = [
@@ -150,6 +151,35 @@ const currentUserToken = raw
 
     usernameColors[username] = newColor;
     return newColor;
+  }
+
+  function minOperations(s1: string, s2: string): number {
+    const m = s1.length;
+    const n = s2.length;
+  
+    const dp: number[][] = Array.from({ length: m + 1 }, () =>
+      Array(n + 1).fill(0)
+    );
+  
+    for (let i = 0; i <= m; i++) {
+      for (let j = 0; j <= n; j++) {
+        if (i === 0) {
+          dp[i][j] = j; // insert all of s2[0..j]
+        } else if (j === 0) {
+          dp[i][j] = i; // delete all of s1[0..i]
+        } else if (s1[i - 1] === s2[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1]; // no change
+        } else {
+          dp[i][j] = 1 + Math.min(
+            dp[i - 1][j],     // deletion
+            dp[i][j - 1],     // insertion
+            dp[i - 1][j - 1]  // substitution
+          );
+        }
+      }
+    }
+  
+    return dp[m][n];
   }
 
   // --- useEffect for Fetching and Socket Listeners ---
@@ -269,6 +299,12 @@ const currentUserToken = raw
         setMessages((prev) => [...prev, message]);
       });
 
+      socket.on("chatAlert", (message: ChatMessage) => {
+        if(message.username == localStorage.getItem("username")) {
+          setMessages((prev) => [...prev, message]);
+        }
+      });
+
       // --- Error handling ---
       socket.on("connect_error", (err) => {
         console.error("Socket connection error:", err);
@@ -350,12 +386,13 @@ const currentUserToken = raw
         (p) => p.id.toString() === currentUserId
       )?.username;
   
-      if (chatInput === currentWord) {
+      if (chatInput.toLowerCase() === currentWord.toLowerCase()) {
         socket.emit("chatMessage", {
           lobbyId,
-          message: `${username} GUESSED THE CORRECT WORD!`,
+          message: "alert24efjh2394fj324923212_",
           username,
         });
+
         // --- Increment score for the player ---
         if (currentUserId) {
           const playerId = Number(currentUserId);
@@ -376,6 +413,14 @@ const currentUserToken = raw
         setChatInput("");
       } else {
         socket.emit("chatMessage", { lobbyId, message: chatInput, username });
+        const minimalOps = minOperations(chatInput.toLowerCase(), currentWord.toLowerCase());
+        const maxOps = Math.round(currentWord.length / 5) >= 1? Math.round(currentWord.length / 5): 1;
+        if (minimalOps <= maxOps){
+          setLastSendMessage(chatInput);
+          socket.emit("chatAlert", {lobbyId,
+            message: "alert32909f32934982374_",
+            username})
+        }
         setChatInput("");
       }
     }
@@ -430,19 +475,45 @@ const currentUserToken = raw
       <div className="chat-box">
         <h1 className="players-chat-title">CHAT</h1>
         <div className="chat-messages">
-          {messages.map((msg, index) => (
-            <div key={index} className="chat-message">
-              <span
-                style={{ color: getUsernameColor(msg.username) }}
-                className="chat-username"
+          {messages.map((msg, index) => {
+            const isCorrectGuess = msg.message === "alert24efjh2394fj324923212_";
+            const isCloseGuess   = msg.message === "alert32909f32934982374_";
+          
+            return (
+              <div
+                key={index}
+                className={`chat-message ${
+                  isCorrectGuess
+                    ? "chat-message--success"
+                    : isCloseGuess
+                    ? "chat-message--close"
+                    : ""
+                }`}
               >
-                {msg.username}:
-              </span>
-              <span className="chat-text"> {msg.message}</span>
-            </div>
-          ))}
+                {isCorrectGuess ? (
+                  <span className="chat-text--success">
+                    <strong>{msg.username.toUpperCase()}</strong> GUESSED THE CORRECT
+                    WORD
+                  </span>
+                ) : isCloseGuess ? (
+                  <span className="chat-text--close">"{lastSendMessage}" IS CLOSE!</span>
+                ) : (
+                  <>
+                    <span
+                      style={{ color: getUsernameColor(msg.username) }}
+                      className="chat-username"
+                    >
+                      {msg.username}:
+                    </span>
+                    <span className="chat-text"> {msg.message}</span>
+                  </>
+                )}
+              </div>
+            );
+          })}
           <div ref={messagesEndRef} />
         </div>
+
         <div className="chat-input-area">
         <Input
             className="chat-input"

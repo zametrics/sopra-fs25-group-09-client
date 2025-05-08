@@ -721,7 +721,7 @@ a {
 .chat-message {
   font-family: Dhyana;
   font-weight: 100;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   letter-spacing: 0.7px;
   margin-bottom: 8px;
   word-break: break-word;
@@ -1837,6 +1837,16 @@ html body .page-background .word-option.selected {
   margin-top: 10px !important;
   margin-bottom: 25px !important;
 }
+
+.chat-text--success {
+  color: #0ea52f; /* a readable green */
+  font-weight: 600;
+}
+
+.chat-text--close      { 
+  color: #dfb11a;
+}
+
 
 /* Optional: Smooth fade-in animation */
 @keyframes fadeInModal {
