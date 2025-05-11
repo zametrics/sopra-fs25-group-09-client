@@ -496,7 +496,7 @@ const currentUserToken = raw
                     WORD
                   </span>
                 ) : isCloseGuess ? (
-                  <span className="chat-text--close">`&quot;`{lastSendMessage}`&quot;`</span>
+                  <span className="chat-text--close">&quot;{lastSendMessage}&quot; is close!</span>
                 ) : (
                   <>
                     <span
