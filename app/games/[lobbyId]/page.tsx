@@ -10,6 +10,7 @@ import io, { Socket } from "socket.io-client";
 import { useDraw } from "@/hooks/useDraw";
 import { drawLine } from "@/utils/drawLine";
 import Layout from "@/utils/layout";
+import { getImageEtag } from "next/dist/server/image-optimizer";
 
 interface LobbyData {
   id: number;
@@ -692,6 +693,10 @@ const LobbyPage: FC = ({}) => {
     
         // 2) Fetch
         const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+
+        if(localStorage.getitem("userId") == lobbyData.id){
+          router.push("/home");
+        }
         
         console.log("Join fetch response:", {
           lobbyId,

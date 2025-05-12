@@ -33,7 +33,7 @@ const pendingStateRequests = new Map();
 const gameStates = new Map();
 const timers = new Map();
 const pendingDisconnects = new Map();
-const LEAVE_DELAY = 5000;
+const LEAVE_DELAY = 0;
 const playerScores = new Map(); // Map<lobbyId, Map<playerId, score>>
 
 
