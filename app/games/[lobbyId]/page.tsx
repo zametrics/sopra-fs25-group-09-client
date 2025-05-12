@@ -694,7 +694,7 @@ const LobbyPage: FC = ({}) => {
         // 2) Fetch
         const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
 
-        if(localStorage.getitem("userId") == lobbyData.id){
+        if(localStorage.getitem("userId") in lobbyData.playerIds){
           router.push("/home");
         }
         

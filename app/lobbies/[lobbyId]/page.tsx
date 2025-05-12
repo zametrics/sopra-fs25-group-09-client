@@ -149,6 +149,35 @@ const LobbyPage: React.FC = () => {
         `[Socket] Emitting joinLobby: lobbyId=${lobbyId}, userId=${currentUserId}, username=${username}`
       );
       socketIo.emit("joinLobby", { lobbyId, userId: currentUserId, username });
+  
+      try {
+      const userIdStr = localStorage.getItem("userId");
+      const userId = userIdStr ? parseInt(JSON.parse(userIdStr), 10) : null;
+      
+      if(!lobby?.playerIds){
+        return;
+      }
+
+      // Put users into database on reconnect
+      if(currentUserId in lobby?.playerIds){
+        return;        
+      }else {
+
+      // Attempt to join
+      try {
+        await apiService.put(
+          `/lobbies/${lobby?.id}/join?playerId=${userId}`,
+          {}
+        );
+      }catch(error) {
+      console.log("Error");
+    } 
+      }
+  
+    }catch(error) {
+      console.log("Error");
+      } 
+
     };
 
     socketIo.on("connect", () => {
