@@ -8,7 +8,7 @@ import { useApi } from "@/hooks/useApi";
 import { User } from "@/types/user";
 import { useBackgroundMusic } from "@/hooks/useBackgroundMusic";
 import { Lobby } from "@/types/lobby";
-import { Modal, Button} from "antd"; // Modal für Popup, Spin für Spinner
+import { Modal, Button } from "antd"; // Modal für Popup, Spin für Spinner
 
 // Exporting the HomeLayout component as default so that it can be imported easily in other files
 export default function HomeLayout({
@@ -57,7 +57,9 @@ export default function HomeLayout({
   const [username, setUsername] = useState<string>("");
 
   // State for Quickplay Loading
-  const [quickPlayStatus, setQuickPlayStatus] = useState<"idle" | "searching" | "joining">("idle");
+  const [quickPlayStatus, setQuickPlayStatus] = useState<
+    "idle" | "searching" | "joining"
+  >("idle");
   const [searchingDots, setSearchingDots] = useState(""); // Für die animierenden Punkte
   const [isNoLobbyModalVisible, setIsNoLobbyModalVisible] = useState(false); // Modal für Fehler
 
@@ -106,14 +108,14 @@ export default function HomeLayout({
 
   useEffect(() => {
     if (quickPlayStatus !== "searching") return;
-  
+
     const interval = setInterval(() => {
       setSearchingDots((prev) => {
         if (prev.length >= 3) return "";
         return prev + ".";
       });
     }, 500);
-  
+
     return () => clearInterval(interval);
   }, [quickPlayStatus]);
 
@@ -344,7 +346,7 @@ export default function HomeLayout({
       const userId = userIdStr ? parseInt(JSON.parse(userIdStr), 10) : null;
 
       if (!userId) {
-        console.error("Error: User not logged in")
+        console.error("Error: User not logged in");
         return;
       }
 
@@ -371,15 +373,15 @@ export default function HomeLayout({
   const handleQuickPlay = async () => {
     if (quickPlayStatus !== "idle") return;
     setQuickPlayStatus("searching");
-  
+
     const MAX_ATTEMPTS = 10;
     const INTERVAL_MS = 1000;
-  
+
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       try {
         const lobbies = await apiService.get<Lobby[]>("/lobbies");
         const openLobby = lobbies.find((lobby) => lobby.status === 0);
-  
+
         if (openLobby) {
           setQuickPlayStatus("joining");
           await joinLobby(openLobby.id); // <-- nutzt bestehende Funktion
@@ -389,17 +391,14 @@ export default function HomeLayout({
         console.error("Quickplay: error while polling lobbies", error);
         break;
       }
-  
+
       await new Promise((resolve) => setTimeout(resolve, INTERVAL_MS));
     }
-  
+
     // Nach 10s keine Lobby gefunden
     setQuickPlayStatus("idle");
     setIsNoLobbyModalVisible(true);
   };
-  
-
-
 
   return (
     <div className="page-background">
@@ -528,11 +527,7 @@ export default function HomeLayout({
             ) : (
               <>
                 <div className="profile-top-row">
-                  <img
-                    src={localAvatarUrl}
-                    alt="Avatar"
-                    className="avatar-image"
-                  />
+                  <img src={avatarUrl} alt="Avatar" className="avatar-image" />
                   <div className="profile-username">{username}</div>
                 </div>
                 <button
@@ -556,7 +551,7 @@ export default function HomeLayout({
               className="green-button"
               onClick={handleQuickPlay}
               disabled={quickPlayStatus !== "idle"}
-              loading= {quickPlayStatus === "joining"}
+              loading={quickPlayStatus === "joining"}
             >
               {quickPlayStatus === "searching" && `Searching${searchingDots}`}
               {quickPlayStatus === "idle" && "PLAY"}
@@ -566,40 +561,37 @@ export default function HomeLayout({
         </div>
       </div>
       <Modal
-         className="modal-no-open-lobbies"
-         open={isNoLobbyModalVisible}
-         onOk={() => setIsNoLobbyModalVisible(false)}
-         onCancel={() => setIsNoLobbyModalVisible(false)}
-         centered
-         width={330}
-         closable={false}
-         footer={null}
-      >       
-         <div className="modal-content-custom">
-           <h2 className="modal-title-custom">NO LOBBIES FOUND</h2>
-           <p className="modal-text">
-              we couldnt find any open lobbies right now 🙁
-           </p>
-             <button
-               className="modal-button-primary green-button "
-               onClick={() => {
-                 setIsNoLobbyModalVisible(false);
-                 handleCreateLobby();
-               }}
-             >
-               Host Your Own
-             </button>
-             <button
-               className="modal-cancel-button green-button"
-               onClick={() => setIsNoLobbyModalVisible(false)}
-             >
-               Cancel
-             </button>
-         </div>
+        className="modal-no-open-lobbies"
+        open={isNoLobbyModalVisible}
+        onOk={() => setIsNoLobbyModalVisible(false)}
+        onCancel={() => setIsNoLobbyModalVisible(false)}
+        centered
+        width={330}
+        closable={false}
+        footer={null}
+      >
+        <div className="modal-content-custom">
+          <h2 className="modal-title-custom">NO LOBBIES FOUND</h2>
+          <p className="modal-text">
+            we couldnt find any open lobbies right now 🙁
+          </p>
+          <button
+            className="modal-button-primary green-button "
+            onClick={() => {
+              setIsNoLobbyModalVisible(false);
+              handleCreateLobby();
+            }}
+          >
+            Host Your Own
+          </button>
+          <button
+            className="modal-cancel-button green-button"
+            onClick={() => setIsNoLobbyModalVisible(false)}
+          >
+            Cancel
+          </button>
+        </div>
       </Modal>
-
-
     </div>
-    
   );
 }

@@ -19,6 +19,7 @@ interface LobbyData {
   lobbyOwner: number;
   type: string;
   currentPainterToken: string | null;
+  status: number;
 }
 
 // Add interfaces from Layout if needed here too, or import them
@@ -120,11 +121,11 @@ const LobbyPage: React.FC = () => {
       );
       return;
     }
-    
-    //http://localhost:3001 --- "https://socket-server-826256454260.europe-west1.run.app/" 
+
+    //http://localhost:3001 --- "https://socket-server-826256454260.europe-west1.run.app/"
     console.log("[Socket] Setting up socket for lobby:", lobbyId);
     const socketIo = io(
-      process.env.NEXT_PUBLIC_SOCKET_URL || "https://socket-server-826256454260.europe-west1.run.app/",
+      process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001",
       {
         // Use env var
         path: "/api/socket",
@@ -234,6 +235,12 @@ const LobbyPage: React.FC = () => {
     currentUserIdNumber !== null &&
     lobby.lobbyOwner === currentUserIdNumber;
   // Add a log to see the isOwner calculation result whenever lobby or currentUserId changes
+
+  const getSliderBackground = (value: number, min: number, max: number) => {
+    const percentage = ((value - min) / (max - min)) * 100;
+    return `linear-gradient(to right, #007bff ${percentage}%, #ccc ${percentage}%)`;
+  };
+
   useEffect(() => {
     console.log(
       `[Auth Check] Re-calculating isOwner: lobbyOwner=${lobby?.lobbyOwner}, currentUserIdNumber=${currentUserIdNumber}, Result=${isOwner}`
@@ -400,13 +407,13 @@ const LobbyPage: React.FC = () => {
       lobby={lobby} // Pass the local state
     >
       <div className="settings-box">
-        <h1 className="drawzone-logo-4rem">DRAWZONE</h1>
-        <p className="drawzone-subtitle-1-5rem">ART BATTLE ROYALE</p>
+        <h1 className="drawzone-logo-2-8rem">DRAWZONE</h1>
+        <p className="drawzone-subtitle-1-5rem"></p>
 
         <div className="lobby-header">
           <h2 className="lobby-banner">HOST A LOBBY</h2>
           <button className="close-button" onClick={showLeaveConfirmation}>
-            ✕
+            <img src="/icons/close_x.svg" alt="Close" className="close-icon" />
           </button>
         </div>
 
@@ -419,6 +426,9 @@ const LobbyPage: React.FC = () => {
             value={maxPlayers}
             onChange={(e) => setMaxPlayers(Number(e.target.value))}
             disabled={!isOwner || loading}
+            style={{
+              background: getSliderBackground(maxPlayers, 2, 8),
+            }}
           />
           <span className="slider-value">{maxPlayers}</span>
         </div>
@@ -432,7 +442,10 @@ const LobbyPage: React.FC = () => {
             step={5}
             value={drawTime}
             onChange={(e) => setDrawTime(Number(e.target.value))}
-            disabled={!isOwner || loading} // Use isOwner flag
+            disabled={!isOwner || loading}
+            style={{
+              background: getSliderBackground(drawTime, 15, 120),
+            }}
           />
           <span className="slider-value">{drawTime}s</span>
         </div>
@@ -446,6 +459,9 @@ const LobbyPage: React.FC = () => {
             value={rounds}
             onChange={(e) => setRounds(Number(e.target.value))}
             disabled={!isOwner || loading} // Use isOwner flag
+            style={{
+              background: getSliderBackground(rounds, 1, 10),
+            }}
           />
           <span className="slider-value">{rounds}</span>
         </div>
@@ -525,7 +541,7 @@ const LobbyPage: React.FC = () => {
       </div>
 
       <Modal
-        title={<div className="leave-modal-title">Leave Lobby</div>}
+        title={<div className="fadeIn leave-modal-title">Leave Lobby</div>}
         open={isLeaveModalVisible}
         onOk={handleLeaveLobby}
         onCancel={handleCancelLeave}
@@ -551,7 +567,7 @@ const LobbyPage: React.FC = () => {
           },
         }}
       >
-        <p className="leave-modal-message">
+        <p className="fadeIn leave-modal-message">
           Are you sure you want to leave this lobby?
         </p>
       </Modal>

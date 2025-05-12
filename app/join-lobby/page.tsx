@@ -191,12 +191,16 @@ const JoinLobbyPage: React.FC = () => {
     <div className="page-background">
       <div className="settings-box join-lobby-container">
         <h1 className="drawzone-logo-2-8rem">DRAWZONE</h1>
-        <p className="drawzone-subtitle-1-1rem">ART BATTLE ROYALE</p>
+        <p className="drawzone-subtitle-1-1rem"></p>
 
         <div className="lobby-header" style={{ marginTop: 4 }}>
           <h2 className="lobby-banner">JOIN AN ACTIVE LOBBY</h2>
           <button className="close-button" onClick={goBack}>
-            ✕
+            <img
+              src="/icons/close_x.svg"
+              alt="close_buttom"
+              className="close-icon"
+            />
           </button>
         </div>
 

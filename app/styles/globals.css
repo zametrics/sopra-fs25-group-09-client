@@ -41,6 +41,17 @@ a {
   }
 }
 
+.stroke-black-1px {
+  text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black,
+    1px 1px 0 black;
+}
+
+.stroke-black-2px {
+  text-shadow: -2px -2px 0 black, -2px 0px 0 black, -2px 2px 0 black,
+    0px -2px 0 black, 0px 2px 0 black, 2px -2px 0 black, 2px 0px 0 black,
+    2px 2px 0 black;
+}
+
 .login-container {
   display: flex;
   justify-content: center;
@@ -101,6 +112,16 @@ a {
   src: url("/fonts/Nunito.ttf") format("truetype");
 }
 
+@font-face {
+  font-family: "Anja";
+  src: url("/fonts/Anja Eliane accent002.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "DMMono";
+  src: url("/fonts/DMMono-Regular.ttf") format("truetype");
+}
+
 .page-background {
   height: 100vh;
   overflow: hidden;
@@ -112,16 +133,10 @@ a {
 }
 
 .login-register-box {
-  background: rgba(255, 255, 255, 0.56);
-  border-radius: 35px;
   padding: 40px;
   max-width: 450px;
   width: 100%;
   text-align: center;
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.69),
-    0 8px 20px rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(1px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 .drawzone-logo-4rem {
@@ -132,7 +147,7 @@ a {
   font-weight: normal;
   text-shadow: -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff,
     3px 3px 0 #fff, -3px 0px 0 #fff, 3px 0px 0 #fff, 0px -3px 0 #fff,
-    0px 3px 0 #fff, 0 0 3px #fff;
+    0px 3px 0 #fff, 0 0 3px #fff, 0 0 5px black;
 }
 
 .drawzone-logo-3-7rem {
@@ -144,7 +159,7 @@ a {
   font-weight: normal;
   text-shadow: -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff,
     3px 3px 0 #fff, -3px 0px 0 #fff, 3px 0px 0 #fff, 0px -3px 0 #fff,
-    0px 3px 0 #fff, 0 0 3px #fff;
+    0px 3px 0 #fff, 0 0 3px #fff, 0 0 10px black;
 }
 
 .drawzone-logo-2-8rem {
@@ -156,7 +171,7 @@ a {
   font-weight: 500;
   text-shadow: -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff,
     2px 2px 0 #fff, -2px 0px 0 #fff, 2px 0px 0 #fff, 0px -2px 0 #fff,
-    0px 2px 0 #fff, 0 0 2px #fff;
+    0px 2px 0 #fff, 0 0 2px #fff, 0 0 10px black;
 }
 
 .drawzone-subtitle-1-1rem {
@@ -228,14 +243,14 @@ a {
     -1px -1px 0 #fff, 1px -1px 0 #fff, 1px 1px 0 #fff, -1px 1px 0 #fff !important;
 }
 
-.mainpage_wrapper{
+.mainpage_wrapper {
   align-items: center;
   justify-content: center;
   position: absolute;
   top: 50%;
   left: 50%;
-  -ms-transform: translate(-50%,-50%);
-  transform: translate(-50%,-50%);
+  -ms-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
 }
 
 .login-button:hover {
@@ -356,7 +371,7 @@ a {
   height: 87px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid black;
+  border: 2px solid rgba(0, 0, 0, 0.582);
 }
 
 .avatar-menu {
@@ -481,10 +496,11 @@ a {
   font-family: inherit;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.1);
   cursor: pointer;
+  transition: all 0.1s linear !important;
 }
 
-.edit-profile-button.hover {
-  background-color: #000000;
+.edit-profile-button:hover {
+  transform: scale(101%) !important;
 }
 
 .confirm-edit-profile-button {
@@ -538,18 +554,19 @@ a {
   color: white;
   font-weight: normal;
   font-size: 1rem;
-  border: 1.5px solid black;
+  border: 0px solid black !important;
   border-radius: 12px;
   cursor: pointer;
   text-align: center;
   font-family: Arial, sans-serif;
 
   /* Der weiße innere Rand: */
-  box-shadow: inset 0 0 0 1px white; /* weißer Innenrand */
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.527); /* weißer Innenrand */
+  transition: all 0.1s linear !important;
 }
 
 .logout-button:hover {
-  background-color: #8564fc;
+  transform: scale(101%);
 }
 
 .quickplay-box {
@@ -558,11 +575,14 @@ a {
 
 .quickplay-title {
   font-family: "Digitalt", Medium;
+  font-weight: 100;
   font-size: 3.2rem;
   margin-top: -10px;
   margin-bottom: 10px;
   color: white;
-  -webkit-text-stroke: 0.1px black;
+  letter-spacing: 1.2;
+  text-shadow: 0 0 4px black;
+  -webkit-text-stroke: 0.8px black;
 }
 
 .green-button {
@@ -573,8 +593,8 @@ a {
     45deg,
     #86ee04 0%,
     /* Heller Ton unten links */ #86ee04 49.9%,
-    #67eb00 50%,
-    /* Dunkler Ton oben rechts */ #67eb00 100%
+    #83e60b 50%,
+    /* Dunkler Ton oben rechts */ #83e60b 100%
   ) !important;
 
   height: 65px !important;
@@ -589,36 +609,45 @@ a {
   cursor: pointer !important;
   margin-top: 10px !important;
   margin-bottom: 30px !important;
-  transition: all 0.2s ease !important;
+  transition: all 0.1s ease !important;
 }
 
 .green-button:hover {
-  background: linear-gradient(
-    45deg,
-    #a1ff4d 0%,
-    /* Hellerer Ton unten links */ #a1ff4d 49.9%,
-    #8ff140 50%,
-    /* Dunklerer Ton oben rechts */ #8ff140 100%
-  );
+  padding: 10px 32px !important;
 }
 
 .green-button:active {
-  transform: translateY(2px);
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.3), 0 3px 0 #00000040;
+  transform: translateY(2px) !important;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.3), 0 3px 0 #00000040 !important;
 }
 
 .player-box,
 .settings-box,
 .chat-box,
 .game-box {
-  background: rgba(255, 255, 255, 0.56);
-  border-radius: 50px;
+  background: rgba(243, 243, 243, 0.404);
   padding: 40px;
   text-align: center;
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.69),
+}
+
+.login-register-box,
+.left-box,
+.profile-box,
+.quickplay-box,
+.player-box,
+.settings-box,
+.chat-box,
+.game-box {
+  background: rgba(238, 238, 238, 0.678);
+  border-radius: 35px;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.781),
     0 8px 20px rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(1px);
   -webkit-backdrop-filter: blur(10px);
+
+  backdrop-filter: blur(1px) saturate(140%);
+  -webkit-backdrop-filter: blur(2px) saturate(100%);
+  border: 1px solid rgba(198, 203, 209, 0.089);
 }
 
 .game-box {
@@ -644,6 +673,7 @@ a {
   margin-right: 13px;
   margin-top: 100px;
   height: 650px;
+  padding: 40px 30px;
 }
 
 .chat-box {
@@ -652,66 +682,117 @@ a {
   margin-left: 13px;
   height: 650px;
   margin-top: 100px;
+  padding: 40px 30px;
 }
 
 .players-chat-title {
-  font-family: "Digitalt", Medium;
-  font-size: 2.5rem;
-  font-weight: 1000f;
-  margin-top: -30px;
+  font-family: "digitalt";
+  font-size: 2.3rem;
+  font-weight: 400;
+  margin-top: -25px;
   margin-bottom: 10px;
   color: white;
-  -webkit-text-stroke: 0.5px black;
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.842);
+  -webkit-text-stroke: 0.8px black;
 }
 
 .player-list {
-  margin-top: 25px;
+  margin-top: 15px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 17px;
+  display: flex;
+  width: 100%;
 }
 
 .player-entry {
+  position: relative; /* <<< NEU */
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: #00bfff;
-  border-radius: 12px;
-  padding: 8px 10px;
-  color: rgb(255, 255, 255);
-  font-weight: bold;
-  font-size: 1.2rem;
-  font-family: Arial, sans-serif;
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.8),
-    0 4px 12px rgba(0, 0, 0, 0.2);
+  background-color: #06c3f6;
+  border-radius: 15px;
+  padding: 4px 6px;
+  border: 2px solid white;
+  box-shadow: 0 3px 0 #00000023;
+  width: 78%;
+  box-sizing: border-box;
+}
+
+.player_box_text {
+  font-size: 1.25rem;
+  transform: scale(1.05, 1);
+  font-family: digitalt;
+  font-weight: normal;
+  letter-spacing: 1.5px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #f6f6f6;
+  text-shadow: 0 0 4 rgba(0, 0, 0, 1);
+}
+
+.player-owner-indicator {
+  margin-top: -8px;
 }
 
 .player-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-grow: 1;
 }
 
 .player-avatar {
-  width: 35px;
-  height: 35px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   object-fit: cover;
   border: 1px solid rgb(0, 0, 0);
+  box-shadow: 0 0 2 rgba(0, 0, 0, 0.582);
 }
 
 .player-entry-own {
-  background-color: #0099ff; /* dunkleres Blau */
+  box-shadow: 0 3px 0 #00000023, 0 0 5px rgba(255, 255, 255, 0.432);
+}
+
+.player-score-box {
+  position: absolute;
+  right: 12px;
+  transform: translate(80%);
+  background: linear-gradient(
+    45deg,
+    #f8a11f 0%,
+    #f8931f 49.9%,
+    #fe8744 50%,
+    #fe8744 100%
+  );
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  width: 27%;
+  border: 2px solid white;
+  box-shadow: inset 0 -3px 0 #fe6544, 0 5px 0 #00000023;
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  right: -22px;
+  height: 35px;
+  padding: 1px 1px;
+}
+
+.player-painter-indicator {
+  margin-left: 4px;
 }
 
 .chat-messages {
-  background-color: white;
-  height: 460px;
-  border-radius: 18px;
-  padding: 2px 8px;
-  margin-bottom: 15px;
-  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.1), 0 6px 12px rgba(0, 0, 0, 0.2);
-
+  background-color: rgb(252, 248, 255);
+  height: 500px;
+  border-radius: 15px;
+  padding: 2px 10px;
+  margin-bottom: 7px;
+  border: 4px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.425);
   overflow-y: hidden; /* verhindert Scrollen */
   display: flex;
   flex-direction: column;
@@ -721,7 +802,7 @@ a {
 .chat-message {
   font-family: Dhyana;
   font-weight: 100;
-  font-size: 0.65rem;
+  font-size: 0.9rem;
   letter-spacing: 0.7px;
   margin-bottom: 8px;
   word-break: break-word;
@@ -732,6 +813,7 @@ a {
 .chat-username {
   font-weight: bold;
   margin-right: 5px;
+  text-shadow: 0 0 1px rgba(0, 0, 0, 0.156);
 }
 
 .chat-text {
@@ -740,73 +822,106 @@ a {
 
 .chat-input-area {
   display: flex;
-  gap: 10px;
+  gap: 6px;
   align-items: center;
+  justify-items: center;
+  justify-content: center;
+  max-width: 94%;
 }
 
 .chat-input {
   flex: 1 !important;
-  height: 45px !important;
-  border-radius: 12px !important;
+  height: 40px !important;
   border: 1px solid #ccc !important;
-  padding: 0 15px !important;
-  font-size: 1rem !important;
+  padding: 0 10px !important;
+  font-size: 0.8rem !important;
+  background-color: rgb(243, 243, 243) !important;
+  border: 1px solid rgba(65, 65, 65, 0.575) !important;
+  border-radius: 10px !important;
+  color: black !important;
+  font-family: "Dhyana" !important;
+  transform: translate(3%);
+}
+
+.placeholder-chat {
+  color: black;
 }
 
 .chat-send-button {
   height: 45px;
-  width: 45px;
-  border-radius: 50%;
-  background-color: white;
-  border: 1.5px solid black;
+  width: 40px;
+  border-radius: 10px;
+  background-color: rgba(199, 199, 199, 0.233);
+  border: 1px solid rgba(65, 65, 65, 0.575) !important;
   font-size: 1.3rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
+  transform: translate(3%);
+}
+
+.chat-send-button:hover {
+  box-shadow: 0 0 3px rgb(174, 0, 255);
+}
+
+.send-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+  margin-top: 2px; /* Adjust this value if it's not vertically centered */
+  margin-right: 1px;
 }
 
 .lobby-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: -50px;
+  margin-top: -55px;
   margin-bottom: 20px;
 }
 
 .lobby-banner {
-  background-color: #a75efa;
-  color: white;
-  height: 40px;
-  font-family: "Digitalt", sans-serif;
-  font-size: 1.8rem;
-  font-weight: normal;
+  background-color: #7912ff;
+  color: rgb(255, 255, 255);
+  height: 45px;
+  font-family: "nunito", sans-serif;
+  font-size: 1.64rem;
+  font-weight: bold;
   text-transform: uppercase;
-  padding: 5px 10px;
-  letter-spacing: 1.2;
-  border-radius: 999px;
+  padding: 4px 8px;
+  letter-spacing: 0.9;
+  border-radius: 99px;
   text-align: center;
   width: 100%;
-  -webkit-text-stroke: 1.6px #a75efa;
+  border: 2px solid rgb(255, 255, 255);
+  text-shadow: 0 0 3px rgba(255, 255, 255, 0.712);
+  box-shadow: inset 0 -3px 0 #772eca7e, 0 3px 0 #00000023;
 }
 
 .close-button {
-  background: #a75efa;
-  border-radius: 50%;
-  font-size: 1.3rem;
-  font-weight: bold;
-  margin-left: -50px;
-  width: 48px;
-  height: 48px;
-  border: 3.7px solid #ffffff;
+  background: #00000000;
+  margin-left: -85px;
+  margin-right: 2px;
+  text-align: center;
+  width: 45px;
+  height: 45px;
+  border: 2px solid rgba(255, 255, 255, 0);
   color: #ffffff;
   cursor: pointer;
-  -webkit-text-stroke: 3px rgb(255, 255, 255);
+  transition: all 0.1s linear !important;
+}
+
+.close-icon {
+  width: 23px;
+  height: 23px;
+  margin-top: 4px;
+  margin-left: -2px;
+  transform: scale(90%);
 }
 
 .close-button:hover {
-  background: #b586eb;
+  transform: scale(108%);
 }
 
 .lobby-setting-group {
@@ -821,21 +936,74 @@ a {
   color: #ffffff;
   display: block;
   margin-top: 25px;
-  -webkit-text-stroke: 1.5px rgb(0, 0, 0);
+  -webkit-text-stroke: 1.2px rgb(0, 0, 0);
 }
 
+/* Allgemeine Slider-Stile */
 input[type="range"] {
-  width: 80%;
-  margin-right: 10px;
+  -webkit-appearance: none;
+  width: 83%;
+  height: 10px;
+  background: #ccc; /* hellgrauer Hintergrund */
+  border-radius: 4px;
+  outline: none;
+}
+
+/* Slider-Track (für Firefox) */
+input[type="range"]::-moz-range-track {
+  background: #ccc;
+  height: 10px;
+  border-radius: 4px;
+}
+
+/* Slider-Knopf (WebKit – Chrome/Safari/Edge) */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+  background: #ffffff; /* kräftiges Blau */
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  margin-top: -2px; /* damit er zentriert auf dem Track sitzt */
+}
+
+/* Slider-Knopf (Firefox) */
+input[type="range"]::-moz-range-thumb {
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+  background: #007bff;
+  cursor: pointer;
+}
+
+/* Wertfeld neben dem Slider */
+.slider-value {
+  display: inline-block;
+  width: 40px;
+  margin-left: 12px;
+  padding: 4px 6px;
+  border: 1px solid #ffffff27 !important;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.479) !important;
+  text-align: center;
+  font-weight: bold;
+  box-shadow: 0 0 3px rgba(255, 255, 255, 0.678);
+  font-family: nunito;
+  font-size: 0.9rem !important;
 }
 
 .slider-value {
   display: inline-block;
-  min-width: 30px;
+  width: 43px;
+  margin-left: 12px;
+  padding: 4px 0px;
+  border: 1px solid #000;
+  border-radius: 8px;
+  background-color: white;
   text-align: center;
   font-weight: bold;
-  color: #333;
-  font-family: Arial, sans-serif;
+  color: rgb(4, 9, 54);
 }
 
 .wordset-controls {
@@ -1023,8 +1191,8 @@ textarea {
   background-color: #eeeeee; /* Slightly darker for active */
 }
 
-.Drawzone_button_login{
-  width: 200px!important;
+.Drawzone_button_login {
+  width: 200px !important;
 }
 
 /* Active Tool Indicator */
@@ -1485,15 +1653,15 @@ html body .page-background .word-option {
 }
 
 html body .page-background .word-option:hover {
-  border-color: #4D92EB !important;
+  border-color: #4d92eb !important;
   background-color: #f0f8ff !important;
   color: black !important; /* Ensure text remains black on hover */
   transform: translateY(-2px) !important;
 }
 
 html body .page-background .word-option.selected {
-  border-color: #4D92EB !important;
-  background-color: #BBD8FF !important; /* Much lighter blue for contrast with black text */
+  border-color: #4d92eb !important;
+  background-color: #bbd8ff !important; /* Much lighter blue for contrast with black text */
   color: black !important; /* Force black text */
   transform: scale(1.02) !important;
   animation: pulse 0.5s ease-in-out !important;
@@ -1501,26 +1669,20 @@ html body .page-background .word-option.selected {
 
 /* Animation for when a word is selected */
 @keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
-.player-score-box {
-  background-color: #ff914d;
-  color: white;
-  font-weight: bold;
-  border-radius: 12px;
-  padding: 2px 8px;
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 35px;
-  height: 35px;
-  font-size: 14px;
+.player-painter-indicator {
+  margin-left: 4px;
 }
-.player-painter-indicator { margin-left: 4px; }
 
 /* Game Leaderboard Styles */
 
@@ -1539,8 +1701,12 @@ html body .page-background .word-option.selected {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .leaderboard-container {
@@ -1556,8 +1722,14 @@ html body .page-background .word-option.selected {
 }
 
 @keyframes slideUp {
-  from { transform: translateY(30px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .leaderboard-title {
@@ -1565,7 +1737,7 @@ html body .page-background .word-option.selected {
   color: #333;
   text-align: center;
   margin-bottom: 16px;
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
   font-weight: 700;
 }
 
@@ -1574,7 +1746,7 @@ html body .page-background .word-option.selected {
   color: #555;
   text-align: center;
   margin-bottom: 24px;
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
 }
 
 .winner-section {
@@ -1608,13 +1780,13 @@ html body .page-background .word-option.selected {
   font-weight: bold;
   color: #333;
   margin-bottom: 4px;
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
 }
 
 .winner-score {
   font-size: 18px;
-  color: #4CAF50;
-  font-family: 'Poppins', sans-serif;
+  color: #4caf50;
+  font-family: "Poppins", sans-serif;
   font-weight: 500;
 }
 
@@ -1634,11 +1806,13 @@ html body .page-background .word-option.selected {
   font-weight: bold;
   color: #555;
   border-bottom: 1px solid #eee;
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
   font-size: 14px;
 }
 
-.rank-header, .player-header, .score-header {
+.rank-header,
+.player-header,
+.score-header {
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -1659,7 +1833,7 @@ html body .page-background .word-option.selected {
   align-items: center;
   border-bottom: 1px solid #eee;
   transition: background-color 0.2s;
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
 }
 
 .leaderboard-row:hover {
@@ -1696,11 +1870,6 @@ html body .page-background .word-option.selected {
   font-size: 16px;
 }
 
-.player-info {
-  display: flex;
-  align-items: center;
-}
-
 .player-avatar-small {
   width: 32px;
   height: 32px;
@@ -1721,7 +1890,7 @@ html body .page-background .word-option.selected {
 
 .player-score {
   font-weight: bold;
-  color: #4CAF50;
+  color: #4caf50;
   text-align: center;
   font-size: 16px;
 }
@@ -1736,7 +1905,7 @@ html body .page-background .word-option.selected {
 .leaderboard-actions button {
   flex: 1;
   height: 44px;
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
   font-weight: 500;
   border-radius: 8px;
   transition: all 0.2s;
@@ -1753,7 +1922,7 @@ html body .page-background .word-option.selected {
 }
 
 .play-again-button {
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: white;
   border: none;
 }
@@ -1773,7 +1942,6 @@ html body .page-background .word-option.selected {
   border: 2px solid rgb(255, 255, 255) !important;
   backdrop-filter: blur(8px) !important;
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.712) !important;
-
 }
 
 .ant-modal-mask {
@@ -1794,7 +1962,7 @@ html body .page-background .word-option.selected {
   margin-bottom: 12px;
   font-family: "Digitalt", sans-serif;
   letter-spacing: 1;
-  -webkit-text-stroke:0.7px rgb(255, 55, 55);
+  -webkit-text-stroke: 0.7px rgb(255, 55, 55);
 }
 
 .modal-text {
@@ -1805,8 +1973,6 @@ html body .page-background .word-option.selected {
   padding-right: 20;
   padding-top: 10;
   font-family: "Koulen";
-  
-
 }
 
 .modal-cancel-button {
@@ -1843,10 +2009,9 @@ html body .page-background .word-option.selected {
   font-weight: 600;
 }
 
-.chat-text--close      { 
+.chat-text--close {
   color: #dfb11a;
 }
-
 
 /* Optional: Smooth fade-in animation */
 @keyframes fadeInModal {
@@ -1860,22 +2025,21 @@ html body .page-background .word-option.selected {
   }
 }
 
-
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .leaderboard-container {
     width: 95%;
     padding: 16px;
   }
-  
+
   .leaderboard-title {
     font-size: 24px;
   }
-  
+
   .leaderboard-subtitle {
     font-size: 18px;
   }
-  
+
   .player-username {
     max-width: 100px;
   }

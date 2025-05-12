@@ -43,7 +43,7 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px; /* Spacing from template */
+  gap: 15px; /* Spacing from template */
 }
 
 /* --- Lobby Entry Styling (Template Match) --- */

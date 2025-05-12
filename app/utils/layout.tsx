@@ -15,6 +15,7 @@ interface LobbyData {
   lobbyOwner: number;
   type: string;
   currentPainterToken: string | null;
+  status: number;
 }
 
 interface PlayerData {
@@ -41,10 +42,7 @@ interface LayoutProps {
   // needs to react to the owner change for enabling/disabling controls.
   // If only the indicator in Layout needs updating, this isn't strictly necessary.
   onLobbyUpdate?: (updatedLobby: Partial<LobbyData>) => void;
-  
 }
-
-
 
 interface PlayerLeftData {
   id: string | number; // ID might be string or number from server
@@ -71,7 +69,6 @@ const Layout: React.FC<LayoutProps> = ({
   localAvatarUrl,
   lobby: initialLobby, // Rename prop to avoid conflict with state
   onLobbyUpdate, // Get the update function
-  
 }) => {
   const apiService = useApi();
   const [players, setPlayers] = useState<PlayerData[]>([]);
@@ -83,7 +80,6 @@ const Layout: React.FC<LayoutProps> = ({
   const [isChatDisabled, setIsChatDisabled] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [lastSendMessage, setLastSendMessage] = useState<string>("");
-
 
   const colorPool: string[] = [
     "#e6194b",
@@ -121,13 +117,11 @@ const Layout: React.FC<LayoutProps> = ({
     [onLobbyUpdate]
   ); // Dependency on the callback
 
-
-  const raw = typeof window !== "undefined"
-  ? localStorage.getItem("token")
-  : null;
-const currentUserToken = raw
-  ? (JSON.parse(raw) as { token?: string }).token || null
-  : null;
+  const raw =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const currentUserToken = raw
+    ? (JSON.parse(raw) as { token?: string }).token || null
+    : null;
 
   const isYouPainter = lobby?.currentPainterToken === currentUserToken;
 
@@ -156,11 +150,11 @@ const currentUserToken = raw
   function minOperations(s1: string, s2: string): number {
     const m = s1.length;
     const n = s2.length;
-  
+
     const dp: number[][] = Array.from({ length: m + 1 }, () =>
       Array(n + 1).fill(0)
     );
-  
+
     for (let i = 0; i <= m; i++) {
       for (let j = 0; j <= n; j++) {
         if (i === 0) {
@@ -170,15 +164,17 @@ const currentUserToken = raw
         } else if (s1[i - 1] === s2[j - 1]) {
           dp[i][j] = dp[i - 1][j - 1]; // no change
         } else {
-          dp[i][j] = 1 + Math.min(
-            dp[i - 1][j],     // deletion
-            dp[i][j - 1],     // insertion
-            dp[i - 1][j - 1]  // substitution
-          );
+          dp[i][j] =
+            1 +
+            Math.min(
+              dp[i - 1][j], // deletion
+              dp[i][j - 1], // insertion
+              dp[i - 1][j - 1] // substitution
+            );
         }
       }
     }
-  
+
     return dp[m][n];
   }
 
@@ -196,7 +192,10 @@ const currentUserToken = raw
               .catch(() => ({ id, username: "Guest" } as PlayerData))
           );
           const playerData = await Promise.all(playerPromises);
-          const newPlayers = playerData.map((p) => ({ ...p, id: Number(p.id) })) as PlayerData[];
+          const newPlayers = playerData.map((p) => ({
+            ...p,
+            id: Number(p.id),
+          })) as PlayerData[];
           setPlayers(newPlayers);
           // --- Initialize scores for all players ---
           setScores((prev) => {
@@ -225,30 +224,33 @@ const currentUserToken = raw
     }
 
     if (socket) {
-      socket.on("lobbyState", (data: LobbyStateData & { currentPainterToken?: string | null }) => {
-        console.log("Received lobbyState:", data);
-        const newPlayers = data.players.map((p) => ({
-          id: Number(p.id),
-          username: p.username,
-        }));
-        setPlayers(newPlayers);
-        // --- Update scores to include new players ---
-        setScores((prev) => {
-          const newScores = { ...prev };
-          newPlayers.forEach((player) => {
-            if (!(player.id in newScores)) {
-              newScores[player.id] = 0;
-            }
+      socket.on(
+        "lobbyState",
+        (data: LobbyStateData & { currentPainterToken?: string | null }) => {
+          console.log("Received lobbyState:", data);
+          const newPlayers = data.players.map((p) => ({
+            id: Number(p.id),
+            username: p.username,
+          }));
+          setPlayers(newPlayers);
+          // --- Update scores to include new players ---
+          setScores((prev) => {
+            const newScores = { ...prev };
+            newPlayers.forEach((player) => {
+              if (!(player.id in newScores)) {
+                newScores[player.id] = 0;
+              }
+            });
+            return newScores;
           });
-          return newScores;
-        });
-        if (data.ownerId !== undefined && data.ownerId !== null) {
-          updateLobbyState({ lobbyOwner: Number(data.ownerId) });
+          if (data.ownerId !== undefined && data.ownerId !== null) {
+            updateLobbyState({ lobbyOwner: Number(data.ownerId) });
+          }
+          if (data.currentPainterToken !== undefined) {
+            updateLobbyState({ currentPainterToken: data.currentPainterToken });
+          }
         }
-        if (data.currentPainterToken !== undefined) {
-          updateLobbyState({ currentPainterToken: data.currentPainterToken });
-        }
-      });
+      );
 
       // --- Player Joined ---
       socket.on(
@@ -258,7 +260,10 @@ const currentUserToken = raw
           setPlayers((prev) => {
             const newPlayerId = Number(newPlayer.id);
             if (prev.some((p) => p.id === newPlayerId)) return prev;
-            const newPlayers = [...prev, { id: newPlayerId, username: newPlayer.username }];
+            const newPlayers = [
+              ...prev,
+              { id: newPlayerId, username: newPlayer.username },
+            ];
             // --- Initialize score for new player ---
             setScores((prevScores) => ({
               ...prevScores,
@@ -300,7 +305,7 @@ const currentUserToken = raw
       });
 
       socket.on("chatAlert", (message: ChatMessage) => {
-        if(message.username == localStorage.getItem("username")) {
+        if (message.username == localStorage.getItem("username")) {
           setMessages((prev) => [...prev, message]);
         }
       });
@@ -311,9 +316,11 @@ const currentUserToken = raw
         message.error(`Connection failed: ${err.message}`, 5);
       });
 
-                  // --- NEW: Word Selected Listener ---
+      // --- NEW: Word Selected Listener ---
       socket.on("word-selected", (data: { word: string }) => {
-        console.log(`Received word-selected for lobby ${lobbyId}: ${data.word}`);
+        console.log(
+          `Received word-selected for lobby ${lobbyId}: ${data.word}`
+        );
         setCurrentWord(data.word); // Update currentWord state
         setIsChatDisabled(false);
         setChatInput("");
@@ -328,7 +335,9 @@ const currentUserToken = raw
       });
 
       socket.on("scoreUpdated", ({ playerId, score }) => {
-        console.log(`[Score] Received score update for player ${playerId}: ${score}`);
+        console.log(
+          `[Score] Received score update for player ${playerId}: ${score}`
+        );
         setScores((prev) => ({
           ...prev,
           [playerId]: score,
@@ -339,10 +348,7 @@ const currentUserToken = raw
         console.log("Game ended – showing leaderboard");
         setShowLeaderboard(true);
       });
-
     }
-
-    
 
     // --- Cleanup ---
     return () => {
@@ -359,7 +365,6 @@ const currentUserToken = raw
     };
     // Add updateLobbyState to dependencies
   }, [lobbyId, socket, apiService, currentUserId, updateLobbyState]);
-
 
   /* EMERGENCY CODE DO NOT TOUCH LEAVE IT DONT CHANGE!
   const fetchCurrentWord = async () => {
@@ -379,13 +384,13 @@ const currentUserToken = raw
   }, [messages]);
 
   const sendMessage = () => {
-    if(isChatDisabled) return;
-    
+    if (isChatDisabled) return;
+
     if (chatInput.trim() && socket) {
       const username = players.find(
         (p) => p.id.toString() === currentUserId
       )?.username;
-  
+
       if (chatInput.toLowerCase() === currentWord.toLowerCase()) {
         socket.emit("chatMessage", {
           lobbyId,
@@ -413,13 +418,21 @@ const currentUserToken = raw
         setChatInput("");
       } else {
         socket.emit("chatMessage", { lobbyId, message: chatInput, username });
-        const minimalOps = minOperations(chatInput.toLowerCase(), currentWord.toLowerCase());
-        const maxOps = Math.round(currentWord.length / 5) >= 1? Math.round(currentWord.length / 5): 1;
-        if (minimalOps <= maxOps){
+        const minimalOps = minOperations(
+          chatInput.toLowerCase(),
+          currentWord.toLowerCase()
+        );
+        const maxOps =
+          Math.round(currentWord.length / 5) >= 1
+            ? Math.round(currentWord.length / 5)
+            : 1;
+        if (minimalOps <= maxOps) {
           setLastSendMessage(chatInput);
-          socket.emit("chatAlert", {lobbyId,
+          socket.emit("chatAlert", {
+            lobbyId,
             message: "alert32909f32934982374_",
-            username})
+            username,
+          });
         }
         setChatInput("");
       }
@@ -430,41 +443,54 @@ const currentUserToken = raw
     <div className="page-background">
       <div className="player-box">
         {/* Use local lobby state for display */}
-        <h1 className="players-chat-title">
-          PLAYERS ({players.length}/{lobby?.numOfMaxPlayers || "?"})
-        </h1>
+        {lobby?.status === 0 ? (
+          <h1 className="players-chat-title">
+            PLAYERS ({players.length}/{lobby?.numOfMaxPlayers || "?"})
+          </h1>
+        ) : (
+          <h1 className="players-chat-title">SCOREBOARD</h1>
+        )}
         <div className="player-list">
           {players.map((player) => (
             <div
-            key={player.id}
-            className={`player-entry ${
-            String(player.id) === currentUserId ? "player-entry-own" : ""
-          }`}
-    >
-      <div className="player-info" style={{ display: "flex", alignItems: "center", gap: "8px", flexGrow: 1 }}>
-      <img
-        src={
-          String(player.id) === currentUserId
-            ? localAvatarUrl
-            : "/icons/avatar.png"
-        }
-        alt="Avatar"
-        className="player-avatar"
-      />
-      <span>{player.username}</span>
-      {lobby && player.id === lobby.lobbyOwner && (
-      <span className="player-owner-indicator" title="Lobby Owner">👑</span>
-    )}
-    {isYouPainter && String(player.id) === currentUserId && (
-            <span
-              className="player-painter-indicator"
-              title="You’re painting"
-            >✏️</span>
-          )}
-    </div>
-    <div className="player-score-box">{scores[player.id] || 0}</div> {/* <- Here's the new part */}
-  </div>
-
+              key={player.id}
+              className={`player-entry ${
+                String(player.id) === currentUserId ? "player-entry-own" : ""
+              }`}
+            >
+              <div className="player-info">
+                <img
+                  src={
+                    String(player.id) === currentUserId
+                      ? localAvatarUrl
+                      : "/icons/avatar.png"
+                  }
+                  alt="Avatar"
+                  className="player-avatar"
+                />
+                <span className="player_box_text">{player.username}</span>
+                {lobby && player.id === lobby.lobbyOwner && (
+                  <span
+                    className="player-owner-indicator player_box_text"
+                    title="Lobby Owner"
+                  >
+                    👑
+                  </span>
+                )}
+                {isYouPainter && String(player.id) === currentUserId && (
+                  <span
+                    className="player-painter-indicator"
+                    title="You’re painting"
+                  >
+                    ✏️
+                  </span>
+                )}
+              </div>
+              <div className="player_box_text player-score-box">
+                {scores[player.id] || 0}
+              </div>{" "}
+              {/* <- Here's the new part */}
+            </div>
           ))}
         </div>
       </div>
@@ -476,9 +502,10 @@ const currentUserToken = raw
         <h1 className="players-chat-title">CHAT</h1>
         <div className="chat-messages">
           {messages.map((msg, index) => {
-            const isCorrectGuess = msg.message === "alert24efjh2394fj324923212_";
-            const isCloseGuess   = msg.message === "alert32909f32934982374_";
-          
+            const isCorrectGuess =
+              msg.message === "alert24efjh2394fj324923212_";
+            const isCloseGuess = msg.message === "alert32909f32934982374_";
+
             return (
               <div
                 key={index}
@@ -492,11 +519,13 @@ const currentUserToken = raw
               >
                 {isCorrectGuess ? (
                   <span className="chat-text--success">
-                    <strong>{msg.username.toUpperCase()}</strong> GUESSED THE CORRECT
-                    WORD
+                    <strong>{msg.username.toUpperCase()}</strong> GUESSED THE
+                    CORRECT WORD
                   </span>
                 ) : isCloseGuess ? (
-                  <span className="chat-text--close">&quot;{lastSendMessage}&quot; is close!</span>
+                  <span className="chat-text--close">
+                    &quot;{lastSendMessage}&quot; is very close!
+                  </span>
                 ) : (
                   <>
                     <span
@@ -515,23 +544,26 @@ const currentUserToken = raw
         </div>
 
         <div className="chat-input-area">
-        <Input
+          <Input
             className="chat-input"
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
             onPressEnter={sendMessage}
-            placeholder={isChatDisabled ? "Chat disabled" : "Type your message here!"}
+            placeholder={
+              isChatDisabled ? "Chat disabled" : "Type your message here!"
+            }
             disabled={isChatDisabled} // Disable input when chat is disabled
           />
-          <Button className="chat-send-button" onClick={sendMessage} disabled={isChatDisabled} // Disable button when chat is disabled
+          <Button
+            className="chat-send-button"
+            onClick={sendMessage}
+            disabled={isChatDisabled}
           >
-            <span role="img" aria-label="send">
-              📨
-            </span>
+            <img src="/icons/send_icon.png" alt="Send" className="send-icon" />
           </Button>
         </div>
       </div>
-      { showLeaderboard && (
+      {showLeaderboard && (
         <div className="leaderboard-overlay">
           <div className="leaderboard-container">
             <h2 className="players-chat-title">🏆 Final Leaderboard</h2>
@@ -542,9 +574,19 @@ const currentUserToken = raw
                   <div
                     key={player.id}
                     className="player-entry"
-                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
                       <img
                         src={
                           String(player.id) === currentUserId
@@ -556,20 +598,24 @@ const currentUserToken = raw
                       />
                       <span>{player.username}</span>
                       {lobby && player.id === lobby.lobbyOwner && (
-                        <span className="player-owner-indicator" title="Lobby Owner">
+                        <span
+                          className="player-owner-indicator"
+                          title="Lobby Owner"
+                        >
                           👑
                         </span>
                       )}
                     </div>
-                    <div className="player-score-box">{scores[player.id] ?? 0}</div>
+                    <div className="player-score-box">
+                      {scores[player.id] ?? 0}
+                    </div>
                   </div>
                 ))}
             </div>
           </div>
         </div>
       )}
-
-    </div> 
+    </div>
   );
 };
 
