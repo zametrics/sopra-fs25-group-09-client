@@ -150,25 +150,19 @@ const LobbyPage: React.FC = () => {
       );
       socketIo.emit("joinLobby", { lobbyId, userId: currentUserId, username });
   
-      try {
-      const userIdStr = localStorage.getItem("userId");
-      const userId = userIdStr ? parseInt(JSON.parse(userIdStr), 10) : null;
-      
+
 
       // Attempt to join
       try {
         await apiService.put(
-          `/lobbies/${lobby?.id}/join?playerId=${userId}`,
+          `/lobbies/${lobby?.id}/join?playerId=${currentUserId}`,
           {}
         );
       }catch(error) {
       console.log("Error",error);
     } 
       
-  
-    }catch(error) {
-      console.log("Error", error);
-      } 
+
 
     };
 
