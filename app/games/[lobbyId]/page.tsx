@@ -989,7 +989,7 @@ useEffect(() => {
       }
 
       // http://localhost:3001 https://socket-server-826256454260.europe-west1.run.app/  http://localhost:3001
-      socketIo = io("https://socket-server-826256454260.europe-west1.run.app/ ", {
+      socketIo = io("https://socket-server-826256454260.europe-west1.run.app/", {
         path: "/api/socket",
       });
       setSocket(socketIo);
