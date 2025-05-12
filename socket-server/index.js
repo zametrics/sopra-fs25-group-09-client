@@ -21,7 +21,7 @@ const io = new Server(server, {
 });
 
 //https://sopra-fs25-group-09-server.oa.r.appspot.com/   , http://localhost:8080
-const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8080";
+const BACKEND_API_URL = process.env.BACKEND_API_URL || "https://sopra-fs25-group-09-server.oa.r.appspot.com/";
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args)); // Dynamic import
 
