@@ -154,10 +154,7 @@ const LobbyPage: React.FC = () => {
 
       // Attempt to join
       try {
-        await apiService.put(
-          `/lobbies/${lobby?.id}/join?playerId=${currentUserId}`,
-          {}
-        );
+        await apiService.put(`/lobbies/${lobbyId}/join?playerId=${currentUserId}`, {});
       }catch(error) {
       console.log("Error",error);
     } 
