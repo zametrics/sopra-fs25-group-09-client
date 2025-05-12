@@ -301,7 +301,7 @@ const LobbyPage: React.FC = () => {
         type: type === "custom" && customWords ? "custom" : type, // Handle custom type
         numOfRounds: rounds,
         drawTime: drawTime,
-        status: 1,
+
       };
 
       console.log(

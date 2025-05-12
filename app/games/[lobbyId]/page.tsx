@@ -688,13 +688,18 @@ const LobbyPage: FC = ({}) => {
     const joinThenFetch = async () => {
       setLoading(true);
       try {
+
+        const lobbyData2 = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+        
+        if(lobbyData2.status == 0){
         // 1) Join
         await apiService.put(`/lobbies/${lobbyId}/join?playerId=${currentUserId}`, {});
-    
+        }
+
         // 2) Fetch
         const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
 
-        if(localStorage.getitem("userId") in lobbyData.playerIds){
+        if(!(localStorage.getitem("userId") in  lobbyData.playerIds)){
           router.push("/home");
         }
         
