@@ -2,7 +2,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
-const { cursorTo } = require("readline");
+
 
 // --- Load Environment Variables ---
 require("dotenv").config();
@@ -33,7 +33,7 @@ const pendingStateRequests = new Map();
 const gameStates = new Map();
 const timers = new Map();
 const pendingDisconnects = new Map();
-const LEAVE_DELAY = 0;
+const LEAVE_DELAY = 5000;
 const playerScores = new Map(); // Map<lobbyId, Map<playerId, score>>
 
 

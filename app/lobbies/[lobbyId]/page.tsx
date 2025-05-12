@@ -149,18 +149,6 @@ const LobbyPage: React.FC = () => {
         `[Socket] Emitting joinLobby: lobbyId=${lobbyId}, userId=${currentUserId}, username=${username}`
       );
       socketIo.emit("joinLobby", { lobbyId, userId: currentUserId, username });
-  
-
-
-      // Attempt to join
-      try {
-        await apiService.put(`/lobbies/${lobbyId}/join?playerId=${currentUserId}`, {});
-      }catch(error) {
-      console.log("Error",error);
-    } 
-      
-
-
     };
 
     socketIo.on("connect", () => {
@@ -292,7 +280,7 @@ const LobbyPage: React.FC = () => {
         type: type === "custom" && customWords ? "custom" : type, // Handle custom type
         numOfRounds: rounds,
         drawTime: drawTime,
-
+        status: 1,
       };
 
       console.log(
