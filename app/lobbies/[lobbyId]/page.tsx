@@ -154,14 +154,6 @@ const LobbyPage: React.FC = () => {
       const userIdStr = localStorage.getItem("userId");
       const userId = userIdStr ? parseInt(JSON.parse(userIdStr), 10) : null;
       
-      if(!lobby?.playerIds){
-        return;
-      }
-
-      // Put users into database on reconnect
-      if(currentUserId in lobby?.playerIds){
-        return;        
-      }else {
 
       // Attempt to join
       try {
@@ -172,7 +164,7 @@ const LobbyPage: React.FC = () => {
       }catch(error) {
       console.log("Error",error);
     } 
-      }
+      
   
     }catch(error) {
       console.log("Error", error);
