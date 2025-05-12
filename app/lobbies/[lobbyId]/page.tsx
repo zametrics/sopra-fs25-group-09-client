@@ -170,12 +170,12 @@ const LobbyPage: React.FC = () => {
           {}
         );
       }catch(error) {
-      console.log("Error");
+      console.log("Error",error);
     } 
       }
   
     }catch(error) {
-      console.log("Error");
+      console.log("Error", error);
       } 
 
     };

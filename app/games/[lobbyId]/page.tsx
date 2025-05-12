@@ -10,7 +10,7 @@ import io, { Socket } from "socket.io-client";
 import { useDraw } from "@/hooks/useDraw";
 import { drawLine } from "@/utils/drawLine";
 import Layout from "@/utils/layout";
-import { getImageEtag } from "next/dist/server/image-optimizer";
+
 
 interface LobbyData {
   id: number;
