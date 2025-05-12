@@ -71,6 +71,7 @@ const Layout: React.FC<LayoutProps> = ({
   onLobbyUpdate, // Get the update function
 }) => {
   const apiService = useApi();
+
   const [players, setPlayers] = useState<PlayerData[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState<string>("");
@@ -100,6 +101,21 @@ const Layout: React.FC<LayoutProps> = ({
   useEffect(() => {
     setLobby(initialLobby);
   }, [initialLobby]);
+
+
+  // for the end of game state quit
+  const handleQuit = async () => {
+  try {
+    await apiService.put(`/lobbies/${lobbyId}/leave?playerId=${currentUserId}`, {});
+    socket?.emit("leaveLobby", { lobbyId, userId: currentUserId });
+    message.success("You have left the game.");
+    window.location.href = "/home"; // or use `router.push("/home")` if using `useRouter`
+  } catch (error) {
+    console.error("Failed to quit game:", error);
+    message.error("Failed to quit. Try again.");
+  }
+};
+
 
   // --- Helper function to update lobby state locally and notify parent ---
   const updateLobbyState = useCallback(
@@ -566,7 +582,7 @@ const Layout: React.FC<LayoutProps> = ({
       {showLeaderboard && (
         <div className="leaderboard-overlay">
           <div className="leaderboard-container">
-            <h2 className="players-chat-title">🏆 Final Leaderboard</h2>
+            <h2 className="leaderboard-title">🏆 Final Leaderboard</h2>
             <div className="player-list">
               {[...players]
                 .sort((a, b) => (scores[b.id] ?? 0) - (scores[a.id] ?? 0))
@@ -611,6 +627,11 @@ const Layout: React.FC<LayoutProps> = ({
                     </div>
                   </div>
                 ))}
+            </div>
+            <div style={{ marginTop: "1rem", display: "flex", gap: "10px", justifyContent: "center" }}>
+              <Button className="quit-button" onClick={handleQuit}>
+                Quit Game
+              </Button>
             </div>
           </div>
         </div>
