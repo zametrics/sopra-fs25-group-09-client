@@ -92,7 +92,7 @@ Note: If a team member fails to show continuous progress after using their Joker
 
 
 
-## Contributions Week 5 - [Begin Date] to [End Date]
+## Contributions Week 5 - [23.4.2025] to [29.04.2025]
 
 | **Student**      | **Date**  | **Link to Commit**          | **Description**                     | **Relevance**                          |
 |-------------------|-----------|-----------------------------|-------------------------------------|-----------------------------------------|
@@ -108,6 +108,30 @@ Note: If a team member fails to show continuous progress after using their Joker
 
 ---
 
-## Contributions Week 6 - [Begin Date] to [End Date]
+## Contributions Week 6 - [30.4.2025] to [06.04.2025]  -- JOKER WEEK
 
-*Continue with the same table format as above.*
+| **Student**      | **Date**  | **Link to Commit**          | **Description**                     | **Relevance**                          |
+|-------------------|-----------|-----------------------------|-------------------------------------|-----------------------------------------|
+| **[@githubUser1]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+|                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+| **[@githubUser2]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+|                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+| **[@githubUser3]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+|                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+| **[@githubUser4]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+|                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+
+---
+
+## Contributions Week 7 - [07.05.2025] to [13.05.2025]
+
+| **Student**      | **Date**  | **Link to Commit**          | **Description**                     | **Relevance**                          |
+|-------------------|-----------|-----------------------------|-------------------------------------|-----------------------------------------|
+| **[@githubUser1]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+|                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+| **[@githubUser2]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+|                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+| **[@githubUser3]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+|                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+| **[@githubUser4]** | [date]    | [Link to Commit 1]          | [Brief description of the task]     | [Why this contribution is relevant]     |
+|                   | [date]    | [Link to Commit 2]          | [Brief description of the task]     | [Why this contribution is relevant]     |
