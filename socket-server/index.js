@@ -3,7 +3,6 @@ const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
 
-
 // --- Load Environment Variables ---
 require("dotenv").config();
 
@@ -21,7 +20,9 @@ const io = new Server(server, {
 });
 
 //https://sopra-fs25-group-09-server.oa.r.appspot.com/   , http://localhost:8080
-const BACKEND_API_URL = process.env.BACKEND_API_URL || "https://sopra-fs25-group-09-server.oa.r.appspot.com/";
+const BACKEND_API_URL =
+  process.env.BACKEND_API_URL ||
+  "https://sopra-fs25-group-09-server.oa.r.appspot.com/";
 const fetch = (...args) =>
   import("node-fetch").then(({ default: fetch }) => fetch(...args)); // Dynamic import
 
@@ -35,7 +36,6 @@ const timers = new Map();
 const pendingDisconnects = new Map();
 const LEAVE_DELAY = 5000;
 const playerScores = new Map(); // Map<lobbyId, Map<playerId, score>>
-
 
 // --- NEW: Fetch Lobby Details Function ---
 async function fetchLobbyDetailsFromDb(lobbyId) {
@@ -74,10 +74,8 @@ async function fetchTokenFromID(userID) {
       return null;
     }
     const userData = await response.json();
-    const token = userData.token
-    console.log(
-      `API Success: Fetched userDetails for ${userID}`
-    ); 
+    const token = userData.token;
+    console.log(`API Success: Fetched userDetails for ${userID}`);
     return token;
   } catch (error) {
     console.error(
@@ -103,7 +101,7 @@ async function handleTimeUp(lobbyId) {
   let someoneStillHasToPaint = false;
   for (const playerId of playerIds) {
     const token = await fetchTokenFromID(playerId);
-    if (!token) return;         // abort on DB error
+    if (!token) return; // abort on DB error
     if (!painterHistoryTokens.includes(token)) {
       someoneStillHasToPaint = true;
       break;
@@ -111,18 +109,18 @@ async function handleTimeUp(lobbyId) {
   }
 
   const gs = gameStates.get(lobbyId);
-  if (!gs) return;              // should never happen
+  if (!gs) return; // should never happen
 
   if (someoneStillHasToPaint) {
-    io.to(lobbyId).emit("roundEnded");          // wait for a word
+    io.to(lobbyId).emit("roundEnded"); // wait for a word
   } else if (gs.currentRound < gs.numOfRounds) {
     gs.currentRound++;
     gameStates.set(lobbyId, gs);
     io.to(lobbyId).emit("gameUpdate", {
       currentRound: gs.currentRound,
-      numOfRounds : gs.numOfRounds,
+      numOfRounds: gs.numOfRounds,
     });
-    io.to(lobbyId).emit("roundEnded");          // wait for a word
+    io.to(lobbyId).emit("roundEnded"); // wait for a word
   } else {
     // all rounds finished – clean everything
     timers.delete(lobbyId);
@@ -145,8 +143,9 @@ function runTimer(lobbyId, startTime) {
     if (time <= 0) {
       clearInterval(interval);
       const t = timers.get(lobbyId);
-      if (t) timers.set(lobbyId, { ...t, interval: null, paused: true, time: 0 });
-      await handleTimeUp(lobbyId);              // do round / game bookkeeping
+      if (t)
+        timers.set(lobbyId, { ...t, interval: null, paused: true, time: 0 });
+      await handleTimeUp(lobbyId); // do round / game bookkeeping
     }
   }, 1_000);
 
@@ -327,6 +326,7 @@ async function handleOwnerTransfer(lobbyId, disconnectedUserIdNum) {
             ([id, data]) => ({
               id: String(id),
               username: data.username,
+              avatarUrl: data.avatarUrl,
             })
           );
           io.to(lobbyId).emit("lobbyState", {
@@ -359,36 +359,41 @@ io.on("connection", (socket) => {
 
   socket.on("updateScore", ({ lobbyId, playerId }) => {
     if (!lobbyId || typeof playerId !== "number") {
-      console.error(`Invalid updateScore data from socket ${socket.id}:`, { lobbyId, playerId });
+      console.error(`Invalid updateScore data from socket ${socket.id}:`, {
+        lobbyId,
+        playerId,
+      });
       return;
     }
-  
+
     const timerEntry = timers.get(lobbyId);
     if (!timerEntry || typeof timerEntry.time !== "number") {
       console.error(`[Error] No valid timer for lobby ${lobbyId}`);
       return;
     }
-  
+
     const score = timerEntry.time;
-  
+
     // --- Add score to player ---
     if (!playerScores.has(lobbyId)) playerScores.set(lobbyId, new Map());
     const lobbyScores = playerScores.get(lobbyId);
     const prevScore = lobbyScores.get(playerId) || 0;
     const newScore = prevScore + score;
     lobbyScores.set(playerId, newScore);
-  
-    console.log(`[Score] Player ${playerId} in lobby ${lobbyId} now has ${newScore} points`);
-  
+
+    console.log(
+      `[Score] Player ${playerId} in lobby ${lobbyId} now has ${newScore} points`
+    );
+
     io.to(lobbyId).emit("scoreUpdated", { playerId, score: newScore });
-  
+
     // --- Drawer bonus ---
     const lobby = lobbies.get(lobbyId);
     if (!lobby || !lobby.currentPainterToken) {
       console.warn(`[Bonus] No painter token found for lobby ${lobbyId}`);
       return;
     }
-  
+
     // Reverse-lookup the playerId of the drawer using the token
     let drawerId = null;
     for (const [uid, data] of lobby.players.entries()) {
@@ -397,35 +402,35 @@ io.on("connection", (socket) => {
         break;
       }
     }
-  
+
     if (drawerId === null) {
-      console.warn(`[Bonus] Could not find drawer for token ${lobby.currentPainterToken}`);
+      console.warn(
+        `[Bonus] Could not find drawer for token ${lobby.currentPainterToken}`
+      );
       return;
     }
-  
+
     if (drawerId === playerId) {
-      console.log(`[Bonus] Skipping bonus – drawer and guesser are the same (${playerId})`);
+      console.log(
+        `[Bonus] Skipping bonus – drawer and guesser are the same (${playerId})`
+      );
       return;
     }
-  
+
     const drawerBonus = Math.floor(score / 4); // Or timerEntry.time / 4
-  
+
     const drawerPrevScore = lobbyScores.get(drawerId) || 0;
     const drawerNewScore = drawerPrevScore + drawerBonus;
     lobbyScores.set(drawerId, drawerNewScore);
-  
-    console.log(`[Bonus] Drawer ${drawerId} gets ${drawerBonus} bonus. Total: ${drawerNewScore}`);
+
+    console.log(
+      `[Bonus] Drawer ${drawerId} gets ${drawerBonus} bonus. Total: ${drawerNewScore}`
+    );
     io.to(lobbyId).emit("scoreUpdated", {
       playerId: drawerId,
       score: drawerNewScore,
     });
   });
-  
-  
-  
-  
-  
-
 
   socket.on("gameStarting", ({ lobbyId, settings }) => {
     console.log(`Game starting for lobby ${lobbyId}`);
@@ -444,29 +449,29 @@ io.on("connection", (socket) => {
 
   socket.on("startTimer", async ({ lobbyId, drawTime, numOfRounds }) => {
     console.log(`Start timer for lobby ${lobbyId} with drawTime: ${drawTime}s`);
-  
+
     // bootstrap gameState once
     if (!gameStates.has(lobbyId)) {
       gameStates.set(lobbyId, {
         currentRound: 1,
-        numOfRounds : numOfRounds,
-        drawTime    : drawTime,
+        numOfRounds: numOfRounds,
+        drawTime: drawTime,
       });
       io.to(lobbyId).emit("gameUpdate", { currentRound: 1, numOfRounds });
     }
-  
+
     const existing = timers.get(lobbyId);
     if (existing && !existing.paused) {
       console.log(`⏱️ Timer already running for lobby ${lobbyId}`);
       return;
     }
 
-       // resume from pause or start fresh
-       const startAt = existing?.paused ? gameStates.get(lobbyId).drawTime : (drawTime || 60);
-       runTimer(lobbyId, startAt);
-   
+    // resume from pause or start fresh
+    const startAt = existing?.paused
+      ? gameStates.get(lobbyId).drawTime
+      : drawTime || 60;
+    runTimer(lobbyId, startAt);
   });
-  
 
   // --- REVISED joinLobby Handler ---
   socket.on("joinLobby", async ({ lobbyId, userId, username }) => {
@@ -525,9 +530,23 @@ io.on("connection", (socket) => {
     // --- Add/Update player in memory (use consistent key type, e.g., string) ---
     const userIdString = String(userId); // Use string key for map consistency
     const wasPlayerPresent = lobbyData.players.has(userIdString);
-    const previousPlayerData = lobbyData.players.get(userIdString);  
-    const token = await fetchTokenFromID(userId); 
-    lobbyData.players.set(userIdString, { socketId: socket.id, username, token });
+    const previousPlayerData = lobbyData.players.get(userIdString);
+    const userDetails = await fetch(`${BACKEND_API_URL}/users/${userId}`);
+    let token = null;
+    let avatarUrl = null;
+
+    if (userDetails.ok) {
+      const json = await userDetails.json();
+      token = json.token;
+      avatarUrl = json.avatarUrl || null;
+    }
+
+    lobbyData.players.set(userIdString, {
+      socketId: socket.id,
+      username,
+      token,
+      avatarUrl,
+    });
     lobbies.set(lobbyId, lobbyData); // Update map entry
 
     // --- Update socket mapping (use original types) ---
@@ -547,6 +566,7 @@ io.on("connection", (socket) => {
       ([id, data]) => ({
         id: String(id), // Ensure string ID for client
         username: data.username,
+        avatarUrl: data.avatarUrl,
       })
     );
 
@@ -633,46 +653,50 @@ io.on("connection", (socket) => {
     }
   });
   // --- chatMessage Handler (no changes needed) ---
-/**
- * Broadcast to the whole lobby (current behaviour).
- */
-socket.on("chatMessage", ({ lobbyId, message, username }) => {
-  if (!lobbyId || typeof message !== "string" || message.trim().length === 0) {
-    return;
-  }
+  /**
+   * Broadcast to the whole lobby (current behaviour).
+   */
+  socket.on("chatMessage", ({ lobbyId, message, username }) => {
+    if (
+      !lobbyId ||
+      typeof message !== "string" ||
+      message.trim().length === 0
+    ) {
+      return;
+    }
 
-  const senderInfo      = socketToLobby.get(socket.id);
-  const senderUsername  = username || senderInfo?.username || "Guest";
+    const senderInfo = socketToLobby.get(socket.id);
+    const senderUsername = username || senderInfo?.username || "Guest";
 
-  // 👇 everyone in the lobby (including the sender) receives this
-  io.to(lobbyId).emit("chatMessage", {
-    username : senderUsername,
-    message,
-    timestamp: new Date().toISOString(),
-  });
-});
-
-/**
- * Send a response ONLY to the client that triggered the event.
- * Two equivalent ways are shown; pick one style and stick with it.
- */
-socket.on("chatAlert", ({ message, username }) => {
-  // basic validation omitted for brevity
-
-  const senderInfo      = socketToLobby.get(socket.id);
-  const senderUsername  = username || senderInfo?.username || "";
-
-  // Option A – simplest and most common:
-  socket.emit("chatAlert", {
-    username : senderUsername,
-    message,
-    timestamp: new Date().toISOString(),
+    // 👇 everyone in the lobby (including the sender) receives this
+    io.to(lobbyId).emit("chatMessage", {
+      username: senderUsername,
+      message,
+      timestamp: new Date().toISOString(),
+    });
   });
 
-  // ─────────────  OR  ─────────────
-  // Option B – does exactly the same thing, a bit more verbosely:
-  // io.to(socket.id).emit("chatAlert", { … });
-});
+  /**
+   * Send a response ONLY to the client that triggered the event.
+   * Two equivalent ways are shown; pick one style and stick with it.
+   */
+  socket.on("chatAlert", ({ message, username }) => {
+    // basic validation omitted for brevity
+
+    const senderInfo = socketToLobby.get(socket.id);
+    const senderUsername = username || senderInfo?.username || "";
+
+    // Option A – simplest and most common:
+    socket.emit("chatAlert", {
+      username: senderUsername,
+      message,
+      timestamp: new Date().toISOString(),
+    });
+
+    // ─────────────  OR  ─────────────
+    // Option B – does exactly the same thing, a bit more verbosely:
+    // io.to(socket.id).emit("chatAlert", { … });
+  });
 
   // --- disconnect Handler ---
   socket.on("disconnect", () => {
@@ -1018,18 +1042,20 @@ socket.on("chatAlert", ({ message, username }) => {
     const playerInfo = socketToLobby.get(socket.id);
     if (!playerInfo) return;
     const { lobbyId, userId } = playerInfo;
-  
+
     // Set the current painter token
     const lobby = lobbies.get(lobbyId);
     if (lobby && lobby.players.has(String(userId))) {
       const painterToken = lobby.players.get(String(userId)).token;
       lobby.currentPainterToken = painterToken;
-      console.log(`[Painter] Set currentPainterToken for lobby ${lobbyId} to ${painterToken}`);
+      console.log(
+        `[Painter] Set currentPainterToken for lobby ${lobbyId} to ${painterToken}`
+      );
     }
-  
+
     // Relay to everyone else
     socket.to(lobbyId).emit("word-selected", data);
-  
+
     // Resume the countdown if we were waiting
     const t = timers.get(lobbyId);
     const gs = gameStates.get(lobbyId);
@@ -1037,18 +1063,16 @@ socket.on("chatAlert", ({ message, username }) => {
       runTimer(lobbyId, gs.drawTime);
     }
   });
-  
 
   socket.on("get-round-infos", (lobbyId) => {
     const gs = gameStates.get(lobbyId);
-    if (!gs) return;             // should never happen
+    if (!gs) return; // should never happen
 
     io.to(lobbyId).emit("gameUpdate", {
       currentRound: gs.currentRound,
-      numOfRounds : gs.numOfRounds,
+      numOfRounds: gs.numOfRounds,
     });
   });
-
 });
 
 const PORT = process.env.PORT || 3001;

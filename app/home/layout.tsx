@@ -169,6 +169,11 @@ export default function HomeLayout({
   const handleConfirmChanges = async () => {
     // Run both saveUsername and saveAvatar in parallel
     await Promise.all([saveUsername(), saveAvatar()]);
+    // 🔁 Avatar-URL erneut aus localStorage holen + Cache umgehen
+    const updatedAvatar = localStorage.getItem("avatarUrl");
+    if (updatedAvatar) {
+      setLocalAvatarUrl(updatedAvatar);
+    }
 
     // After saving, navigate the user back to the main home page
     router.push("/home");
@@ -196,6 +201,7 @@ export default function HomeLayout({
     localStorage.removeItem("token");
     localStorage.removeItem("username");
     localStorage.removeItem("userId");
+    localStorage.removeItem("avatarUrl");
     router.push("/login");
   };
 
@@ -209,21 +215,40 @@ export default function HomeLayout({
     setAvatarUrl("/icons/avatar.png"); // Reset to default avatar
   };
 
-  // Function to handle uploading (setting) a new image URL for the avatar
-  const handleUploadImage = () => {
-    // Prompt the user to enter a new image URL
-    const url = prompt("Enter new image URL:");
+  const handleAvatarFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUserId) return;
 
-    // If the user provided a non-empty, trimmed URL, update the avatar state
-    if (url && url.trim()) {
-      setAvatarUrl(url); // This sets the new avatar URL into component state
-    }
-    // If the user entered something (not cancelled), but it's invalid (e.g. empty string), show an error
-    else if (url !== null) {
-      message.error("Please enter a valid image URL.");
-    }
+    const formData = new FormData();
+    formData.append("file", file);
 
-    // Note: If the user presses "Cancel" on the prompt, `url` will be null and nothing happens
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/files/upload-avatar/${currentUserId}`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const url = await response.text();
+      setAvatarUrl(url);
+      localStorage.setItem("avatarUrl", url);
+      message.success("Profilbild erfolgreich aktualisiert!");
+      setShowAvatarMenu(false);
+      await apiService.put(`/users/${currentUserId}/avatar`, {
+        avatarUrl: url,
+      });
+    } catch (err) {
+      message.error("Fehler beim Hochladen des Bildes");
+      console.error("Upload Error:", err);
+    }
   };
 
   // Async function to handle saving/updating the user's avatar URL
@@ -493,12 +518,20 @@ export default function HomeLayout({
                     </span>
                     {showAvatarMenu && (
                       <div className="avatar-menu">
-                        <button
-                          onClick={handleUploadImage}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarFileUpload}
+                          style={{ display: "none" }}
+                          id="avatarUploadInput"
+                        />
+                        <label
+                          htmlFor="avatarUploadInput"
                           className="upload-image-btn"
                         >
                           upload image
-                        </button>
+                        </label>
+
                         <button
                           onClick={handleDeleteImage}
                           className="delete-image-btn"
@@ -527,7 +560,11 @@ export default function HomeLayout({
             ) : (
               <>
                 <div className="profile-top-row">
-                  <img src={avatarUrl} alt="Avatar" className="avatar-image" />
+                  <img
+                    src={avatarUrl === "" ? "/icons/avatar.png" : avatarUrl}
+                    alt="Avatar"
+                    className="avatar-image"
+                  />
                   <div className="profile-username">{username}</div>
                 </div>
                 <button

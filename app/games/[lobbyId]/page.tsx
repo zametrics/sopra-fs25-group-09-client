@@ -129,7 +129,6 @@ const DISCONNECT_TIMEOUT_ID_KEY = "disconnectTimeoutId";
 const DISCONNECT_LOBBY_ID_KEY = "disconnectLobbyId";
 
 const LobbyPage: FC = ({}) => {
-  
   const [activeTool, setActiveTool] = useState<Tool>("brush"); // Default to brush
   const [brushSize, setBrushSize] = useState<number>(brushSizes.size2); // Default size
   const params = useParams();
@@ -153,20 +152,21 @@ const LobbyPage: FC = ({}) => {
   const currentUserId =
     typeof window !== "undefined" ? localStorage.getItem("userId") : "";
 
-    const raw = typeof window !== "undefined"
-    ? localStorage.getItem("token")
-    : null;
-  
+  const raw =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
   // parse and extract `.token`
   const currentUserToken = raw
     ? (JSON.parse(raw) as { token?: string }).token || null
     : null;
   //console.log("just the uuid:", currentUserToken);
 
+  const [isCurrentUserPainter, setIsCurrentUserPainter] =
+    useState<boolean>(false);
 
-  
-  const [isCurrentUserPainter, setIsCurrentUserPainter] = useState<boolean>(false);
-  
+  const delay = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+
   const remoteUsersLastPointRef = useRef<Map<string, Point | null>>(new Map());
   const localAvatarUrl =
     typeof window !== "undefined"
@@ -188,12 +188,18 @@ const LobbyPage: FC = ({}) => {
   const [selectedWord, setSelectedWord] = useState<string>("");
 
   const [isSelectingPainter, setIsSelectingPainter] = useState<boolean>(false);
-  
+  const [showChoosingModal, setShowChoosingModal] = useState(false);
 
   const wordToGuess = selectedWord || "placeholder"; //PLACEHOLDER WORD
+  const [currentPainterUsername, setCurrentPainterUsername] = useState<
+    string | null
+  >(null);
 
   const triggerNextPainterSelection = async () => {
-    console.log("triggerNextPainterSelection called at:", new Date().toISOString());
+    console.log(
+      "triggerNextPainterSelection called at:",
+      new Date().toISOString()
+    );
     if (!lobbyId) {
       console.error("Cannot select next painter: Lobby ID missing.");
       return;
@@ -205,8 +211,10 @@ const LobbyPage: FC = ({}) => {
       );
       setLobby(updatedLobby);
 
-
-      console.log("Lobby updated with new painter:", updatedLobby.currentPainterToken);
+      console.log(
+        "Lobby updated with new painter:",
+        updatedLobby.currentPainterToken
+      );
       if (!updatedLobby.currentPainterToken) {
         console.warn("Backend returned null currentPainterToken");
       }
@@ -214,21 +222,28 @@ const LobbyPage: FC = ({}) => {
       console.error("Error selecting next painter:", error);
       message.error("Failed to select next painter.");
     }
-  }
+  };
 
-  
   const fetchWordOptions = async () => {
     console.log("THE WORD FETCHER: ", isCurrentUserPainter);
     const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-    if(!lobbyData) {
-      console.error("Error: Couldnt connect to server")
+    if (!lobbyData) {
+      console.error("Error: Couldnt connect to server");
     }
     //only allow word options if word hasnt been picked yet
     console.log(lobbyData.currentWord);
     console.log(typeof lobbyData.currentWord);
     console.log(JSON.stringify(lobbyData.currentWord));
-    if(!(lobbyData.currentWord == "\"default_word\"" || lobbyData.currentWord == "default_word")) {
-      console.log("Skipping word fetch: User already picked a word", lobbyData.currentWord);
+    if (
+      !(
+        lobbyData.currentWord == '"default_word"' ||
+        lobbyData.currentWord == "default_word"
+      )
+    ) {
+      console.log(
+        "Skipping word fetch: User already picked a word",
+        lobbyData.currentWord
+      );
       return;
     }
 
@@ -240,17 +255,17 @@ const LobbyPage: FC = ({}) => {
       console.log("Skipping word fetch: Lobby not loaded");
       return;
     }
-  
+
     try {
       const language = lobby.language;
       const wordType = lobby.type;
-  
+
       console.log(`Fetching words: lang=${language}, type=${wordType}`);
-  
+
       const response = await apiService.get<string[]>(
         `/api/words/gpt?lang=${language}&type=${wordType}&count=3`
       );
-  
+
       if (response && Array.isArray(response)) {
         console.log("API response:", response);
         const options = response.map((word) => ({ word, selected: false }));
@@ -275,65 +290,91 @@ const LobbyPage: FC = ({}) => {
       setShowWordSelection(true);
     }
   };
-  
+
   // Trigger fetchWordOptions when isCurrentUserPainter changes
   useEffect(() => {
     const asyncFetch = async () => {
+      setShowChoosingModal(false);
+      setCurrentPainterUsername(null);
       if (isCurrentUserPainter) {
-        
-          console.log("User became painter, trying to fetch word options");
+        console.log("User became painter, trying to fetch word options");
 
-          fetchWordOptions();
+        fetchWordOptions();
+      } else {
+        await delay(1000);
+
+        const lobbyState = await apiService.get<LobbyData>(
+          `/lobbies/${lobbyId}`
+        );
+        console.log("STEP 1 PASSED");
+        const currentPainterToken = lobbyState.currentPainterToken;
+        console.log("nigga", currentPainterToken);
+        console.log(lobbyState?.playerIds);
+        for (const id of lobbyState?.playerIds ?? []) {
+          console.log("STEP 2 PASSED", id);
+          const userData = await apiService.get<{
+            id: number;
+            token: string;
+            username: string;
+          }>(`/users/${id}`);
+          console.log("STEP 3 PASSED", showChoosingModal);
+          if (userData.token == currentPainterToken) {
+            console.log(userData.username);
+            await setCurrentPainterUsername(userData.username);
+            break;
+          }
+        }
+        console.log("STEP 4 PASSED", currentPainterUsername);
+        setShowChoosingModal(true);
       }
-    }
+    };
     asyncFetch();
   }, [isCurrentUserPainter]);
 
   const handleWordSelect = async (selectedIndex: number) => {
-      if (selectedIndex < 0 || selectedIndex >= wordOptions.length) {
-        console.error("Invalid word selection index:", selectedIndex);
-        return;
-      }
-
-      // Update the selected state
-      const updatedOptions = wordOptions.map((option, index) => ({
-        ...option,
-        selected: index === selectedIndex,
-      }));
-
-      setWordOptions(updatedOptions);
-
-      // Set the selected word
-      const word = wordOptions[selectedIndex].word;
-      setSelectedWord(word);
-      await apiService.put<LobbyData>(`/lobbies/${lobbyId}/word`, word);
-
-      // Emit the selected word to other players via socket
-      if (socket) {
-        console.log(`Emitting selected word "${word}" to other players`);
-        setShowWordSelection(false);
-        socket.emit("clear");
-        //clear again locally cause of bugs
-        const canvas = canvasElementRef.current;
-        const ctx = canvas?.getContext("2d");
-        if (!ctx || !canvas) return;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        remoteUsersLastPointRef.current.clear();
-        saveCanvasState();
-
-        await socket.emit("startTimer", {
-          lobbyId,
-          drawTime: lobby?.drawTime,
-          numOfRounds: lobby?.numOfRounds,
-        });
-
-        await socket.emit("word-selected", {
-          lobbyId,
-          word,
-        });
-
-      }
+    if (selectedIndex < 0 || selectedIndex >= wordOptions.length) {
+      console.error("Invalid word selection index:", selectedIndex);
+      return;
     }
+
+    // Update the selected state
+    const updatedOptions = wordOptions.map((option, index) => ({
+      ...option,
+      selected: index === selectedIndex,
+    }));
+
+    setWordOptions(updatedOptions);
+
+    // Set the selected word
+    const word = wordOptions[selectedIndex].word;
+    setSelectedWord(word);
+    await apiService.put<LobbyData>(`/lobbies/${lobbyId}/word`, word);
+
+    // Emit the selected word to other players via socket
+    if (socket) {
+      console.log(`Emitting selected word "${word}" to other players`);
+      setShowWordSelection(false);
+      socket.emit("clear");
+      //clear again locally cause of bugs
+      const canvas = canvasElementRef.current;
+      const ctx = canvas?.getContext("2d");
+      if (!ctx || !canvas) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      remoteUsersLastPointRef.current.clear();
+      saveCanvasState();
+
+      await socket.emit("startTimer", {
+        lobbyId,
+        drawTime: lobby?.drawTime,
+        numOfRounds: lobby?.numOfRounds,
+      });
+
+      await socket.emit("word-selected", {
+        lobbyId,
+        word,
+      });
+    }
+  };
 
   // const wordToGuess = selectedWord || "noword";
 
@@ -372,7 +413,6 @@ const LobbyPage: FC = ({}) => {
     [socket, color, brushSize, activeTool]
   );
 
-  
   // --- Save Canvas State Function ---
   const saveCanvasState = useCallback(() => {
     const canvas = canvasElementRef.current;
@@ -602,22 +642,22 @@ const LobbyPage: FC = ({}) => {
   useEffect(() => {
     const fetchLobbyInfos = async () => {
       const lobbyState = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-    
+
       if (!lobbyState) {
         console.error("Server connection failed, could not fetch lobbystate");
         return;
       }
-    
+
       // Bereinige die Quotes, wenn nötig
       let cleanWord = lobbyState.currentWord;
-    
+
       try {
         // Nur parsen, wenn es tatsächlich ein JSON-String ist
         cleanWord = JSON.parse(lobbyState.currentWord);
       } catch (err) {
         console.error(err);
       }
-    
+
       setSelectedWord(cleanWord);
       console.log("Final wordToGuess:", cleanWord);
       await socket?.emit("get-round-infos", lobbyId);
@@ -625,14 +665,12 @@ const LobbyPage: FC = ({}) => {
 
     fetchLobbyInfos();
 
-      console.log("Painter Status:", {
-
+    console.log("Painter Status:", {
       isCurrentUserPainter,
       currentPainterToken: lobby?.currentPainterToken,
       currentUserToken,
     });
   }, [isCurrentUserPainter, currentUserToken, lobby]);
-
 
   useEffect(() => {
     const canvas = canvasElementRef.current;
@@ -688,143 +726,164 @@ const LobbyPage: FC = ({}) => {
       setLoading(true);
       try {
         // 1) Join
-        await apiService.put(`/lobbies/${lobbyId}/join?playerId=${currentUserId}`, {});
-    
+        await apiService.put(
+          `/lobbies/${lobbyId}/join?playerId=${currentUserId}`,
+          {}
+        );
+
         // 2) Fetch
-        const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-        
+        const lobbyData = await apiService.get<LobbyData>(
+          `/lobbies/${lobbyId}`
+        );
+
         console.log("Join fetch response:", {
           lobbyId,
           playerIds: lobbyData.playerIds,
           currentPainterToken: lobbyData.currentPainterToken,
         });
-        
+
         // 3) Set lobby and painter status
 
-        if(!lobby?.currentPainterToken){setLobby(lobbyData);}
-        
-        setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
+        if (!lobby?.currentPainterToken) {
+          setLobby(lobbyData);
+        }
+
+        setIsCurrentUserPainter(
+          lobbyData.currentPainterToken === currentUserToken
+        );
       } catch (err) {
         console.error("Join error:", err);
-
       } finally {
         setLoading(false);
       }
     };
-    
+
     if (currentUserId) {
       joinThenFetch();
     }
   }, []); // Removed apiService assuming it's stable
-  
-useEffect(() => {
-  const assignPainterIfNeeded = async () => {
-    if (loading) {
-      console.log("Skipping painter assignment:", { loading, lobby, lobbyId, currentUserId });
-      return;
-    }
 
-    try {
-      // Fetch the current lobby state
-      const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-
-      // Only assign painter if no painter exists and user is lobby owner
-      if (!lobbyData.currentPainterToken && lobby?.lobbyOwner.toString() === currentUserId) {
-        // Assign the next painter
-        const updatedLobby = await apiService.post<LobbyData>(
-          `/lobbies/${lobbyId}/nextPainter`,
-          {}
-        );
-
-        // Update the lobby state
-        setLobby(updatedLobby);
-
-        // Use the updatedLobby from the POST response to set painter status
-        console.log("Painter token check:", {
-          currentUserToken,
-          painterToken: updatedLobby.currentPainterToken,
+  useEffect(() => {
+    const assignPainterIfNeeded = async () => {
+      if (loading) {
+        console.log("Skipping painter assignment:", {
+          loading,
+          lobby,
+          lobbyId,
+          currentUserId,
         });
-        setIsCurrentUserPainter(updatedLobby.currentPainterToken === currentUserToken);
-      } else {
-        // If no painter assignment is needed, use the fetched lobby data
-        setLobby(lobbyData);
-        console.log("Painter token checkasdhusdifhuisdhif:");
-        setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
+        return;
       }
 
-      setLoading(true);
+      try {
+        // Fetch the current lobby state
+        const lobbyData = await apiService.get<LobbyData>(
+          `/lobbies/${lobbyId}`
+        );
 
-    } catch (err) {
-      console.error("Painter assignment error:", err);
+        // Only assign painter if no painter exists and user is lobby owner
+        if (
+          !lobbyData.currentPainterToken &&
+          lobby?.lobbyOwner.toString() === currentUserId
+        ) {
+          // Assign the next painter
+          const updatedLobby = await apiService.post<LobbyData>(
+            `/lobbies/${lobbyId}/nextPainter`,
+            {}
+          );
+
+          // Update the lobby state
+          setLobby(updatedLobby);
+
+          // Use the updatedLobby from the POST response to set painter status
+          console.log("Painter token check:", {
+            currentUserToken,
+            painterToken: updatedLobby.currentPainterToken,
+          });
+          setIsCurrentUserPainter(
+            updatedLobby.currentPainterToken === currentUserToken
+          );
+        } else {
+          // If no painter assignment is needed, use the fetched lobby data
+          setLobby(lobbyData);
+          console.log("Painter token checkasdhusdifhuisdhif:");
+          setIsCurrentUserPainter(
+            lobbyData.currentPainterToken === currentUserToken
+          );
+        }
+
+        setLoading(true);
+      } catch (err) {
+        console.error("Painter assignment error:", err);
+      }
+    };
+
+    if (!loading) {
+      assignPainterIfNeeded();
     }
-  };
-
-  if (!loading) {
-    assignPainterIfNeeded();
-  }
-}, [loading]);
+  }, [loading]);
 
   useEffect(() => {
     // Remove the automatic timer start from here
     // Optionally, you can add a log to confirm the socket and lobby are ready
     if (socket && lobby && lobby.drawTime) {
-      console.log("Socket and lobby ready, waiting for word selection to start timer:", lobbyId);
+      console.log(
+        "Socket and lobby ready, waiting for word selection to start timer:",
+        lobbyId
+      );
     }
-  }, [socket, lobby, lobbyId])
+  }, [socket, lobby, lobbyId]);
 
-  const showLeaveConfirmation = () => {
-    setIsLeaveModalVisible(true);
-  };
+  // IMPLEMENT LATER REMIND ILIAS IF YOU SEE THIS
+  //  const showLeaveConfirmation = () => {
+  //    setIsLeaveModalVisible(true);
+  //  };
 
   // --- Refactor leave logic into a stable function ---
-  const performLeaveLobby = useCallback(
-    async (redirect = true) => {
-      if (!currentUserId || !lobbyId || !socket) {
-        console.warn("Attempted to leave lobby without necessary info.");
-        if (redirect) router.push("/home");
-        return;
-      }
+  const performLeaveLobby = useCallback(async (redirect = true) => {
+    if (!currentUserId || !lobbyId || !socket) {
+      console.warn("Attempted to leave lobby without necessary info.");
+      if (redirect) router.push("/home");
+      return;
+    }
 
-      console.log(
-        `Performing leave action for user ${currentUserId} from lobby ${lobbyId}`
+    console.log(
+      `Performing leave action for user ${currentUserId} from lobby ${lobbyId}`
+    );
+
+    try {
+      // Notify backend first
+      await apiService.put(
+        `/lobbies/${lobbyId}/leave?playerId=${currentUserId}`,
+        {}
       );
-      
+      console.log(
+        `Backend notified of user ${currentUserId} leaving lobby ${lobbyId}`
+      );
 
-      try {
-        // Notify backend first
-        await apiService.put(
-          `/lobbies/${lobbyId}/leave?playerId=${currentUserId}`,
-          {}
-        );
-        console.log(
-          `Backend notified of user ${currentUserId} leaving lobby ${lobbyId}`
-        );
+      // Then notify other players via socket
+      socket.emit("leaveLobby", { lobbyId, userId: currentUserId });
+      console.log(
+        `Socket event 'leaveLobby' emitted for user ${currentUserId}`
+      );
 
-        // Then notify other players via socket
-        socket.emit("leaveLobby", { lobbyId, userId: currentUserId });
-        console.log(
-          `Socket event 'leaveLobby' emitted for user ${currentUserId}`
-        );
-
-        if (redirect) {
-          message.success("You have left the lobby");
-          router.push("/home");
-        }
-      } catch (error) {
-        console.error("Error leaving lobby:", error);
-        if (redirect) {
-          message.error("Failed to leave lobby cleanly, redirecting anyway");
-          router.push("/home");
-        }
-      } finally {
-        setIsLeaveModalVisible(false); // Ensure modal closes if open
-        // Clean up disconnect timer info from session storage if it exists
-        sessionStorage.removeItem(DISCONNECT_TIMEOUT_ID_KEY);
-        sessionStorage.removeItem(DISCONNECT_LOBBY_ID_KEY);
+      if (redirect) {
+        message.success("You have left the lobby");
+        router.push("/home");
       }
-    },
-    []
-  ); // Dependencies for the leave action
+    } catch (error) {
+      console.error("Error leaving lobby:", error);
+      if (redirect) {
+        message.error("Failed to leave lobby cleanly, redirecting anyway");
+        router.push("/home");
+      }
+    } finally {
+      setIsLeaveModalVisible(false); // Ensure modal closes if open
+      // Clean up disconnect timer info from session storage if it exists
+      sessionStorage.removeItem(DISCONNECT_TIMEOUT_ID_KEY);
+      sessionStorage.removeItem(DISCONNECT_LOBBY_ID_KEY);
+    }
+  }, []); // Dependencies for the leave action
 
   const handleLeaveLobby = () => {
     // Clear any pending automatic disconnect timer *before* manually leaving
@@ -989,9 +1048,12 @@ useEffect(() => {
       }
 
       // http://localhost:3001 https://socket-server-826256454260.europe-west1.run.app/  http://localhost:3001
-      socketIo = io("https://socket-server-826256454260.europe-west1.run.app/", {
-        path: "/api/socket",
-      });
+      socketIo = io(
+        "https://socket-server-826256454260.europe-west1.run.app/",
+        {
+          path: "/api/socket",
+        }
+      );
       setSocket(socketIo);
 
       if (!isMounted) {
@@ -1047,24 +1109,28 @@ useEffect(() => {
       });
 
       socketIo.on("roundEnded", async () => {
-        await apiService.put<LobbyData>(`/lobbies/${lobbyId}/word`, 'default_word');
-    
+        await apiService.put<LobbyData>(
+          `/lobbies/${lobbyId}/word`,
+          "default_word"
+        );
+
         console.log("Round ended at:", new Date().toISOString());
         setIsCurrentUserPainter(false);
         setSelectedWord("");
         setShowWordSelection(false);
         setIsSelectingPainter(true); // NEW: Block navigation
 
-        const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-        setLobby(lobbyData)
-        
+        const lobbyData = await apiService.get<LobbyData>(
+          `/lobbies/${lobbyId}`
+        );
+        setLobby(lobbyData);
+
         if (lobbyData.currentPainterToken === currentUserToken) {
           console.log("Current painter triggering next painter selection");
           try {
             await triggerNextPainterSelection();
             socketIo?.emit("painter-selection-complete", { lobbyId });
             console.log("emit painter-selection-complete");
-            
           } catch (err) {
             console.error("Error in triggerNextPainterSelection:", err);
             message.error("Failed to select next painter");
@@ -1075,14 +1141,21 @@ useEffect(() => {
       });
 
       socketIo.on("painter-selection-complete", async () => {
-        console.log("Received painter-selection-complete, fetching lobby state");
+        console.log(
+          "Received painter-selection-complete, fetching lobby state"
+        );
         try {
-          const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
-          console.log(`Fetched lobby ${lobbyId}, NEW TOKEN: ${lobbyData.currentPainterToken}`);
+          const lobbyData = await apiService.get<LobbyData>(
+            `/lobbies/${lobbyId}`
+          );
+          console.log(
+            `Fetched lobby ${lobbyId}, NEW TOKEN: ${lobbyData.currentPainterToken}`
+          );
           setLobby(lobbyData);
-          setIsCurrentUserPainter(lobbyData.currentPainterToken === currentUserToken);
+          setIsCurrentUserPainter(
+            lobbyData.currentPainterToken === currentUserToken
+          );
           setIsSelectingPainter(false); // NEW: Allow navigation
-        
         } catch (err) {
           console.error("Failed to fetch lobby:", err);
           message.error("Could not update lobby state");
@@ -1110,9 +1183,16 @@ useEffect(() => {
       });
 
       socketIo.on("get-canvas-state", (data: GetCanvasStateData) => {
-        if (canvasElementRef.current && socketIo && data.requesterId != currentUserId) {
-          console.log(`Received request to provide canvas state for ${data.requesterId}. Sending...`);
-          const currentDataUrl = canvasElementRef.current.toDataURL("image/png");
+        if (
+          canvasElementRef.current &&
+          socketIo &&
+          data.requesterId != currentUserId
+        ) {
+          console.log(
+            `Received request to provide canvas state for ${data.requesterId}. Sending...`
+          );
+          const currentDataUrl =
+            canvasElementRef.current.toDataURL("image/png");
           socketIo.emit("send-canvas-state", {
             targetUserId: data.requesterId,
             dataUrl: currentDataUrl,
@@ -1128,7 +1208,8 @@ useEffect(() => {
         if (!ctx) return;
 
         const drawerUserId = data.userId;
-        const lastPointForUser = remoteUsersLastPointRef.current.get(drawerUserId) || null;
+        const lastPointForUser =
+          remoteUsersLastPointRef.current.get(drawerUserId) || null;
         let prevPointForDrawing: Point | null = lastPointForUser;
 
         if (!data.points || data.points.length === 0) return;
@@ -1180,11 +1261,18 @@ useEffect(() => {
         const leftPlayerId = String(leftPlayer.id);
         if (remoteUsersLastPointRef.current.has(leftPlayerId)) {
           remoteUsersLastPointRef.current.delete(leftPlayerId);
-          console.log(`Cleared last point state for user ${leftPlayerId} who left.`);
+          console.log(
+            `Cleared last point state for user ${leftPlayerId} who left.`
+          );
         }
       });
 
-      if (canvasElementRef.current && historyStack.length === 0 && !isCanvasInitialized && isMounted) {
+      if (
+        canvasElementRef.current &&
+        historyStack.length === 0 &&
+        !isCanvasInitialized &&
+        isMounted
+      ) {
         saveCanvasState();
       }
     };
@@ -1195,7 +1283,9 @@ useEffect(() => {
       console.log("[Unmount] GamePage cleanup running...");
       isMounted = false;
 
-      console.log("[Unmount] Client-side timer logic removed. Server handles disconnect delay.");
+      console.log(
+        "[Unmount] Client-side timer logic removed. Server handles disconnect delay."
+      );
 
       if (socketIo) {
         console.log("[Unmount] Removing socket listeners...");
@@ -1221,7 +1311,14 @@ useEffect(() => {
       }
       setSocket(null);
     };
-  }, [lobbyId, currentUserId, currentUserToken, isCanvasInitialized, loadCanvasFromDataUrl, saveCanvasState]); // NEW: Stable dependencies
+  }, [
+    lobbyId,
+    currentUserId,
+    currentUserToken,
+    isCanvasInitialized,
+    loadCanvasFromDataUrl,
+    saveCanvasState,
+  ]); // NEW: Stable dependencies
 
   useEffect(() => {
     if (isSelectingPainter) {
@@ -1244,7 +1341,7 @@ useEffect(() => {
       console.log("Clear blocked: User is not the current painter.");
       return;
     }
-  
+
     if (socket) {
       socket.emit("clear");
     }
@@ -1325,7 +1422,6 @@ useEffect(() => {
       currentUserId={currentUserId}
       localAvatarUrl={localAvatarUrl}
       lobby={lobby}
-     
     >
       {" "}
       {/* <-- START React Fragment */}
@@ -1342,39 +1438,45 @@ useEffect(() => {
               zIndex: 10,
             }}
           >
-            <div className="timer-container">
-              <svg className="timer-circle" viewBox="0 0 100 100">
-                <circle className="timer-circle-bg" cx="50" cy="50" r="45" />
-                <circle
-                  className="timer-circle-progress"
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  style={{
-                    strokeDashoffset:
-                      timer !== null
-                        ? 283 - (283 * timer) / (lobby?.drawTime || 60)
-                        : 283,
-                  }}
-                />
-              </svg>
-              <div className="timer-content">
-                <span className="timer-value">
-                  {timer !== null ? timer : "--"}
-                </span>
-                <span className="timer-label">seconds</span>
+            <div>
+              <div className="timer-container">
+                <svg className="timer-circle" viewBox="0 0 100 100">
+                  <circle className="timer-circle-bg" cx="50" cy="50" r="45" />
+                  <circle
+                    className="timer-circle-progress"
+                    cx="50"
+                    cy="50"
+                    r="45"
+                    style={{
+                      strokeDashoffset:
+                        timer !== null
+                          ? 283 - (283 * timer) / (lobby?.drawTime || 60)
+                          : 283,
+                    }}
+                  />
+                </svg>
+                <div className="timer-content">
+                  <span className="timer-value">
+                    {timer !== null ? timer : "--"}
+                  </span>
+                  <span className="timer-label">seconds</span>
+                </div>
               </div>
-            </div>
-            <div className="round-content">
-              <span className="currentRound">Round: {currentRound || "*"}</span>
-              <span className="allRound">/{numOfRounds || "*"}</span>
+              <div className="round-content">
+                <span className="lable-round">
+                  Round
+                  <div style={{ display: "flex" }}>
+                    {<div className="currentRound">{currentRound || "--"}</div>}
+                    <span className="allRound">
+                      &nbsp;of&nbsp;{numOfRounds || "--"}
+                    </span>
+                  </div>
+                </span>
+              </div>
             </div>
           </div>
           <h1 className="drawzone-logo-2-8rem">DRAWZONE</h1>
-          <h2 className="drawzone-subtitle-1-1rem">ART BATTLE ROYALE</h2>
-          <button className="leave-game-button" onClick={showLeaveConfirmation}>
-            LEAVE GAME
-          </button>
+          <h2 className="drawzone-subtitle-1-1rem">art battle royale</h2>
           {/* <Button
             onClick={() => {
               console.log("Start Timer clicked, lobbyId:", lobbyId);
@@ -1396,7 +1498,9 @@ useEffect(() => {
               <span className="word-to-guess">
                 {wordToGuess === "default_word"
                   ? Array.from({ length: 3 }).map((_, index) => (
-                      <span key={index} className="word-letter">{"\u00A0"}</span>
+                      <span key={index} className="word-letter">
+                        {"\u00A0"}
+                      </span>
                     ))
                   : wordToGuess
                       .toLowerCase()
@@ -1411,18 +1515,21 @@ useEffect(() => {
               <span className="word-to-guess">
                 {wordToGuess === "default_word"
                   ? Array.from({ length: 3 }).map((_, index) => (
-                      <span key={index} className="word-letter">{"\u00A0"}</span>
+                      <span key={index} className="word-letter">
+                        {"\u00A0"}
+                      </span>
                     ))
                   : wordToGuess
                       .toLowerCase()
                       .split("")
                       .map((_, index) => (
-                        <span key={index} className="word-letter">{" "}</span>
+                        <span key={index} className="word-letter">
+                          {" "}
+                        </span>
                       ))}
               </span>
             )}
           </div>
-          
           {/* Drawing Canvas */}
           <canvas
             ref={combinedCanvasRef}
@@ -1610,23 +1717,44 @@ useEffect(() => {
           </p>
         </Modal>
         {isCurrentUserPainter && showWordSelection && (
-  <div className="word-selection-overlay">
-    <div className="word-selection-container">
-      <h2>Select a word to draw:</h2>
-      <div className="word-options">
-        {wordOptions.map((option, index) => (
-          <button
-            key={index}
-            className={`word-option ${option.selected ? "selected" : ""}`}
-            onClick={() => handleWordSelect(index)}
-          >
-            {option.word}
-          </button>
-        ))}
-      </div>
-    </div>
-  </div>
-)}
+          <div className="word-selection-overlay">
+            <div className="word-selection-container">
+              <h2>
+                YOU ARE <span className="drawing-accent">DRAWING!</span>
+              </h2>
+              <p className="word-selection-subtitle">pick a word:</p>
+              <div className="word-options">
+                {wordOptions.map((option, index) => (
+                  <button
+                    key={index}
+                    className={`word-option ${
+                      option.selected ? "selected" : ""
+                    }`}
+                    onClick={() => handleWordSelect(index)}
+                  >
+                    {<span className="option-text">{option.word}</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Show guessing screen to all non-painters while no word has been picked */}
+        {!isCurrentUserPainter &&
+          selectedWord === "default_word" &&
+          showChoosingModal && (
+            <div className="word-selection-overlay">
+              <div className="word-selection-container">
+                <h2>
+                  YOU ARE <span className="guessing-accent">GUESSING!</span>
+                </h2>
+                <p className="word-selection-subtitle">
+                  {currentPainterUsername ?? "Someone"} is choosing a word
+                  <span className="guessing-dots"></span>
+                </p>
+              </div>
+            </div>
+          )}
       </div>
     </Layout>
   );

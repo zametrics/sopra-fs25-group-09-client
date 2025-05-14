@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useApi } from "@/hooks/useApi";
 import { useEffect, useState } from "react";
 import { Form, Input, Button } from "antd";
+import { User } from "@/types/user";
 import {
   UserOutlined,
   LockOutlined,
@@ -58,6 +59,12 @@ const Login: React.FC = () => {
 
       if (response.success) {
         // Store the username in localStorage to keep track of the logged-in user
+        const userData = await apiService.get<User>(
+          `/users/${response.userId}`
+        );
+        if (userData.avatarUrl) {
+          localStorage.setItem("avatarUrl", userData.avatarUrl);
+        }
         const tokenData = { token: response.token };
         localStorage.setItem("token", JSON.stringify(tokenData));
         localStorage.setItem("username", values.username); // Store username from input

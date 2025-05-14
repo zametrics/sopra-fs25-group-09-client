@@ -434,6 +434,7 @@ a {
   border-bottom: 1px solid rgba(0, 0, 0, 0.2);
   background-color: transparent;
   cursor: pointer;
+  padding: 6px 0px;
 }
 .upload-image-btn:hover {
   background-color: rgba(0, 0, 0, 0.08);
@@ -718,6 +719,10 @@ a {
   box-shadow: 0 3px 0 #00000023;
   width: 78%;
   box-sizing: border-box;
+}
+
+.player-entry-lobby {
+  width: 100%;
 }
 
 .player_box_text {
@@ -1082,6 +1087,7 @@ textarea {
 .word-display-area {
   width: 100%;
   text-align: center;
+  margin-top: 10px;
   margin-bottom: 8px; /* Spacing below word area */
   line-height: 0.9; /* Helps control vertical spacing if needed */
 }
@@ -1123,8 +1129,8 @@ textarea {
   background-color: #ffffff;
   border-radius: 15px;
   box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3);
-  margin-bottom: 20px; /* Space below canvas */
-
+  margin-bottom: 15px; /* Space below canvas */
+  margin-top: 2px; /* Space below canvas */
   image-rendering: -moz-crisp-edges; /* Firefox */
   image-rendering: -webkit-crisp-edges; /* Webkit (Safari, Chrome < 41) */
   /*image-rendering: pixelated;                 /* Chrome >= 41, Opera >= 28 */
@@ -1515,6 +1521,7 @@ textarea {
   font-size: 2rem;
   margin-bottom: 1.5rem;
 }
+
 .timer-container {
   position: relative;
   width: 120px;
@@ -1523,6 +1530,7 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-top: -5px;
 }
 
 .timer-circle {
@@ -1563,6 +1571,37 @@ textarea {
   line-height: 1;
 }
 
+.round-content {
+  position: absolute;
+  top: 6%;
+  left: 467%;
+  display: flex;
+  align-items: center;
+  align-self: center;
+  align-items: center;
+  justify-content: center;
+}
+
+.lable-round {
+  position: relative;
+  font-family: "Nunito";
+  font-weight: bold;
+  font-size: 1.4rem;
+  color: rgb(255, 255, 255);
+  text-shadow: 0 0 3px rgb(0, 0, 0);
+  background-color: #2c2c2c21;
+  border-radius: 25px;
+  padding: 18px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.075);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.329);
+}
+.currentRound {
+  position: relative;
+  justify-content: center;
+}
+.allRound {
+}
+
 .timer-label {
   font-size: 0.85rem;
   color: #666;
@@ -1597,74 +1636,138 @@ textarea {
 }
 
 /* Super-specific Word Selection Modal Styles */
-html body .page-background .word-selection-overlay {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  background-color: rgba(0, 0, 0, 0.7) !important;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  z-index: 9999 !important; /* Even higher z-index */
-  animation: fadeIn 0.3s ease-in-out !important;
+.word-selection-overlay {
+  position: fixed;
+  inset: 0;
+  backdrop-filter: blur(2px);
+  background-color: rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 0.3s ease-out;
 }
 
-html body .page-background .word-selection-container {
-  background-color: white !important;
-  border-radius: 10px !important;
-  padding: 20px !important;
-  text-align: center !important;
-  max-width: 500px !important;
-  width: 90% !important;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3) !important;
-  animation: slideIn 0.3s ease-out !important;
-  color: black !important; /* Force black text for all container content */
+.word-selection-container {
+  background-color: #ffffff;
+  color: #000000;
+  border-radius: 16px;
+  padding: 23px;
+  width: 90%;
+  max-width: 500px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  border: 2px solid rgba(109, 109, 109, 0.664);
+  animation: slideIn 0.3s ease-out;
 }
 
-html body .page-background .word-selection-container h2 {
-  color: black !important;
-  margin-bottom: 20px !important;
-  font-size: 1.5rem !important;
-  font-weight: bold !important;
+.word-selection-container h2 {
+  font-family: "Dhyana", serif;
+  font-size: 2.2rem;
+  margin-bottom: 6px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  -webkit-text-stroke: 0.2px black;
 }
 
-html body .page-background .word-options {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 12px !important;
-  margin-top: 20px !important;
+.drawing-accent {
+  font-family: "Kranky", serif;
+  color: #4d1fd1;
+  font-weight: 500;
+  letter-spacing: 1px;
+  font-size: 2.5rem;
+  -webkit-text-stroke: 0.1px #4d1fd1;
 }
 
-html body .page-background .word-option {
-  padding: 15px !important;
-  border: 2px solid #e0e0e0 !important;
-  border-radius: 8px !important;
-  font-size: 1.2rem !important;
-  cursor: pointer !important;
-  transition: all 0.2s !important;
-  background-color: white !important;
-  color: black !important; /* Force black text */
-  text-transform: uppercase !important;
-  font-weight: 500 !important;
-  letter-spacing: 1px !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+.guessing-accent {
+  font-family: "Kranky", serif;
+  color: #0039f5;
+  font-weight: 500;
+  letter-spacing: 1px;
+  font-size: 2.5rem;
+  -webkit-text-stroke: 0.1px #0039f5;
 }
 
-html body .page-background .word-option:hover {
-  border-color: #4d92eb !important;
-  background-color: #f0f8ff !important;
-  color: black !important; /* Ensure text remains black on hover */
-  transform: translateY(-2px) !important;
+.word-selection-subtitle {
+  font-family: "Dhyana", serif;
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #222;
+  -webkit-text-stroke: 0.1px black;
 }
 
-html body .page-background .word-option.selected {
-  border-color: #4d92eb !important;
-  background-color: #bbd8ff !important; /* Much lighter blue for contrast with black text */
-  color: black !important; /* Force black text */
-  transform: scale(1.02) !important;
-  animation: pulse 0.5s ease-in-out !important;
+/* Dots animation */
+.guessing-dots::after {
+  content: "";
+  display: inline-block;
+  width: 1em;
+  text-align: left;
+  animation: dots 1.5s steps(3, end) infinite;
+}
+
+@keyframes dots {
+  0% {
+    content: ".";
+  }
+  33% {
+    content: "..";
+  }
+  66% {
+    content: "...";
+  }
+}
+
+.word-options {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.word-option {
+  flex: 1;
+  min-width: 80px;
+  padding: 8px 0px;
+  border: 2px solid #838383a8;
+  border-radius: 10px;
+  background-color: #f8f8f8;
+  text-transform: capitalize;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+.option-text {
+  font-family: "nunito", serif;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.word-option:hover {
+  background-color: #f3eefa;
+  border-color: #5a30cead;
+  transform: translateY(-1px);
+}
+
+.word-option.selected {
+  background-color: #f3eefa;
+  border-color: #5a30cead;
+  transform: scale(1.05);
+  font-weight: bold;
+  animation: pulse 0.4s ease-in-out;
+}
+
+/* Animationen */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Animation for when a word is selected */
@@ -1692,7 +1795,7 @@ html body .page-background .word-option.selected {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0 , 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -2050,7 +2153,6 @@ html body .page-background .word-option.selected {
     max-width: 100px;
   }
 }
-
 
 /* Quit Button */
 .quit-button {

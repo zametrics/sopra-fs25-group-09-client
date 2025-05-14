@@ -21,6 +21,7 @@ interface LobbyData {
 interface PlayerData {
   id: number;
   username: string;
+  avatarUrl: string;
 }
 
 interface ChatMessage {
@@ -57,7 +58,7 @@ interface LobbyOwnerChangedData {
 
 // --- Interface for Lobby State Event (including owner) ---
 interface LobbyStateData {
-  players: { id: string; username: string }[]; // Assuming server sends string IDs now
+  players: { id: string; username: string; avatarUrl: string }[]; // Assuming server sends string IDs now
   ownerId?: number | string | null; // Owner ID can be included
 }
 
@@ -102,20 +103,21 @@ const Layout: React.FC<LayoutProps> = ({
     setLobby(initialLobby);
   }, [initialLobby]);
 
-
   // for the end of game state quit
   const handleQuit = async () => {
-  try {
-    await apiService.put(`/lobbies/${lobbyId}/leave?playerId=${currentUserId}`, {});
-    socket?.emit("leaveLobby", { lobbyId, userId: currentUserId });
-    message.success("You have left the game.");
-    window.location.href = "/home"; // or use `router.push("/home")` if using `useRouter`
-  } catch (error) {
-    console.error("Failed to quit game:", error);
-    message.error("Failed to quit. Try again.");
-  }
-};
-
+    try {
+      await apiService.put(
+        `/lobbies/${lobbyId}/leave?playerId=${currentUserId}`,
+        {}
+      );
+      socket?.emit("leaveLobby", { lobbyId, userId: currentUserId });
+      message.success("You have left the game.");
+      window.location.href = "/home"; // or use `router.push("/home")` if using `useRouter`
+    } catch (error) {
+      console.error("Failed to quit game:", error);
+      message.error("Failed to quit. Try again.");
+    }
+  };
 
   // --- Helper function to update lobby state locally and notify parent ---
   const updateLobbyState = useCallback(
@@ -247,6 +249,7 @@ const Layout: React.FC<LayoutProps> = ({
           const newPlayers = data.players.map((p) => ({
             id: Number(p.id),
             username: p.username,
+            avatarUrl: p.avatarUrl,
           }));
           setPlayers(newPlayers);
           // --- Update scores to include new players ---
@@ -271,14 +274,22 @@ const Layout: React.FC<LayoutProps> = ({
       // --- Player Joined ---
       socket.on(
         "playerJoined",
-        (newPlayer: { id: string | number; username: string }) => {
+        (newPlayer: {
+          id: string | number;
+          username: string;
+          avatarUrl: string;
+        }) => {
           console.log("Player joined event received:", newPlayer);
           setPlayers((prev) => {
             const newPlayerId = Number(newPlayer.id);
             if (prev.some((p) => p.id === newPlayerId)) return prev;
             const newPlayers = [
               ...prev,
-              { id: newPlayerId, username: newPlayer.username },
+              {
+                id: newPlayerId,
+                username: newPlayer.username,
+                avatarUrl: newPlayer.avatarUrl,
+              },
             ];
             // --- Initialize score for new player ---
             setScores((prevScores) => ({
@@ -470,20 +481,22 @@ const Layout: React.FC<LayoutProps> = ({
           {players.map((player) => (
             <div
               key={player.id}
-              className={`player-entry ${
-                String(player.id) === currentUserId ? "player-entry-own" : ""
-              }`}
+              className={`player-entry
+  ${String(player.id) === currentUserId ? "player-entry-own" : ""}
+  ${lobby?.status === 0 ? "player-entry-lobby" : ""}
+`}
             >
               <div className="player-info">
                 <img
                   src={
                     String(player.id) === currentUserId
                       ? localAvatarUrl
-                      : "/icons/avatar.png"
+                      : player.avatarUrl || "/icons/avatar.png"
                   }
                   alt="Avatar"
                   className="player-avatar"
                 />
+
                 <span className="player_box_text">{player.username}</span>
                 {lobby && player.id === lobby.lobbyOwner && (
                   <span
@@ -502,10 +515,12 @@ const Layout: React.FC<LayoutProps> = ({
                   </span>
                 )}
               </div>
-              <div className="player_box_text player-score-box">
-                {scores[player.id] || 0}
-              </div>{" "}
               {/* <- Here's the new part */}
+              {lobby?.status === 1 && (
+                <div className="player_box_text player-score-box">
+                  {scores[player.id] || 0}
+                </div>
+              )}{" "}
             </div>
           ))}
         </div>
@@ -535,8 +550,7 @@ const Layout: React.FC<LayoutProps> = ({
               >
                 {isCorrectGuess ? (
                   <span className="chat-text--success">
-                    <strong>{msg.username.toUpperCase()}</strong> GUESSED THE
-                    CORRECT WORD
+                    <strong>{msg.username}</strong> guessed the correct word!
                   </span>
                 ) : isCloseGuess ? (
                   <span className="chat-text--close">
@@ -607,11 +621,12 @@ const Layout: React.FC<LayoutProps> = ({
                         src={
                           String(player.id) === currentUserId
                             ? localAvatarUrl
-                            : "/icons/avatar.png"
+                            : player.avatarUrl || "/icons/avatar.png"
                         }
                         alt="Avatar"
                         className="player-avatar"
                       />
+
                       <span>{player.username}</span>
                       {lobby && player.id === lobby.lobbyOwner && (
                         <span
@@ -628,7 +643,14 @@ const Layout: React.FC<LayoutProps> = ({
                   </div>
                 ))}
             </div>
-            <div style={{ marginTop: "1rem", display: "flex", gap: "10px", justifyContent: "center" }}>
+            <div
+              style={{
+                marginTop: "1rem",
+                display: "flex",
+                gap: "10px",
+                justifyContent: "center",
+              }}
+            >
               <Button className="quit-button" onClick={handleQuit}>
                 Quit Game
               </Button>
