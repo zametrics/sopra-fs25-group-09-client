@@ -291,7 +291,13 @@ const LobbyPage: FC = ({}) => {
   // Trigger fetchWordOptions when isCurrentUserPainter changes
   useEffect(() => {
     const asyncFetch = async () => {
+<<<<<<< HEAD
 
+=======
+      setShowChoosingModal(false);
+      setCurrentPainterUsername(null);
+      await delay(2000);
+>>>>>>> refs/remotes/origin/main
       if (isCurrentUserPainter) {
         console.log("User became painter, trying to fetch word options");
 
@@ -720,6 +726,7 @@ const LobbyPage: FC = ({}) => {
 
         setIsCurrentUserPainter(
           lobbyData.currentPainterToken === currentUserToken
+          
         );
       } catch (err) {
         console.error("Join error:", err);
@@ -773,6 +780,7 @@ const LobbyPage: FC = ({}) => {
           setIsCurrentUserPainter(
             updatedLobby.currentPainterToken === currentUserToken
           );
+
         } else {
           // If no painter assignment is needed, use the fetched lobby data
           setLobby(lobbyData);
@@ -780,6 +788,25 @@ const LobbyPage: FC = ({}) => {
           setIsCurrentUserPainter(
             lobbyData.currentPainterToken === currentUserToken
           );
+
+        console.log("STEP 1 PASSED");
+        const currentPainterToken = lobbyData.currentPainterToken;
+        console.log(lobbyData?.playerIds);
+        for (const id of lobbyData?.playerIds ?? []) {
+          console.log("STEP 2 PASSED", id);
+          const userData = await apiService.get<{
+            id: number;
+            token: string;
+            username: string;
+          }>(`/users/${id}`);
+          console.log("STEP 3 PASSED", showChoosingModal);
+
+          if (userData.token == currentPainterToken) {
+            console.log(userData.username);
+            await setCurrentPainterUsername(userData.username);
+            break;
+            }
+          }
         }
 
         setLoading(true);
