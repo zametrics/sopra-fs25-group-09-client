@@ -781,8 +781,8 @@ const LobbyPage: FC = ({}) => {
           setIsCurrentUserPainter(
             lobbyData.currentPainterToken === currentUserToken
           );
-
-        console.log("STEP 1 PASSED");
+        
+          console.log("STEP 1 PASSED");
         const currentPainterToken = lobbyData.currentPainterToken;
         console.log(lobbyData?.playerIds);
         for (const id of lobbyData?.playerIds ?? []) {
@@ -798,10 +798,17 @@ const LobbyPage: FC = ({}) => {
             console.log(userData.username);
             await setCurrentPainterUsername(userData.username);
             break;
-            }
           }
         }
+        console.log("STEP 4 PASSED", currentPainterUsername);
+        setShowChoosingModal(true);
 
+          setLobby(lobbyData);
+          setIsCurrentUserPainter(
+            lobbyData.currentPainterToken === currentUserToken
+          ); 
+        }
+        
         setLoading(true);
       } catch (err) {
         console.error("Painter assignment error:", err);
