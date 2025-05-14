@@ -774,41 +774,17 @@ const LobbyPage: FC = ({}) => {
             updatedLobby.currentPainterToken === currentUserToken
           );
 
+          socket?.emit("painter-selection-complete", { lobbyId })
+
         } else {
           // If no painter assignment is needed, use the fetched lobby data
           setLobby(lobbyData);
           console.log("Painter token checkasdhusdifhuisdhif:");
           setIsCurrentUserPainter(
             lobbyData.currentPainterToken === currentUserToken
-          );
-        
-          console.log("STEP 1 PASSED");
-        const currentPainterToken = lobbyData.currentPainterToken;
-        console.log(lobbyData?.playerIds);
-        for (const id of lobbyData?.playerIds ?? []) {
-          console.log("STEP 2 PASSED", id);
-          const userData = await apiService.get<{
-            id: number;
-            token: string;
-            username: string;
-          }>(`/users/${id}`);
-          console.log("STEP 3 PASSED", showChoosingModal);
-
-          if (userData.token == currentPainterToken) {
-            console.log(userData.username);
-            await setCurrentPainterUsername(userData.username);
-            break;
-          }
+          );          
         }
-        console.log("STEP 4 PASSED", currentPainterUsername);
-        setShowChoosingModal(true);
 
-          setLobby(lobbyData);
-          setIsCurrentUserPainter(
-            lobbyData.currentPainterToken === currentUserToken
-          ); 
-        }
-        
         setLoading(true);
       } catch (err) {
         console.error("Painter assignment error:", err);
