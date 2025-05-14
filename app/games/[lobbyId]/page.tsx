@@ -296,13 +296,13 @@ const LobbyPage: FC = ({}) => {
     const asyncFetch = async () => {
       setShowChoosingModal(false);
       setCurrentPainterUsername(null);
+      await delay(1000);
       if (isCurrentUserPainter) {
         console.log("User became painter, trying to fetch word options");
 
         fetchWordOptions();
       } else {
         await delay(1000);
-
         const lobbyState = await apiService.get<LobbyData>(
           `/lobbies/${lobbyId}`
         );
