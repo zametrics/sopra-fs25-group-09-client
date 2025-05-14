@@ -296,7 +296,7 @@ const LobbyPage: FC = ({}) => {
     const asyncFetch = async () => {
       setShowChoosingModal(false);
       setCurrentPainterUsername(null);
-      await delay(1000);
+      await delay(2000);
       if (isCurrentUserPainter) {
         console.log("User became painter, trying to fetch word options");
 
