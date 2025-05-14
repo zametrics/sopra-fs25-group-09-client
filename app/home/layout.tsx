@@ -226,7 +226,7 @@ export default function HomeLayout({
 
     try {
       const response = await fetch(
-        `http://localhost:8080/api/files/upload-avatar/${currentUserId}`,
+        `https://sopra-fs25-group-09-server.oa.r.appspot.com/api/files/upload-avatar/${currentUserId}`,
         {
           method: "POST",
           body: formData,
