@@ -1737,6 +1737,7 @@ textarea {
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+  color: black;
 }
 .option-text {
   font-family: "nunito", serif;
