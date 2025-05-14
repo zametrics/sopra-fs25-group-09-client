@@ -115,7 +115,7 @@ Note: If a team member fails to show continuous progress after using their Joker
 
 ---
 
-## Contributions Week 6 - [30.4.2025] to [06.04.2025] -- JOKER WEEK
+## Contributions Week 6 - [30.4.2025] to [06.05.2025] -- JOKER WEEK
 
 | **Student**        | **Date** | **Link to Commit** | **Description**                 | **Relevance**                       |
 | ------------------ | -------- | ------------------ | ------------------------------- | ----------------------------------- |
