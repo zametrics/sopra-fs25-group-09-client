@@ -291,13 +291,6 @@ const LobbyPage: FC = ({}) => {
   // Trigger fetchWordOptions when isCurrentUserPainter changes
   useEffect(() => {
     const asyncFetch = async () => {
-<<<<<<< HEAD
-
-=======
-      setShowChoosingModal(false);
-      setCurrentPainterUsername(null);
-      await delay(2000);
->>>>>>> refs/remotes/origin/main
       if (isCurrentUserPainter) {
         console.log("User became painter, trying to fetch word options");
 
