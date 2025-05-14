@@ -126,7 +126,7 @@ const LobbyPage: React.FC = () => {
     console.log("[Socket] Setting up socket for lobby:", lobbyId);
     const socketIo = io(
       process.env.NEXT_PUBLIC_SOCKET_URL ||
-        "http://localhost:3001",
+        "https://socket-server-826256454260.europe-west1.run.app/",
       {
         // Use env var
         path: "/api/socket",
