@@ -96,7 +96,7 @@ Note: If a team member fails to show continuous progress after using their Joker
 |                    | 25.04      | https://github.com/zametrics/sopra-fs25-group-09-client/commit/2b5605456caff84f4a5f85dff8253a84a86adbc2   | Hide Words From players when guessing#94                                                                                                                                                                                                                                           | its a game feature must have                                                                                                   |
 |                    | 25.04      | https://github.com/zametrics/sopra-fs25-group-09-client/commit/16e1257c77f0396f0bf8c44fcb3742f228c3a5c5   | Visually and functionally distinguish the painter Bug Fixes                                                                                                                                                                                                                        | eliminating bugs                                                                                                               |
 | **@iliasw15**      | 22.04.2025 | (https://github.com/zametrics/sopra-fs25-group-09-client/commit/a0d7292dd5114d0d7885f7606f85147ef0c56d11) | Disconnects if someone leaves                                                                                                                                                                                                                                                      | It fixes bug to have to muchunnecessary lobbies                                                                                |
-|                    | 20.04.2025 | (https://github.com/zametrics/sopra-fs25-group-09-client/commit/a0d7292dd5114d0d7885f7606f85147ef0c56d11) | Delete button                                                                                                                                                                                                                                                                      | Important cause was an issue                                                                                                   |
+|                    | 20.04.2025 | (https://github.com/zametrics/sopra-fs25-group-09-client/commit/9551a4f19a653ee55e0cc8fadb7e49d09e5f7f0f) | Delete button                                                                                                                                                                                                                                                                      | Important cause was an issue                                                                                                   |
 
 ---
 
@@ -115,7 +115,7 @@ Note: If a team member fails to show continuous progress after using their Joker
 
 ---
 
-## Contributions Week 6 - [30.4.2025] to [06.04.2025] -- JOKER WEEK
+## Contributions Week 6 - [30.4.2025] to [06.05.2025] -- JOKER WEEK
 
 | **Student**        | **Date** | **Link to Commit** | **Description**                 | **Relevance**                       |
 | ------------------ | -------- | ------------------ | ------------------------------- | ----------------------------------- |
