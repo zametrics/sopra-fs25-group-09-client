@@ -164,9 +164,6 @@ const LobbyPage: FC = ({}) => {
   const [isCurrentUserPainter, setIsCurrentUserPainter] =
     useState<boolean>(false);
 
-  const delay = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
-
   const remoteUsersLastPointRef = useRef<Map<string, Point | null>>(new Map());
   const localAvatarUrl =
     typeof window !== "undefined"
@@ -294,39 +291,12 @@ const LobbyPage: FC = ({}) => {
   // Trigger fetchWordOptions when isCurrentUserPainter changes
   useEffect(() => {
     const asyncFetch = async () => {
-      setShowChoosingModal(false);
-      setCurrentPainterUsername(null);
-      await delay(1000);
+
       if (isCurrentUserPainter) {
         console.log("User became painter, trying to fetch word options");
 
         fetchWordOptions();
-      } else {
-        await delay(1000);
-        const lobbyState = await apiService.get<LobbyData>(
-          `/lobbies/${lobbyId}`
-        );
-        console.log("STEP 1 PASSED");
-        const currentPainterToken = lobbyState.currentPainterToken;
-        console.log("nigga", currentPainterToken);
-        console.log(lobbyState?.playerIds);
-        for (const id of lobbyState?.playerIds ?? []) {
-          console.log("STEP 2 PASSED", id);
-          const userData = await apiService.get<{
-            id: number;
-            token: string;
-            username: string;
-          }>(`/users/${id}`);
-          console.log("STEP 3 PASSED", showChoosingModal);
-          if (userData.token == currentPainterToken) {
-            console.log(userData.username);
-            await setCurrentPainterUsername(userData.username);
-            break;
-          }
-        }
-        console.log("STEP 4 PASSED", currentPainterUsername);
-        setShowChoosingModal(true);
-      }
+      } 
     };
     asyncFetch();
   }, [isCurrentUserPainter]);
@@ -1115,6 +1085,9 @@ const LobbyPage: FC = ({}) => {
         );
 
         console.log("Round ended at:", new Date().toISOString());
+
+        setShowChoosingModal(false);
+        setCurrentPainterUsername(null);
         setIsCurrentUserPainter(false);
         setSelectedWord("");
         setShowWordSelection(false);
@@ -1144,6 +1117,7 @@ const LobbyPage: FC = ({}) => {
         console.log(
           "Received painter-selection-complete, fetching lobby state"
         );
+
         try {
           const lobbyData = await apiService.get<LobbyData>(
             `/lobbies/${lobbyId}`
@@ -1151,6 +1125,28 @@ const LobbyPage: FC = ({}) => {
           console.log(
             `Fetched lobby ${lobbyId}, NEW TOKEN: ${lobbyData.currentPainterToken}`
           );
+
+        console.log("STEP 1 PASSED");
+        const currentPainterToken = lobbyData.currentPainterToken;
+        console.log(lobbyData?.playerIds);
+        for (const id of lobbyData?.playerIds ?? []) {
+          console.log("STEP 2 PASSED", id);
+          const userData = await apiService.get<{
+            id: number;
+            token: string;
+            username: string;
+          }>(`/users/${id}`);
+          console.log("STEP 3 PASSED", showChoosingModal);
+
+          if (userData.token == currentPainterToken) {
+            console.log(userData.username);
+            await setCurrentPainterUsername(userData.username);
+            break;
+          }
+        }
+        console.log("STEP 4 PASSED", currentPainterUsername);
+        setShowChoosingModal(true);
+
           setLobby(lobbyData);
           setIsCurrentUserPainter(
             lobbyData.currentPainterToken === currentUserToken
