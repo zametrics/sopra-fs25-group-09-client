@@ -243,6 +243,35 @@ a {
     -1px -1px 0 #fff, 1px -1px 0 #fff, 1px 1px 0 #fff, -1px 1px 0 #fff !important;
 }
 
+.register-button {
+  width: 75% !important;
+  height: 52px !important;
+  font-weight: 500 !important;
+  font-size: 1.8rem !important;
+  letter-spacing: 1.6px !important;
+  border-radius: 8px !important;
+  border: 1px solid #000 !important;
+  font-family: "Digitalt", serif !important;
+  color: #000 !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 0px 10px rgb(255, 255, 255, 0.4), 0 6px 12px rgba(0, 0, 0, 0.3) !important;
+  text-shadow: 0 -1px 0 #fff, 1px 0 0 #fff, 0 1px 0 #fff, -1px 0 0 #fff,
+    -1px -1px 0 #fff, 1px -1px 0 #fff, 1px 1px 0 #fff, -1px 1px 0 #fff !important;
+  background-color: #f39191 !important;
+  border-color: rgb(94, 16, 16) !important;
+}
+.register-button:hover {
+  background-color: #f39595 !important;
+  box-shadow: 0 8px 20px rgba(248, 46, 46, 0.4), 0 12px 12px rgba(70, 0, 0, 0.1) !important;
+  transform: translateY(0px) !important;
+  cursor: pointer !important;
+}
+
+.register-button:active {
+  transform: translateY(1px) scale(0.98) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
 .mainpage_wrapper {
   align-items: center;
   justify-content: center;
@@ -276,21 +305,21 @@ a {
 
 .redirect-register-button {
   width: 58% !important;
-  background-color: #444 !important;
+  background-color: #22222259 !important;
   color: white !important;
   font-weight: 900 !important;
   font-size: 0.9em !important;
   letter-spacing: 1px !important;
   border-radius: 8px !important;
   margin-top: 1.2px !important;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.77),
-    0 8px 20px rgba(255, 255, 255, 0.5) !important;
-  border: 1px solid #fff !important;
+  box-shadow: inset 0 0 0 1px rgba(119, 119, 119, 0.397),
+    0 8px 20px rgba(77, 77, 77, 0.377) !important;
+  border: 1px solid #83838344 !important;
+  transition: all 0.2s ease !important;
 }
 
 .redirect-register-button:hover {
-  background-color: #5e5e5e !important;
-  transform: translateY(0px) !important;
+  transform: scale(102%) !important;
   cursor: pointer !important;
 }
 
@@ -707,6 +736,14 @@ a {
   width: 100%;
 }
 
+.player-list-diff {
+  position: relative;
+  gap: 10px;
+  margin-bottom: 10px;
+  margin-top: 0px;
+  left: 20px;
+}
+
 .player-entry {
   position: relative; /* <<< NEU */
   display: flex;
@@ -735,6 +772,12 @@ a {
   -moz-osx-font-smoothing: grayscale;
   color: #f6f6f6;
   text-shadow: 0 0 4 rgba(0, 0, 0, 1);
+}
+
+.score-diff-text {
+  font-size: 1.4rem;
+  padding: 3px 20px;
+  max-width: 200px;
 }
 
 .player-owner-indicator {
@@ -784,6 +827,11 @@ a {
   right: -22px;
   height: 35px;
   padding: 1px 1px;
+}
+
+.score-diff-box {
+  right: 110px;
+  max-width: 70px;
 }
 
 .player-painter-indicator {
@@ -1757,6 +1805,98 @@ textarea {
   transform: scale(1.05);
   font-weight: bold;
   animation: pulse 0.4s ease-in-out;
+}
+
+.loading-overlay {
+  position: absolute;
+  z-index: 999;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ready-container {
+  background: rgb(247, 248, 252);
+  border-radius: 20px;
+  padding: 30px 20px;
+  text-align: center;
+  max-width: 380px;
+  width: 100%;
+}
+
+.ready-title {
+  font-size: 3rem;
+  font-weight: 100;
+  margin-bottom: 15px;
+  text-shadow: 0 0px 5px rgba(116, 114, 235, 0.8);
+  font-family: "Kranky", serif;
+  color: rgb(0, 26, 255);
+}
+
+.correct-word {
+  font-size: 3rem;
+  font-weight: 100;
+  margin-bottom: 20px;
+  text-shadow: 0 0px 5px rgba(116, 114, 235, 0.8);
+  font-family: "Kranky", serif;
+  color: rgb(22, 5, 61);
+}
+
+.error-correct-word {
+  font-size: 1.8rem;
+  font-weight: 500;
+  margin-bottom: 20px;
+  font-family: "Nunito", serif;
+  color: rgb(255, 0, 0);
+}
+
+.settings-subtitle {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  font-family: Nunito;
+}
+
+.game-settings-list {
+  list-style: none;
+  padding: 5px 10px;
+  margin: 10 auto 30px;
+  text-align: left;
+  max-width: 300px;
+  font-size: 1.3rem;
+  border: 1px solid #9b71fd34;
+  border-radius: 15px;
+  background-color: #c2a0f836;
+}
+
+.game-settings-list li {
+  margin: 10px;
+  font-weight: 500;
+  color: rgb(0, 0, 0);
+  font-family: Nunito;
+  text-shadow: 0 0 0px rgb(172, 156, 218);
+}
+
+.game-settings-list li strong {
+  color: #694adb;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.loading-message {
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.644);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.514);
+  font-family: Nunito;
+}
+.loading-message-diff {
+  margin-top: 22px;
 }
 
 /* Animationen */

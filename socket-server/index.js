@@ -36,6 +36,7 @@ const timers = new Map();
 const pendingDisconnects = new Map();
 const LEAVE_DELAY = 5000;
 const playerScores = new Map(); // Map<lobbyId, Map<playerId, score>>
+const correctGuessers = new Map(); // Map<lobbyId, Set<playerId>>
 
 // --- NEW: Fetch Lobby Details Function ---
 async function fetchLobbyDetailsFromDb(lobbyId) {
@@ -127,6 +128,7 @@ async function handleTimeUp(lobbyId) {
     gameStates.delete(lobbyId);
     io.to(lobbyId).emit("gameEnded");
   }
+  correctGuessers.delete(lobbyId); // 🧽 Clean up
 }
 
 /**
@@ -137,20 +139,25 @@ async function handleTimeUp(lobbyId) {
 function runTimer(lobbyId, startTime) {
   let time = startTime;
   console.log(`Starting timer for lobby ${lobbyId} with ${time} seconds`);
+
   timers.set(lobbyId, { time, interval: null, paused: false }); // Initialize timer
+
   const interval = setInterval(async () => {
+    const currentTimer = timers.get(lobbyId);
+
     time--;
-    console.log(`[Debug] Timer tick for lobby ${lobbyId}: ${time} seconds remaining`);
-    timers.set(lobbyId, { time, interval, paused: false }); // Update timer on each tick
+    console.log(
+      `[Debug] Timer tick for lobby ${lobbyId}: ${time} seconds remaining`
+    );
     io.to(lobbyId).emit("timerUpdate", time);
 
-    if (time <= 0) {
+    if (time <= 0 || currentTimer?.paused) {
       clearInterval(interval);
-      timers.set(lobbyId, { time: 0, interval: null, paused: true });
+      timers.set(lobbyId, { time: time, interval: null, paused: true });
       console.log(`[Debug] Timer ended for lobby ${lobbyId}`);
       await handleTimeUp(lobbyId);
     }
-  }, 1_000);
+  }, 1000);
 }
 
 // --- NEW: Update Lobby Owner Function ---
@@ -359,96 +366,126 @@ io.on("connection", (socket) => {
   // Add this inside the io.on("connection", (socket) => { ... }) block, after existing socket event handlers
 
   socket.on("updateScore", ({ lobbyId, playerId }) => {
-  if (!lobbyId || typeof playerId !== "number") {
-    console.error(`Invalid updateScore data from socket ${socket.id}:`, {
-      lobbyId,
-      playerId,
-    });
-    return;
-  }
-
-  const timerEntry = timers.get(lobbyId);
-  if (!timerEntry || typeof timerEntry.time !== "number") {
-    console.error(`[Error] No valid timer for lobby ${lobbyId}`, { timerEntry });
-    return;
-  }
-
-  const gameState = gameStates.get(lobbyId);
-  if (!gameState) {
-    console.error(`[Error] No game state for lobby ${lobbyId}`);
-    return;
-  }
-
-  // Log timer details for debugging
-  console.log(`[Debug] Timer for lobby ${lobbyId}:`, {
-    remainingTime: timerEntry.time,
-    startTime: gameState.drawTime,
-    paused: timerEntry.paused,
-  });
-
-  // Use remaining time as the score
-  const score = timerEntry.time;
-  if (score <= 0) {
-    console.warn(`[Score] Timer is at or below 0 for lobby ${lobbyId}, no points awarded`);
-    return;
-  }
-
-  // Add score to player
-  if (!playerScores.has(lobbyId)) playerScores.set(lobbyId, new Map());
-  const lobbyScores = playerScores.get(lobbyId);
-  const prevScore = lobbyScores.get(playerId) || 0;
-  const newScore = prevScore + score;
-  lobbyScores.set(playerId, newScore);
-
-  console.log(
-    `[Score] Player ${playerId} in lobby ${lobbyId} guessed correctly with ${score} seconds remaining. New total: ${newScore} points`
-  );
-
-  io.to(lobbyId).emit("scoreUpdated", { playerId, score: newScore });
-
-  // Drawer bonus
-  const lobby = lobbies.get(lobbyId);
-  if (!lobby || !lobby.currentPainterToken) {
-    console.warn(`[Bonus] No painter token found for lobby ${lobbyId}`);
-    return;
-  }
-
-  // Find drawer’s playerId
-  let drawerId = null;
-  for (const [uid, data] of lobby.players.entries()) {
-    if (data.token === lobby.currentPainterToken) {
-      drawerId = Number(uid);
-      break;
+    if (!lobbyId || typeof playerId !== "number") {
+      console.error(`Invalid updateScore data from socket ${socket.id}:`, {
+        lobbyId,
+        playerId,
+      });
+      return;
     }
-  }
 
-  if (drawerId === null) {
-    console.warn(
-      `[Bonus] Could not find drawer for token ${lobby.currentPainterToken}`
-    );
-    return;
-  }
+    const timerEntry = timers.get(lobbyId);
+    if (!timerEntry || typeof timerEntry.time !== "number") {
+      console.error(`[Error] No valid timer for lobby ${lobbyId}`, {
+        timerEntry,
+      });
+      return;
+    }
 
-  if (drawerId === playerId) {
+    const gameState = gameStates.get(lobbyId);
+    if (!gameState) {
+      console.error(`[Error] No game state for lobby ${lobbyId}`);
+      return;
+    }
+
+    // Log timer details for debugging
+    console.log(`[Debug] Timer for lobby ${lobbyId}:`, {
+      remainingTime: timerEntry.time,
+      startTime: gameState.drawTime,
+      paused: timerEntry.paused,
+    });
+
+    // Use remaining time as the score
+    const score = timerEntry.time;
+    if (score <= 0) {
+      console.warn(
+        `[Score] Timer is at or below 0 for lobby ${lobbyId}, no points awarded`
+      );
+      return;
+    }
+
+    // Add score to player
+    if (!playerScores.has(lobbyId)) playerScores.set(lobbyId, new Map());
+    const lobbyScores = playerScores.get(lobbyId);
+    const prevScore = lobbyScores.get(playerId) || 0;
+    const newScore = prevScore + score;
+    lobbyScores.set(playerId, newScore);
+
     console.log(
-      `[Bonus] Skipping bonus – drawer and guesser are the same (${playerId})`
+      `[Score] Player ${playerId} in lobby ${lobbyId} guessed correctly with ${score} seconds remaining. New total: ${newScore} points`
     );
-    return;
-  }
 
-  const drawerBonus = Math.floor(score / 4); // Bonus based on remaining time
-  const drawerPrevScore = lobbyScores.get(drawerId) || 0;
-  const drawerNewScore = drawerPrevScore + drawerBonus;
-  lobbyScores.set(drawerId, drawerNewScore);
+    io.to(lobbyId).emit("scoreUpdated", { playerId, score: newScore });
 
-  console.log(
-    `[Bonus] Drawer ${drawerId} gets ${drawerBonus} bonus points. Total: ${drawerNewScore}`
-  );
-  io.to(lobbyId).emit("scoreUpdated", {
-    playerId: drawerId,
-    score: drawerNewScore,
+    // Drawer bonus
+    const lobby = lobbies.get(lobbyId);
+    if (!lobby || !lobby.currentPainterToken) {
+      console.warn(`[Bonus] No painter token found for lobby ${lobbyId}`);
+      return;
+    }
+
+    // Find drawer’s playerId
+    let drawerId = null;
+    for (const [uid, data] of lobby.players.entries()) {
+      if (data.token === lobby.currentPainterToken) {
+        drawerId = Number(uid);
+        break;
+      }
+    }
+
+    if (drawerId === null) {
+      console.warn(
+        `[Bonus] Could not find drawer for token ${lobby.currentPainterToken}`
+      );
+      return;
+    }
+
+    if (drawerId === playerId) {
+      console.log(
+        `[Bonus] Skipping bonus – drawer and guesser are the same (${playerId})`
+      );
+      return;
+    }
+
+    const drawerBonus = Math.floor(score / 4); // Bonus based on remaining time
+    const drawerPrevScore = lobbyScores.get(drawerId) || 0;
+    const drawerNewScore = drawerPrevScore + drawerBonus;
+    lobbyScores.set(drawerId, drawerNewScore);
+
+    console.log(
+      `[Bonus] Drawer ${drawerId} gets ${drawerBonus} bonus points. Total: ${drawerNewScore}`
+    );
+    io.to(lobbyId).emit("scoreUpdated", {
+      playerId: drawerId,
+      score: drawerNewScore,
+    });
+
+    // --- TRACK CORRECT GUESSERS ---
+    if (!correctGuessers.has(lobbyId)) correctGuessers.set(lobbyId, new Set());
+    const guessers = correctGuessers.get(lobbyId);
+    guessers.add(playerId);
+
+    // Check if ALL guessers (excluding painter) have guessed
+    const totalPlayers = Array.from(lobby.players.keys()).map(Number);
+    const numNonPainterPlayers = totalPlayers.filter(
+      (id) => id !== drawerId
+    ).length;
+    const numCorrect = guessers.size;
+
+    if (numCorrect >= numNonPainterPlayers) {
+      // Stop timer
+      clearInterval(timerEntry.interval);
+      timers.set(lobbyId, {
+        time: timerEntry.time,
+        interval: null,
+        paused: true,
+      });
+      console.log(
+        `[Timer] All players guessed correctly in ${lobbyId}, timer paused.`
+      );
+      io.to(lobbyId).emit("timerUpdate", timerEntry.time); // Optional
+    }
   });
-});
 
   socket.on("gameStarting", ({ lobbyId, settings }) => {
     console.log(`Game starting for lobby ${lobbyId}`);
@@ -1090,6 +1127,17 @@ io.on("connection", (socket) => {
       currentRound: gs.currentRound,
       numOfRounds: gs.numOfRounds,
     });
+  });
+
+  socket.on("selecting-word", (data) => {
+    const playerInfo = socketToLobby.get(socket.id);
+    if (!playerInfo) return;
+    const { lobbyId, userId } = playerInfo;
+
+    console.log("[selecting word] 1: " + lobbyId);
+
+    console.log("[selecting word] 2 " + userId);
+    socket.to(lobbyId).emit("selecting-word");
   });
 });
 

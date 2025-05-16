@@ -140,6 +140,14 @@ const LobbyPage: FC = ({}) => {
   // old socket implementation
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false); // Prevent multiple initial loads
+  const [score, setScores] = useState<{ [key: number]: number }>({});
+  const [diffScores, setDiffScores] = useState<{ [playerId: string]: number }>(
+    {}
+  );
+
+  const [usernameCache, setUsernameCache] = useState<{
+    [playerId: string]: string;
+  }>({});
 
   const [color, setColor] = useState<string>("#000000");
   const [isColorPickerVisible, setIsColorPickerVisible] =
@@ -185,7 +193,11 @@ const LobbyPage: FC = ({}) => {
   const [selectedWord, setSelectedWord] = useState<string>("");
 
   const [isSelectingPainter, setIsSelectingPainter] = useState<boolean>(false);
-  const [showChoosingModal, setShowChoosingModal] = useState(false);
+  const [showChoosingModal, setShowChoosingModal] = useState<boolean>(false);
+  const [loadedSelectingWord, setLoadedSelectingWord] =
+    useState<boolean>(false);
+  const [isfirstRound, setisFirstRound] = useState<boolean>(true);
+  const [currentWordModal, setCurrentWordModal] = useState<string>("");
 
   const wordToGuess = selectedWord || "placeholder"; //PLACEHOLDER WORD
   const [currentPainterUsername, setCurrentPainterUsername] = useState<
@@ -262,14 +274,24 @@ const LobbyPage: FC = ({}) => {
       const response = await apiService.get<string[]>(
         `/api/words/gpt?lang=${language}&type=${wordType}&count=3`
       );
+      await new Promise((f) => setTimeout(f, 1000));
 
       if (response && Array.isArray(response)) {
         console.log("API response:", response);
         const options = response.map((word) => ({ word, selected: false }));
         setWordOptions(options);
+        if (socket) {
+          console.log("SELECTING WORD LOG");
+          await socket.emit("selecting-word");
+        }
+
         setShowWordSelection(true);
       } else {
         console.error("Invalid response format for word options:", response);
+        if (socket) {
+          console.log("SELECTING WORD LOG");
+          await socket.emit("selecting-word");
+        }
         setWordOptions([
           { word: "apple", selected: false },
           { word: "banana", selected: false },
@@ -277,6 +299,8 @@ const LobbyPage: FC = ({}) => {
         ]);
         setShowWordSelection(true);
       }
+
+      setisFirstRound(false);
     } catch (error) {
       console.error("Error fetching word options:", error);
       setWordOptions([
@@ -295,7 +319,7 @@ const LobbyPage: FC = ({}) => {
         console.log("User became painter, trying to fetch word options");
 
         fetchWordOptions();
-      } 
+      }
     };
     asyncFetch();
   }, [isCurrentUserPainter]);
@@ -331,6 +355,7 @@ const LobbyPage: FC = ({}) => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       remoteUsersLastPointRef.current.clear();
       saveCanvasState();
+      setCurrentWordModal(word);
 
       await socket.emit("startTimer", {
         lobbyId,
@@ -639,6 +664,8 @@ const LobbyPage: FC = ({}) => {
       currentPainterToken: lobby?.currentPainterToken,
       currentUserToken,
     });
+
+    fetchUsernamesForLobby();
   }, [isCurrentUserPainter, currentUserToken, lobby]);
 
   useEffect(() => {
@@ -692,6 +719,7 @@ const LobbyPage: FC = ({}) => {
   // Join then fetch lobby & pick a painter
   useEffect(() => {
     const joinThenFetch = async () => {
+      console.log(score);
       setLoading(true);
       try {
         // 1) Join
@@ -719,7 +747,6 @@ const LobbyPage: FC = ({}) => {
 
         setIsCurrentUserPainter(
           lobbyData.currentPainterToken === currentUserToken
-          
         );
       } catch (err) {
         console.error("Join error:", err);
@@ -774,15 +801,14 @@ const LobbyPage: FC = ({}) => {
             updatedLobby.currentPainterToken === currentUserToken
           );
 
-          socket?.emit("painter-selection-complete", { lobbyId })
-
+          socket?.emit("painter-selection-complete", { lobbyId });
         } else {
           // If no painter assignment is needed, use the fetched lobby data
           setLobby(lobbyData);
           console.log("Painter token checkasdhusdifhuisdhif:");
           setIsCurrentUserPainter(
             lobbyData.currentPainterToken === currentUserToken
-          );          
+          );
         }
 
         setLoading(true);
@@ -875,6 +901,10 @@ const LobbyPage: FC = ({}) => {
   const handleCancelLeave = () => {
     setIsLeaveModalVisible(false);
   };
+
+  function capitalizeFirstLetter(val: string) {
+    return String(val).charAt(0).toUpperCase() + String(val).slice(1);
+  }
 
   // --- Color Picker Toggle Handler ---
   const toggleColorPicker = () => {
@@ -1020,7 +1050,7 @@ const LobbyPage: FC = ({}) => {
         sessionStorage.removeItem(DISCONNECT_LOBBY_ID_KEY);
       }
 
-      // http://localhost:3001 https://socket-server-826256454260.europe-west1.run.app/  http://localhost:3001
+      // http://localhost:3001 https://socket-server-826256454260.europe-west1.run.app/
       socketIo = io(
         "https://socket-server-826256454260.europe-west1.run.app/",
         {
@@ -1079,6 +1109,7 @@ const LobbyPage: FC = ({}) => {
         console.log("Received selected word from another player:", data.word);
         setSelectedWord(data.word);
         setShowWordSelection(false);
+        setCurrentWordModal(data.word);
       });
 
       socketIo.on("roundEnded", async () => {
@@ -1086,7 +1117,7 @@ const LobbyPage: FC = ({}) => {
           `/lobbies/${lobbyId}/word`,
           "default_word"
         );
-
+        setisFirstRound(false);
         console.log("Round ended at:", new Date().toISOString());
 
         setShowChoosingModal(false);
@@ -1095,6 +1126,7 @@ const LobbyPage: FC = ({}) => {
         setSelectedWord("");
         setShowWordSelection(false);
         setIsSelectingPainter(true); // NEW: Block navigation
+        setLoadedSelectingWord(false);
 
         const lobbyData = await apiService.get<LobbyData>(
           `/lobbies/${lobbyId}`
@@ -1129,26 +1161,26 @@ const LobbyPage: FC = ({}) => {
             `Fetched lobby ${lobbyId}, NEW TOKEN: ${lobbyData.currentPainterToken}`
           );
 
-        console.log("STEP 1 PASSED");
-        const currentPainterToken = lobbyData.currentPainterToken;
-        console.log(lobbyData?.playerIds);
-        for (const id of lobbyData?.playerIds ?? []) {
-          console.log("STEP 2 PASSED", id);
-          const userData = await apiService.get<{
-            id: number;
-            token: string;
-            username: string;
-          }>(`/users/${id}`);
-          console.log("STEP 3 PASSED", showChoosingModal);
+          console.log("STEP 1 PASSED");
+          const currentPainterToken = lobbyData.currentPainterToken;
+          console.log(lobbyData?.playerIds);
+          for (const id of lobbyData?.playerIds ?? []) {
+            console.log("STEP 2 PASSED", id);
+            const userData = await apiService.get<{
+              id: number;
+              token: string;
+              username: string;
+            }>(`/users/${id}`);
+            console.log("STEP 3 PASSED", showChoosingModal);
 
-          if (userData.token == currentPainterToken) {
-            console.log(userData.username);
-            await setCurrentPainterUsername(userData.username);
-            break;
+            if (userData.token == currentPainterToken) {
+              console.log(userData.username);
+              await setCurrentPainterUsername(userData.username);
+              break;
+            }
           }
-        }
-        console.log("STEP 4 PASSED", currentPainterUsername);
-        setShowChoosingModal(true);
+          console.log("STEP 4 PASSED", currentPainterUsername);
+          setShowChoosingModal(true);
 
           setLobby(lobbyData);
           setIsCurrentUserPainter(
@@ -1266,6 +1298,34 @@ const LobbyPage: FC = ({}) => {
         }
       });
 
+      socketIo.on("selecting-word", () => {
+        setLoadedSelectingWord(true);
+        setisFirstRound(false);
+        console.log("SELECTING WORD RECEIVED LOG");
+      });
+
+      socketIo.on("scoreUpdated", ({ playerId, score }) => {
+        console.log(
+          `[Score] Received score update for player ${playerId}: ${score}`
+        );
+
+        setScores((prevScores) => {
+          const lastScore = prevScores?.[playerId] ?? null;
+          const diff = lastScore !== null ? score - lastScore : score;
+
+          // Update diffScores as well
+          setDiffScores((prevDiffs) => ({
+            ...prevDiffs,
+            [playerId]: diff,
+          }));
+
+          return {
+            ...prevScores,
+            [playerId]: score,
+          };
+        });
+      });
+
       if (
         canvasElementRef.current &&
         historyStack.length === 0 &&
@@ -1302,6 +1362,9 @@ const LobbyPage: FC = ({}) => {
         socketIo.off("fill-area");
         socketIo.off("sync-canvas");
         socketIo.off("playerLeft");
+        socketIo.off("selecting-word");
+        socketIo.off("painter-selection-complete");
+        socketIo.off("scoreUpdated");
         // NEW: Delay disconnection to allow event receipt
         setTimeout(() => {
           console.log("[Unmount] Disconnecting socket after delay...");
@@ -1350,7 +1413,38 @@ const LobbyPage: FC = ({}) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     remoteUsersLastPointRef.current.clear();
     saveCanvasState(); // Save the blank state
+    console.log(usernameCache["1"]);
   };
+
+  async function fetchUsernamesForLobby(): Promise<void> {
+    try {
+      const response = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
+      const playerIds = response.playerIds;
+
+      if (Array.isArray(playerIds)) {
+        // Kopie vom aktuellen Cache
+        const newCache = { ...usernameCache };
+
+        for (const id of playerIds) {
+          const stringId = String(id);
+
+          if (!(stringId in newCache)) {
+            const user = await apiService.get<{ id: number; username: string }>(
+              `/users/${id}`
+            );
+            newCache[stringId] = user.username;
+          }
+        }
+
+        setUsernameCache(newCache);
+        console.log("[Usernames] Spielernamen geladen:", newCache);
+      } else {
+        console.error("[Usernames] Spieler-IDs sind kein Array:", playerIds);
+      }
+    } catch (error) {
+      console.error("[Usernames] Fehler beim Abrufen der Spielernamen:", error);
+    }
+  }
 
   // --- Keep rendering logic (Loading, Not Found, Main Game UI) ---
   if (loading && !lobby) {
@@ -1741,7 +1835,8 @@ const LobbyPage: FC = ({}) => {
         {/* Show guessing screen to all non-painters while no word has been picked */}
         {!isCurrentUserPainter &&
           selectedWord === "default_word" &&
-          showChoosingModal && (
+          showChoosingModal &&
+          loadedSelectingWord && (
             <div className="word-selection-overlay">
               <div className="word-selection-container">
                 <h2>
@@ -1750,6 +1845,80 @@ const LobbyPage: FC = ({}) => {
                 <p className="word-selection-subtitle">
                   {currentPainterUsername ?? "Someone"} is choosing a word
                   <span className="guessing-dots"></span>
+                </p>
+              </div>
+            </div>
+          )}
+        {/* Loading screen inbetween rounds*/}
+        {!loadedSelectingWord &&
+          selectedWord === "default_word" &&
+          !showWordSelection &&
+          !isfirstRound && (
+            <div className="loading-overlay word-selection-overlay">
+              <div className="ready-container word-selection-container">
+                <h3 className="settings-subtitle">The correct word was:</h3>
+                <div className="correct-word">
+                  {currentWordModal === "" ? (
+                    <span className="error-correct-word">
+                      errorFetchingCurrentWord
+                    </span>
+                  ) : (
+                    capitalizeFirstLetter(String(currentWordModal))
+                  )}
+                </div>
+                <div className="score-update-list">
+                  {Object.entries(diffScores).map(([playerId, diff]) => (
+                    <div
+                      key={playerId}
+                      className="player-list-diff player-list"
+                    >
+                      <span className="score-diff-text player_box_text player-entry">
+                        {usernameCache[playerId] || "Player " + playerId}
+                      </span>
+                      <span className="score-diff-text player_box_text score-diff-box player-score-box">
+                        +{diff}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="loading-message-diff loading-message">
+                  Loading next round<span className="guessing-dots"></span>
+                </p>
+              </div>
+            </div>
+          )}
+        {/* Show game settings at round start while waiting */}
+        {!loadedSelectingWord &&
+          selectedWord === "default_word" &&
+          !showWordSelection &&
+          isfirstRound && (
+            <div className="loading-overlay word-selection-overlay">
+              <div className="ready-container word-selection-container">
+                <div className="ready-title">Get Ready!</div>
+                <h3 className="settings-subtitle">Game settings:</h3>
+                <ul className="game-settings-list">
+                  <li>
+                    <strong>Draw Time:</strong> {lobby?.drawTime} seconds
+                  </li>
+                  <li>
+                    <strong>Rounds:</strong> {lobby?.numOfRounds}
+                  </li>
+                  <li>
+                    <strong>Wordset:</strong>{" "}
+                    {capitalizeFirstLetter(String(lobby?.type))}
+                  </li>
+                  <li>
+                    <strong>Language:</strong>{" "}
+                    {capitalizeFirstLetter(
+                      String(
+                        lobby?.language === "de" ? "german" : lobby?.language
+                      )
+                    )}
+                  </li>
+                </ul>
+                <p className="loading-message">
+                  Loading<span className="guessing-dots"></span>
                 </p>
               </div>
             </div>

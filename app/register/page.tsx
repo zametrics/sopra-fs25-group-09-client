@@ -26,48 +26,6 @@ const Register = () => {
     password: string;
   }) => {
     try {
-      // Password validation
-      const validatePassword = (
-        password: string
-      ): { isValid: boolean; message: string } => {
-        const minLength = password.length >= 4;
-        const maxLength = password.length <= 32;
-        const hasLetter = /[a-zA-Z]/.test(password);
-        const hasNumber = /\d/.test(password);
-        const noSpaces = !/\s/.test(password);
-
-        if (!minLength)
-          return {
-            isValid: false,
-            message: "Password must be at least 4 characters long",
-          };
-        if (!maxLength)
-          return {
-            isValid: false,
-            message: "Password cannot exceed 32 characters",
-          };
-        if (!hasLetter)
-          return {
-            isValid: false,
-            message: "Password must contain at least one letter",
-          };
-        if (!hasNumber)
-          return {
-            isValid: false,
-            message: "Password must contain at least one number",
-          };
-        if (!noSpaces)
-          return { isValid: false, message: "Password cannot contain spaces" };
-
-        return { isValid: true, message: "Password is valid" };
-      };
-
-      // Validate password
-      const passwordValidation = validatePassword(values.password);
-      if (!passwordValidation.isValid) {
-        throw new Error(passwordValidation.message);
-      }
-
       // Send registration request to the backend
       const response = await apiService.post<UserGetDTO>("/users", values);
 
@@ -86,8 +44,15 @@ const Register = () => {
       router.push("/home");
     } catch (error: unknown) {
       if (error instanceof Error) {
-        alert(`Something went wrong during registration:\n${error.message}`);
-        router.push("/login");
+        form.setFields([
+          {
+            name: "password",
+            errors: [error.message],
+          },
+        ]);
+        form.resetFields(["password"]);
+        form.resetFields(["username"]);
+        alert("Error: " + error.message);
       } else {
         console.error("An unknown error occurred during registration.");
       }
@@ -120,8 +85,41 @@ const Register = () => {
 
           <Form.Item
             name="password"
-            rules={[{ required: true, message: "Please enter a password" }]}
             label={<label className="login-label">Password:</label>}
+            rules={[
+              { required: true, message: "Please enter a password" },
+              {
+                validator: (_, value) => {
+                  if (!value) return Promise.resolve(); // already handled by 'required'
+
+                  if (value.length < 4) {
+                    return Promise.reject(
+                      "Password must be at least 4 characters long"
+                    );
+                  }
+                  if (value.length > 32) {
+                    return Promise.reject(
+                      "Password cannot exceed 32 characters"
+                    );
+                  }
+                  if (!/[a-zA-Z]/.test(value)) {
+                    return Promise.reject(
+                      "Password must contain at least one letter"
+                    );
+                  }
+                  if (!/\d/.test(value)) {
+                    return Promise.reject(
+                      "Password must contain at least one number"
+                    );
+                  }
+                  if (/\s/.test(value)) {
+                    return Promise.reject("Password cannot contain spaces");
+                  }
+
+                  return Promise.resolve();
+                },
+              },
+            ]}
           >
             <Input.Password
               prefix={<LockOutlined />}
@@ -132,7 +130,7 @@ const Register = () => {
 
           <div className="login-actions">
             <Form.Item>
-              <Button htmlType="submit" className="login-button">
+              <Button htmlType="submit" className="register-button">
                 REGISTER
               </Button>
             </Form.Item>
