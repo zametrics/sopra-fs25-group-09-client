@@ -204,6 +204,12 @@ const LobbyPage: FC = ({}) => {
     string | null
   >(null);
 
+  const isPainterRef = useRef(false);
+
+  useEffect(() => {
+    isPainterRef.current = isCurrentUserPainter;
+  }, [isCurrentUserPainter]);
+
   const triggerNextPainterSelection = async () => {
     console.log(
       "triggerNextPainterSelection called at:",
@@ -1117,6 +1123,7 @@ const LobbyPage: FC = ({}) => {
           `/lobbies/${lobbyId}/word`,
           "default_word"
         );
+
         setisFirstRound(false);
         console.log("Round ended at:", new Date().toISOString());
 
@@ -1128,12 +1135,10 @@ const LobbyPage: FC = ({}) => {
         setIsSelectingPainter(true); // NEW: Block navigation
         setLoadedSelectingWord(false);
 
-        const lobbyData = await apiService.get<LobbyData>(
-          `/lobbies/${lobbyId}`
-        );
-        setLobby(lobbyData);
+        const iWasPainter = isPainterRef.current; // ← value **before** resets
+        setIsCurrentUserPainter(false); // local UI only
 
-        if (lobbyData.currentPainterToken === currentUserToken) {
+        if (iWasPainter) {
           console.log("Current painter triggering next painter selection");
           try {
             await triggerNextPainterSelection();
