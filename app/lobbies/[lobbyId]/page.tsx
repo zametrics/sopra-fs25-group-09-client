@@ -51,7 +51,7 @@ const LobbyPage: React.FC = () => {
   const [language, setLanguage] = useState<string>("english");
   const [type, setType] = useState<string>("standard");
   const [customWords, setCustomWords] = useState<string>("");
-  const [useCustomWordsOnly, setUseCustomWordsOnly] = useState<boolean>(false);
+  //const [useCustomWordsOnly, setUseCustomWordsOnly] = useState<boolean>(false);
 
   const currentUserId =
     typeof window !== "undefined" ? localStorage.getItem("userId") : "";
@@ -79,7 +79,7 @@ const LobbyPage: React.FC = () => {
       setType(response.type);
       // Consider resetting custom words or fetching if stored elsewhere
       setCustomWords("");
-      setUseCustomWordsOnly(false);
+      //setUseCustomWordsOnly(false);
       console.log("[Fetch] Lobby state and settings updated.");
     } catch (error) {
       console.error("[Fetch] Error fetching lobby:", error);
