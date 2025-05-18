@@ -30,6 +30,7 @@ const fetch = (...args) =>
 // --- Modified Data Structure ---
 // Map<lobbyId, { ownerId: number | null, players: Map<userId, { socketId, username }>, detailsFetched: boolean }>
 const lobbies = new Map();
+const games = new Map();
 const socketToLobby = new Map(); // Map<socketId, { lobbyId, userId }>
 const pendingStateRequests = new Map();
 const gameStates = new Map();
@@ -374,9 +375,9 @@ io.on("connection", (socket) => {
       const expectedIds = (lobbyDetails.playerIds || []).map(String);
 
       /* 2️⃣  Who is actually connected right now? */
-      const lobbyData = lobbies.get(lobbyId);
-      if (!lobbyData) return; // safety
-      const connectedIds = Array.from(lobbyData.players.keys());
+      const gameData = games.get(lobbyId);
+      if (!gameData) return; // safety
+      const connectedIds = Array.from(gameData.players.keys());
 
       /* 3️⃣  Everyone present? */
       const ready = expectedIds.every((id) => connectedIds.includes(id));
@@ -630,20 +631,6 @@ io.on("connection", (socket) => {
       Array.from(lobbyData.players.keys())
     );
 
-    /* 🔔  Check if a pending painter-selection can now fire */
-    if (pendingPainterSelection.has(lobbyId)) {
-      const expected = pendingPainterSelection.get(lobbyId);
-      const connected = Array.from(lobbyData.players.keys());
-      const ready = expected.every((id) => connected.includes(id));
-      if (ready) {
-        io.to(lobbyId).emit("painter-selection-complete");
-        pendingPainterSelection.delete(lobbyId);
-        console.log(
-          `[PainterSelection] Fired (all present) for lobby ${lobbyId}.`
-        );
-      }
-    }
-
     // --- Emit current state (using fresh DB owner) ---
     const currentPlayers = Array.from(lobbyData.players.entries()).map(
       ([id, data]) => ({
@@ -664,6 +651,36 @@ io.on("connection", (socket) => {
 
     // You might not need 'playerJoined' if 'lobbyState' is always sent to all
     // socket.to(lobbyId).emit("playerJoined", { id: String(userId), username });
+  });
+
+  socket.on("joinGame", async ({ lobbyId, userId, username }) => {
+    let gameData = games.get(lobbyId); // Use original lobbyId key
+
+    if (!gameData) {
+      console.log(`[Join] Initializing memory for lobby ${lobbyId}`);
+      gameData = { players: new Map() };
+      games.set(lobbyId, gameData);
+    }
+
+    gameData.players.set(String(userId), {
+      username,
+    });
+
+    games.set(lobbyId, gameData);
+
+    /* 🔔  Check if a pending painter-selection can now fire */
+    if (pendingPainterSelection.has(lobbyId)) {
+      const expected = pendingPainterSelection.get(lobbyId);
+      const connected = Array.from(gameData.players.keys());
+      const ready = expected.every((id) => connected.includes(id));
+      if (ready) {
+        io.to(lobbyId).emit("painter-selection-complete");
+        pendingPainterSelection.delete(lobbyId);
+        console.log(
+          `[PainterSelection] Fired (all present) for lobby ${lobbyId}.`
+        );
+      }
+    }
   });
 
   // --- leaveLobby Handler ---
