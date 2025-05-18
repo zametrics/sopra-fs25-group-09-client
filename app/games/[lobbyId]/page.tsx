@@ -240,6 +240,10 @@ const LobbyPage: FC = ({}) => {
     }
   };
 
+  function delay(ms = 1000) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   const fetchWordOptions = async () => {
     console.log("THE WORD FETCHER: ", isCurrentUserPainter);
     const lobbyData = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
@@ -809,6 +813,7 @@ const LobbyPage: FC = ({}) => {
           );
 
           if (!socket) return;
+          delay(1000);
           socket?.emit("painter-selection-complete", { lobbyId });
         } else {
           // If no painter assignment is needed, use the fetched lobby data
