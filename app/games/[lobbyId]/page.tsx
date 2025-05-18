@@ -1058,9 +1058,12 @@ const LobbyPage: FC = ({}) => {
       }
 
       // http://localhost:3001 https://socket-server-826256454260.europe-west1.run.app/
-      socketIo = io("http://localhost:3001", {
-        path: "/api/socket",
-      });
+      socketIo = io(
+        "https://socket-server-826256454260.europe-west1.run.app/",
+        {
+          path: "/api/socket",
+        }
+      );
       setSocket(socketIo);
 
       if (!isMounted) {
