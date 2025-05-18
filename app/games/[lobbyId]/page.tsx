@@ -1086,6 +1086,11 @@ const LobbyPage: FC = ({}) => {
           userId: currentUserId,
           username: userData.username,
         });
+        socketIo.emit("joinGame", {
+          lobbyId,
+          userId: currentUserId,
+          username: userData.username,
+        });
         console.log("Emitted joinLobby");
       } catch (error) {
         console.error("Error fetching username for join:", error);
