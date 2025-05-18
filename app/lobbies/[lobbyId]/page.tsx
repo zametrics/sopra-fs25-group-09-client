@@ -494,28 +494,8 @@ const LobbyPage: React.FC = () => {
               <option value="animals">Animals</option>
               <option value="food">Food</option>
               <option value="jobs">Jobs</option>
-              <option value="custom">Custom</option>
             </select>
-            {type === "custom" && (
-              <label>
-                <input
-                  type="checkbox"
-                  checked={useCustomWordsOnly}
-                  onChange={(e) => setUseCustomWordsOnly(e.target.checked)}
-                  disabled={!isOwner || loading}
-                />
-                Use custom words only
-              </label>
-            )}
           </div>
-          {type === "custom" && (
-            <textarea
-              placeholder="Minimum of 10 words. 1–32 characters per word! Separated by a , (comma)"
-              value={customWords}
-              onChange={(e) => setCustomWords(e.target.value)}
-              disabled={!isOwner || loading}
-            />
-          )}
         </div>
 
         <div className="lobby-actions">
