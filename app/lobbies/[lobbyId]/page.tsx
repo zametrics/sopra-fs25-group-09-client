@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import withAuth from "@/hooks/withAuth";
 import io, { Socket } from "socket.io-client";
 import Layout from "@/utils/layout";
+import { useBackgroundMusic } from "@/hooks/useBackgroundMusic";
 
 interface LobbyData {
   id: number;
@@ -60,6 +61,8 @@ const LobbyPage: React.FC = () => {
     typeof window !== "undefined"
       ? localStorage.getItem("avatarUrl") || "/icons/avatar.png"
       : "/icons/avatar.png";
+
+  const { isPlaying, toggle, volume, setVolume } = useBackgroundMusic();
 
   // --- Function to Fetch and Set Lobby State ---
   const fetchAndSetLobby = useCallback(async () => {
@@ -361,15 +364,54 @@ const LobbyPage: React.FC = () => {
   // Loading screen
   if (loading) {
     return (
-      <Layout
-        socket={socket}
-        lobbyId={lobbyId}
-        currentUserId={currentUserId}
-        localAvatarUrl={localAvatarUrl}
-        lobby={lobby}
-      >
-        <div className="game-box">Loading...</div>
-      </Layout>
+      <>
+        {/* Music Controls */}
+        <div
+          style={{
+            position: "absolute",
+            top: "20px",
+            right: "20px",
+            backgroundColor: "rgba(255, 255, 255, 0.85)",
+            borderRadius: "10px",
+            padding: "10px 14px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
+          <button
+            onClick={toggle}
+            style={{
+              background: "none",
+              border: "none",
+              fontSize: "1.2rem",
+              cursor: "pointer",
+            }}
+          >
+            {isPlaying ? "🔊" : "🔇"}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={volume}
+            onChange={(e) => setVolume(parseFloat(e.target.value))}
+            style={{ width: "80px" }}
+          />
+        </div>
+        <Layout
+          socket={socket}
+          lobbyId={lobbyId}
+          currentUserId={currentUserId}
+          localAvatarUrl={localAvatarUrl}
+          lobby={lobby}
+        >
+          <div className="game-box">Loading...</div>
+        </Layout>
+      </>
     );
   }
 
