@@ -807,6 +807,7 @@ const LobbyPage: FC = ({}) => {
             updatedLobby.currentPainterToken === currentUserToken
           );
 
+          if (!socket) return;
           socket?.emit("painter-selection-complete", { lobbyId });
         } else {
           // If no painter assignment is needed, use the fetched lobby data
@@ -823,10 +824,10 @@ const LobbyPage: FC = ({}) => {
       }
     };
 
-    if (!loading) {
+    if (!loading && socket) {
       assignPainterIfNeeded();
     }
-  }, [loading]);
+  }, [loading, socket]);
 
   useEffect(() => {
     // Remove the automatic timer start from here
@@ -1057,12 +1058,9 @@ const LobbyPage: FC = ({}) => {
       }
 
       // http://localhost:3001 https://socket-server-826256454260.europe-west1.run.app/
-      socketIo = io(
-        "https://socket-server-826256454260.europe-west1.run.app/",
-        {
-          path: "/api/socket",
-        }
-      );
+      socketIo = io("http://localhost:3001", {
+        path: "/api/socket",
+      });
       setSocket(socketIo);
 
       if (!isMounted) {
@@ -1592,41 +1590,32 @@ const LobbyPage: FC = ({}) => {
           </Button> */}
           {/* Added a class */}
           <div className="word-display-area">
-            {isCurrentUserPainter ? (
-              <span className="word-to-guess">
-                {wordToGuess === "default_word"
-                  ? Array.from({ length: 3 }).map((_, index) => (
-                      <span key={index} className="word-letter">
-                        {"\u00A0"}
+            <span className="word-to-guess">
+              {wordToGuess === "default_word" || wordToGuess === "placeholder"
+                ? Array.from({ length: 3 }).map((letter, index) => (
+                    <span key={index} className={"word-letter space-letter"}>
+                      {"\u00A0"}
+                    </span>
+                  ))
+                : wordToGuess
+                    .toLowerCase()
+                    .split("")
+                    .map((letter, index) => (
+                      <span
+                        key={index}
+                        className={`word-letter${
+                          letter === " " ? " space-letter" : ""
+                        }`}
+                      >
+                        {isCurrentUserPainter
+                          ? letter === " " // show the letter only for the painter
+                            ? "\u00A0"
+                            : letter
+                          : " "}{" "}
+                        {/* hide actual letters for guessers */}
                       </span>
-                    ))
-                  : wordToGuess
-                      .toLowerCase()
-                      .split("")
-                      .map((letter, index) => (
-                        <span key={index} className="word-letter">
-                          {letter === " " ? "\u00A0" : letter}
-                        </span>
-                      ))}
-              </span>
-            ) : (
-              <span className="word-to-guess">
-                {wordToGuess === "default_word"
-                  ? Array.from({ length: 3 }).map((_, index) => (
-                      <span key={index} className="word-letter">
-                        {"\u00A0"}
-                      </span>
-                    ))
-                  : wordToGuess
-                      .toLowerCase()
-                      .split("")
-                      .map((_, index) => (
-                        <span key={index} className="word-letter">
-                          {" "}
-                        </span>
-                      ))}
-              </span>
-            )}
+                    ))}
+            </span>
           </div>
           {/* Drawing Canvas */}
           <canvas
