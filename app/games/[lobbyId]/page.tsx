@@ -813,7 +813,7 @@ const LobbyPage: FC = ({}) => {
           );
 
           if (!socket) return;
-          delay(1000);
+          await delay(1000);
           socket?.emit("painter-selection-complete", { lobbyId });
         } else {
           // If no painter assignment is needed, use the fetched lobby data
