@@ -4,7 +4,7 @@ export const useBackgroundMusic = (
   audioSrc: string = "/audio/good-night-lofi-cozy-chill-music-160166.mp3"
 ) => {
   const [isPlaying, setIsPlaying] = useState(true);
-  const [volume, setVolume] = useState(0.5);
+  const [volume, setVolume] = useState(0.25);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
   // Load saved settings from sessionStorage

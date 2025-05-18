@@ -2319,3 +2319,33 @@ textarea {
 .quit-button:hover {
   background-color: #d9363e !important; /* Darker red */
 }
+
+
+.wordset-controls select {
+  width: 100% !important;
+  padding: 8px 12px !important;
+  font-size: 14px !important;
+  color: #1e3a8a !important;
+  background-color: #f0f7ff !important;
+  border: 1px solid #bfdbfe !important;
+  border-radius: 6px !important;
+  outline: none !important;
+  transition: border-color 0.2s ease, background-color 0.2s ease !important;
+}
+
+.wordset-controls select:focus {
+  border-color: #3b82f6 !important;
+  background-color: #ffffff !important;
+}
+
+.wordset-controls select:disabled {
+  background-color: #e5e7eb !important;
+  color: #6b7280 !important;
+  cursor: not-allowed !important;
+  opacity: 0.7 !important;
+}
+
+.wordset-controls select option {
+  background-color: #ffffff !important;
+  color: #1e3a8a !important;
+}

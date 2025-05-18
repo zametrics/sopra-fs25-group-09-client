@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import withAuth from "@/hooks/withAuth";
 import io, { Socket } from "socket.io-client";
 import Layout from "@/utils/layout";
+import { useBackgroundMusic } from "@/hooks/useBackgroundMusic";
 
 interface LobbyData {
   id: number;
@@ -51,7 +52,7 @@ const LobbyPage: React.FC = () => {
   const [language, setLanguage] = useState<string>("english");
   const [type, setType] = useState<string>("standard");
   const [customWords, setCustomWords] = useState<string>("");
-  const [useCustomWordsOnly, setUseCustomWordsOnly] = useState<boolean>(false);
+  //const [useCustomWordsOnly, setUseCustomWordsOnly] = useState<boolean>(false);
 
   const currentUserId =
     typeof window !== "undefined" ? localStorage.getItem("userId") : "";
@@ -60,6 +61,8 @@ const LobbyPage: React.FC = () => {
     typeof window !== "undefined"
       ? localStorage.getItem("avatarUrl") || "/icons/avatar.png"
       : "/icons/avatar.png";
+
+  const { isPlaying, toggle, volume, setVolume } = useBackgroundMusic();
 
   // --- Function to Fetch and Set Lobby State ---
   const fetchAndSetLobby = useCallback(async () => {
@@ -79,7 +82,7 @@ const LobbyPage: React.FC = () => {
       setType(response.type);
       // Consider resetting custom words or fetching if stored elsewhere
       setCustomWords("");
-      setUseCustomWordsOnly(false);
+      //setUseCustomWordsOnly(false);
       console.log("[Fetch] Lobby state and settings updated.");
     } catch (error) {
       console.error("[Fetch] Error fetching lobby:", error);
@@ -400,6 +403,7 @@ const LobbyPage: React.FC = () => {
   }
 
   return (
+    
     <Layout
       socket={socket}
       lobbyId={lobbyId}
@@ -407,6 +411,44 @@ const LobbyPage: React.FC = () => {
       localAvatarUrl={localAvatarUrl}
       lobby={lobby} // Pass the local state
     >
+      {/* Music Controls */}
+      <div
+        style={{
+          position: "absolute",
+          top: "20px",
+          right: "20px",
+          backgroundColor: "rgba(255, 255, 255, 0.85)",
+          borderRadius: "10px",
+          padding: "10px 14px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+          zIndex: 9999,
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+        }}
+      >
+        <button
+          onClick={toggle}
+          style={{
+            background: "none",
+            border: "none",
+            fontSize: "1.2rem",
+            cursor: "pointer",
+          }}
+        >
+          {isPlaying ? "🔊" : "🔇"}
+        </button>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={volume}
+          onChange={(e) => setVolume(parseFloat(e.target.value))}
+          style={{ width: "80px" }}
+        />
+      </div>
+
       <div className="settings-box">
         <h1 className="drawzone-logo-2-8rem">DRAWZONE</h1>
         <p className="drawzone-subtitle-1-5rem"></p>
@@ -459,7 +501,7 @@ const LobbyPage: React.FC = () => {
             max={10}
             value={rounds}
             onChange={(e) => setRounds(Number(e.target.value))}
-            disabled={!isOwner || loading} // Use isOwner flag
+            disabled={!isOwner || loading}
             style={{
               background: getSliderBackground(rounds, 1, 10),
             }}
@@ -477,7 +519,7 @@ const LobbyPage: React.FC = () => {
             >
               <option value="en">English</option>
               <option value="de">German</option>
-              <option value="ch">Schwitzerdütsch</option>
+              <option value="ch">Schwitzerdueutsch</option>
             </select>
           </div>
         </div>
@@ -494,28 +536,8 @@ const LobbyPage: React.FC = () => {
               <option value="animals">Animals</option>
               <option value="food">Food</option>
               <option value="jobs">Jobs</option>
-              <option value="custom">Custom</option>
             </select>
-            {type === "custom" && (
-              <label>
-                <input
-                  type="checkbox"
-                  checked={useCustomWordsOnly}
-                  onChange={(e) => setUseCustomWordsOnly(e.target.checked)}
-                  disabled={!isOwner || loading}
-                />
-                Use custom words only
-              </label>
-            )}
           </div>
-          {type === "custom" && (
-            <textarea
-              placeholder="Minimum of 10 words. 1–32 characters per word! Separated by a , (comma)"
-              value={customWords}
-              onChange={(e) => setCustomWords(e.target.value)}
-              disabled={!isOwner || loading}
-            />
-          )}
         </div>
 
         <div className="lobby-actions">
@@ -573,7 +595,7 @@ const LobbyPage: React.FC = () => {
         </p>
       </Modal>
     </Layout>
-  );
+);
 };
 
 export default withAuth(LobbyPage);
