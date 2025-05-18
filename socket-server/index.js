@@ -2,6 +2,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
+const { time } = require("console");
 
 // --- Load Environment Variables ---
 require("dotenv").config();
@@ -37,6 +38,7 @@ const pendingDisconnects = new Map();
 const LEAVE_DELAY = 5000;
 const playerScores = new Map(); // Map<lobbyId, Map<playerId, score>>
 const correctGuessers = new Map(); // Map<lobbyId, Set<playerId>>
+const drawerRoundPoints = new Map(); // { lobbyId => aktueller Rundenscore des Zeichners }
 
 // --- NEW: Fetch Lobby Details Function ---
 async function fetchLobbyDetailsFromDb(lobbyId) {
@@ -136,27 +138,32 @@ async function handleTimeUp(lobbyId) {
  * When it hits 0 it pauses – you must call runTimer() again
  * (we do that from “word-selected”).
  */
+
 function runTimer(lobbyId, startTime) {
-  let time = startTime;
-  console.log(`Starting timer for lobby ${lobbyId} with ${time} seconds`);
-
-  timers.set(lobbyId, { time, interval: null, paused: false }); // Initialize timer
-
-  const interval = setInterval(async () => {
+  const timerObj = { time: startTime, interval: null, paused: false };
+  console.log(`Starting timer for lobby ${lobbyId} with ${startTime} seconds`);
+  timers.set(lobbyId, timerObj);
+  timerObj.interval = setInterval(async () => {
+    if (!correctGuessers.has(lobbyId)) correctGuessers.set(lobbyId, new Set());
+    const guessers = correctGuessers.get(lobbyId);
+    if (guessers.size != 0 && timerObj.time > 30) {
+      timerObj.time = 30;
+    }
+    io.to(lobbyId).emit("timerUpdate", timerObj.time);
     const currentTimer = timers.get(lobbyId);
-
-    time--;
-    console.log(
-      `[Debug] Timer tick for lobby ${lobbyId}: ${time} seconds remaining`
-    );
-    io.to(lobbyId).emit("timerUpdate", time);
-
-    if (time <= 0 || currentTimer?.paused) {
-      clearInterval(interval);
-      timers.set(lobbyId, { time: time, interval: null, paused: true });
+    if (timerObj.time <= 0 || currentTimer?.paused) {
+      clearInterval(timerObj.interval);
+      timerObj.paused = true;
+      timerObj.interval = null;
+      timers.set(lobbyId, timerObj);
       console.log(`[Debug] Timer ended for lobby ${lobbyId}`);
+      console.log(timerObj);
       await handleTimeUp(lobbyId);
     }
+    timerObj.time--;
+    console.log(
+      `[Debug] Timer tick for lobby ${lobbyId}: ${timerObj.time} seconds remaining`
+    );
   }, 1000);
 }
 
@@ -388,84 +395,64 @@ io.on("connection", (socket) => {
       return;
     }
 
-    // Log timer details for debugging
-    console.log(`[Debug] Timer for lobby ${lobbyId}:`, {
-      remainingTime: timerEntry.time,
-      startTime: gameState.drawTime,
-      paused: timerEntry.paused,
-    });
+    /* ---------- 1) Punkte für den Rater ---------- */
+    let score = timerEntry.time; // Standard-Rechnung
+    score = Math.min(score, 350); // ► PG_max
 
-    // Use remaining time as the score
-    const score = timerEntry.time;
     if (score <= 0) {
-      console.warn(
-        `[Score] Timer is at or below 0 for lobby ${lobbyId}, no points awarded`
-      );
-      return;
+      /* ... */
     }
 
-    // Add score to player
     if (!playerScores.has(lobbyId)) playerScores.set(lobbyId, new Map());
     const lobbyScores = playerScores.get(lobbyId);
     const prevScore = lobbyScores.get(playerId) || 0;
     const newScore = prevScore + score;
     lobbyScores.set(playerId, newScore);
 
-    console.log(
-      `[Score] Player ${playerId} in lobby ${lobbyId} guessed correctly with ${score} seconds remaining. New total: ${newScore} points`
-    );
+    io.to(lobbyId).emit("scoreUpdated", {
+      playerId: playerId,
+      score: newScore,
+      drawer: false,
+    });
 
-    io.to(lobbyId).emit("scoreUpdated", { playerId, score: newScore });
-
-    // Drawer bonus
+    /* ---------- 2) Zeichner-Bonus ---------- */
     const lobby = lobbies.get(lobbyId);
     if (!lobby || !lobby.currentPainterToken) {
-      console.warn(`[Bonus] No painter token found for lobby ${lobbyId}`);
-      return;
+      /* ... */
     }
 
-    // Find drawer’s playerId
+    // Zeichner-ID ermitteln
     let drawerId = null;
     for (const [uid, data] of lobby.players.entries()) {
       if (data.token === lobby.currentPainterToken) {
-        drawerId = Number(uid);
+        drawerId = +uid;
         break;
       }
     }
-
-    if (drawerId === null) {
-      console.warn(
-        `[Bonus] Could not find drawer for token ${lobby.currentPainterToken}`
-      );
-      return;
+    if (drawerId === null || drawerId === playerId) {
+      /* ... */
     }
 
-    if (drawerId === playerId) {
-      console.log(
-        `[Bonus] Skipping bonus – drawer and guesser are the same (${playerId})`
-      );
-      return;
-    }
+    // Bonus wie gehabt
+    const drawerBonus = Math.floor(score / 4);
+    const drawerPrev = lobbyScores.get(drawerId) || 0;
+    const drawerNew = drawerPrev + drawerBonus;
+    lobbyScores.set(drawerId, drawerNew);
 
-    const drawerBonus = Math.floor(score / 4); // Bonus based on remaining time
-    const drawerPrevScore = lobbyScores.get(drawerId) || 0;
-    const drawerNewScore = drawerPrevScore + drawerBonus;
-    lobbyScores.set(drawerId, drawerNewScore);
+    // ► Rundenscore des Zeichners mitschreiben
+    const currentRound = drawerRoundPoints.get(lobbyId) || 0;
+    drawerRoundPoints.set(lobbyId, currentRound + drawerBonus);
 
-    console.log(
-      `[Bonus] Drawer ${drawerId} gets ${drawerBonus} bonus points. Total: ${drawerNewScore}`
-    );
     io.to(lobbyId).emit("scoreUpdated", {
       playerId: drawerId,
-      score: drawerNewScore,
+      score: drawerNew,
+      drawer: true,
     });
 
-    // --- TRACK CORRECT GUESSERS ---
-    if (!correctGuessers.has(lobbyId)) correctGuessers.set(lobbyId, new Set());
+    /* ---------- 3) Guesser-Tracking & evtl. Runden-Ende ---------- */
     const guessers = correctGuessers.get(lobbyId);
     guessers.add(playerId);
 
-    // Check if ALL guessers (excluding painter) have guessed
     const totalPlayers = Array.from(lobby.players.keys()).map(Number);
     const numNonPainterPlayers = totalPlayers.filter(
       (id) => id !== drawerId
@@ -473,17 +460,15 @@ io.on("connection", (socket) => {
     const numCorrect = guessers.size;
 
     if (numCorrect >= numNonPainterPlayers) {
-      // Stop timer
-      clearInterval(timerEntry.interval);
+      // --- Timer stoppen
       timers.set(lobbyId, {
         time: timerEntry.time,
         interval: null,
         paused: true,
       });
-      console.log(
-        `[Timer] All players guessed correctly in ${lobbyId}, timer paused.`
-      );
-      io.to(lobbyId).emit("timerUpdate", timerEntry.time); // Optional
+
+      // Aufräumen für nächste Runde
+      drawerRoundPoints.delete(lobbyId);
     }
   });
 

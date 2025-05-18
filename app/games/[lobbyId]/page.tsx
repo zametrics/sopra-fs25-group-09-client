@@ -191,6 +191,7 @@ const LobbyPage: FC = ({}) => {
   const [wordOptions, setWordOptions] = useState<WordOption[]>([]);
   const [showWordSelection, setShowWordSelection] = useState<boolean>(false);
   const [selectedWord, setSelectedWord] = useState<string>("");
+  const drawerScoreRef = useRef<number>(0);
 
   const [isSelectingPainter, setIsSelectingPainter] = useState<boolean>(false);
   const [showChoosingModal, setShowChoosingModal] = useState<boolean>(false);
@@ -1117,6 +1118,7 @@ const LobbyPage: FC = ({}) => {
         setSelectedWord(data.word);
         setShowWordSelection(false);
         setCurrentWordModal(data.word);
+        drawerScoreRef.current = 0;
       });
 
       socketIo.on("roundEnded", async () => {
@@ -1310,15 +1312,27 @@ const LobbyPage: FC = ({}) => {
         console.log("SELECTING WORD RECEIVED LOG");
       });
 
-      socketIo.on("scoreUpdated", ({ playerId, score }) => {
+      socketIo.on("scoreUpdated", ({ playerId, score, drawer }) => {
         console.log(
-          `[Score] Received score update for player ${playerId}: ${score}`
+          `[Score] Received score update for player ${playerId}: ${score} -> Drawer: ${drawer}`
         );
+        if (drawer) {
+          drawerScoreRef.current = Number(score);
+          console.log(`DrawerScore: ${drawerScoreRef.current}`);
+        }
 
         setScores((prevScores) => {
           const lastScore = prevScores?.[playerId] ?? null;
-          const diff = lastScore !== null ? score - lastScore : score;
-
+          let diff = 0;
+          if (!drawer) {
+            diff = lastScore !== null ? score - lastScore : score;
+          } else if (drawer) {
+            diff =
+              lastScore !== null
+                ? drawerScoreRef.current - lastScore
+                : drawerScoreRef.current;
+            console.log(`Drawer Score: ${diff}`);
+          }
           // Update diffScores as well
           setDiffScores((prevDiffs) => ({
             ...prevDiffs,
