@@ -39,6 +39,7 @@ const LEAVE_DELAY = 5000;
 const playerScores = new Map(); // Map<lobbyId, Map<playerId, score>>
 const correctGuessers = new Map(); // Map<lobbyId, Set<playerId>>
 const drawerRoundPoints = new Map(); // { lobbyId => aktueller Rundenscore des Zeichners }
+const pendingPainterSelection = new Map();
 
 // --- NEW: Fetch Lobby Details Function ---
 async function fetchLobbyDetailsFromDb(lobbyId) {
@@ -365,9 +366,37 @@ async function handleOwnerTransfer(lobbyId, disconnectedUserIdNum) {
 io.on("connection", (socket) => {
   console.log(`Connected: ${socket.id}`);
 
-  socket.on("painter-selection-complete", ({ lobbyId }) => {
-    // Notify all clients in the lobby that the painter selection is complete
-    io.to(lobbyId).emit("painter-selection-complete");
+  socket.on("painter-selection-complete", async ({ lobbyId }) => {
+    try {
+      /* 1️⃣  Source of truth: who should be here? */
+      const lobbyDetails = await fetchLobbyDetailsFromDb(lobbyId);
+      if (!lobbyDetails) return; // API error
+      const expectedIds = (lobbyDetails.playerIds || []).map(String);
+
+      /* 2️⃣  Who is actually connected right now? */
+      const lobbyData = lobbies.get(lobbyId);
+      if (!lobbyData) return; // safety
+      const connectedIds = Array.from(lobbyData.players.keys());
+
+      /* 3️⃣  Everyone present? */
+      const ready = expectedIds.every((id) => connectedIds.includes(id));
+
+      if (ready) {
+        io.to(lobbyId).emit("painter-selection-complete");
+        console.log(`[PainterSelection] Fired for lobby ${lobbyId}.`);
+      } else {
+        // keep the list so we can check again on the next join
+        pendingPainterSelection.set(lobbyId, expectedIds);
+        const missing = expectedIds.filter((id) => !connectedIds.includes(id));
+        console.log(
+          `[PainterSelection] Waiting for ${missing.join(
+            ", "
+          )} in lobby ${lobbyId}.`
+        );
+      }
+    } catch (err) {
+      console.error(`[PainterSelection] Error for lobby ${lobbyId}`, err);
+    }
   });
 
   // Add this inside the io.on("connection", (socket) => { ... }) block, after existing socket event handlers
@@ -600,6 +629,20 @@ io.on("connection", (socket) => {
       `[Join] Lobby ${lobbyId} players in memory:`,
       Array.from(lobbyData.players.keys())
     );
+
+    /* 🔔  Check if a pending painter-selection can now fire */
+    if (pendingPainterSelection.has(lobbyId)) {
+      const expected = pendingPainterSelection.get(lobbyId);
+      const connected = Array.from(lobbyData.players.keys());
+      const ready = expected.every((id) => connected.includes(id));
+      if (ready) {
+        io.to(lobbyId).emit("painter-selection-complete");
+        pendingPainterSelection.delete(lobbyId);
+        console.log(
+          `[PainterSelection] Fired (all present) for lobby ${lobbyId}.`
+        );
+      }
+    }
 
     // --- Emit current state (using fresh DB owner) ---
     const currentPlayers = Array.from(lobbyData.players.entries()).map(
