@@ -240,9 +240,9 @@ const LobbyPage: FC = ({}) => {
     }
   };
 
-  function delay(ms = 1000) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
+  // function delay(ms = 1000) {
+  //   return new Promise((resolve) => setTimeout(resolve, ms));
+  // }
 
   const fetchWordOptions = async () => {
     console.log("THE WORD FETCHER: ", isCurrentUserPainter);
