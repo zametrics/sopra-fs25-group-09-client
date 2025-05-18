@@ -364,54 +364,15 @@ const LobbyPage: React.FC = () => {
   // Loading screen
   if (loading) {
     return (
-      <>
-        {/* Music Controls */}
-        <div
-          style={{
-            position: "absolute",
-            top: "20px",
-            right: "20px",
-            backgroundColor: "rgba(255, 255, 255, 0.85)",
-            borderRadius: "10px",
-            padding: "10px 14px",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-          }}
-        >
-          <button
-            onClick={toggle}
-            style={{
-              background: "none",
-              border: "none",
-              fontSize: "1.2rem",
-              cursor: "pointer",
-            }}
-          >
-            {isPlaying ? "🔊" : "🔇"}
-          </button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={volume}
-            onChange={(e) => setVolume(parseFloat(e.target.value))}
-            style={{ width: "80px" }}
-          />
-        </div>
-        <Layout
-          socket={socket}
-          lobbyId={lobbyId}
-          currentUserId={currentUserId}
-          localAvatarUrl={localAvatarUrl}
-          lobby={lobby}
-        >
-          <div className="game-box">Loading...</div>
-        </Layout>
-      </>
+      <Layout
+        socket={socket}
+        lobbyId={lobbyId}
+        currentUserId={currentUserId}
+        localAvatarUrl={localAvatarUrl}
+        lobby={lobby}
+      >
+        <div className="game-box">Loading...</div>
+      </Layout>
     );
   }
 
@@ -442,6 +403,7 @@ const LobbyPage: React.FC = () => {
   }
 
   return (
+    
     <Layout
       socket={socket}
       lobbyId={lobbyId}
@@ -449,6 +411,44 @@ const LobbyPage: React.FC = () => {
       localAvatarUrl={localAvatarUrl}
       lobby={lobby} // Pass the local state
     >
+      {/* Music Controls */}
+      <div
+        style={{
+          position: "absolute",
+          top: "20px",
+          right: "20px",
+          backgroundColor: "rgba(255, 255, 255, 0.85)",
+          borderRadius: "10px",
+          padding: "10px 14px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+          zIndex: 9999,
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+        }}
+      >
+        <button
+          onClick={toggle}
+          style={{
+            background: "none",
+            border: "none",
+            fontSize: "1.2rem",
+            cursor: "pointer",
+          }}
+        >
+          {isPlaying ? "🔊" : "🔇"}
+        </button>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={volume}
+          onChange={(e) => setVolume(parseFloat(e.target.value))}
+          style={{ width: "80px" }}
+        />
+      </div>
+
       <div className="settings-box">
         <h1 className="drawzone-logo-2-8rem">DRAWZONE</h1>
         <p className="drawzone-subtitle-1-5rem"></p>
@@ -501,7 +501,7 @@ const LobbyPage: React.FC = () => {
             max={10}
             value={rounds}
             onChange={(e) => setRounds(Number(e.target.value))}
-            disabled={!isOwner || loading} // Use isOwner flag
+            disabled={!isOwner || loading}
             style={{
               background: getSliderBackground(rounds, 1, 10),
             }}
@@ -519,7 +519,7 @@ const LobbyPage: React.FC = () => {
             >
               <option value="en">English</option>
               <option value="de">German</option>
-              <option value="ch">Schwitzerdütsch</option>
+              <option value="ch">Schwitzerdueutsch</option>
             </select>
           </div>
         </div>
@@ -595,7 +595,7 @@ const LobbyPage: React.FC = () => {
         </p>
       </Modal>
     </Layout>
-  );
+);
 };
 
 export default withAuth(LobbyPage);
