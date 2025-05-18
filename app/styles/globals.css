@@ -1135,14 +1135,14 @@ textarea {
 .word-display-area {
   width: 100%;
   text-align: center;
-  margin-top: 10px;
+  margin-top: 16px;
   margin-bottom: 8px; /* Spacing below word area */
   line-height: 0.9; /* Helps control vertical spacing if needed */
 }
 
 .word-to-guess {
   font-family: "Nunito", sans-serif; /* Or other suitable font */
-  font-size: 2.5rem; /* Smaller font size */
+  font-size: 2.3rem; /* Smaller font size */
   font-weight: 500;
   color: #000;
   text-transform: lowercase;
@@ -1159,10 +1159,15 @@ textarea {
   display: inline-block; /* Treat each letter as a block */
   min-width: 1ch; /* Give letters like 'I' some minimum width */
   text-align: center; /* Center letter above its underline */
-  border-bottom: 3px solid #333; /* Dark grey underline for each letter */
+  border-bottom: 2px solid #333; /* Dark grey underline for each letter */
   padding-bottom: 0px; /* Space between letter and its underline */
-  margin: 0 0.2em; /* Horizontal space BETWEEN letters */
+  margin: 0 0.1em; /* Horizontal space BETWEEN letters */
   /* Adjust 0.4em to control the gap */
+}
+
+/* NEW — hide the underline when the character is a space */
+.word-letter.space-letter {
+  border-bottom-color: transparent;
 }
 
 .test {
@@ -1178,7 +1183,7 @@ textarea {
   border-radius: 15px;
   box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3);
   margin-bottom: 15px; /* Space below canvas */
-  margin-top: 2px; /* Space below canvas */
+  margin-top: -1px; /* Space above canvas */
   image-rendering: -moz-crisp-edges; /* Firefox */
   image-rendering: -webkit-crisp-edges; /* Webkit (Safari, Chrome < 41) */
   /*image-rendering: pixelated;                 /* Chrome >= 41, Opera >= 28 */
