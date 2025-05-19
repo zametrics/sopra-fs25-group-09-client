@@ -403,7 +403,6 @@ const LobbyPage: React.FC = () => {
   }
 
   return (
-    
     <Layout
       socket={socket}
       lobbyId={lobbyId}
@@ -595,7 +594,7 @@ const LobbyPage: React.FC = () => {
         </p>
       </Modal>
     </Layout>
-);
+  );
 };
 
 export default withAuth(LobbyPage);

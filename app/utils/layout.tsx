@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { Button, Input, message } from "antd";
 import { Socket } from "socket.io-client";
 import { useApi } from "@/hooks/useApi";
+import { useSound } from "@/context/SoundProvider";
 
 interface LobbyData {
   id: number;
@@ -97,6 +98,7 @@ const Layout: React.FC<LayoutProps> = ({
 
   const usernameColorsRef = useRef<{ [key: string]: string }>({});
   const [lobby, setLobby] = useState<LobbyData | null>(initialLobby);
+  const { stop } = useSound();
 
   // Update local lobby state if the prop changes
   useEffect(() => {
@@ -118,6 +120,10 @@ const Layout: React.FC<LayoutProps> = ({
       message.error("Failed to quit. Try again.");
     }
   };
+
+  function delay(ms = 1000) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 
   // --- Helper function to update lobby state locally and notify parent ---
   const updateLobbyState = useCallback(
@@ -202,6 +208,9 @@ const Layout: React.FC<LayoutProps> = ({
       try {
         const response = await apiService.get<LobbyData>(`/lobbies/${lobbyId}`);
         setLobby(response);
+        if (response.status == 1) {
+          setIsChatDisabled(true);
+        }
 
         if (response.playerIds && response.playerIds.length > 0) {
           const playerPromises = response.playerIds.map((id: number) =>
@@ -332,7 +341,12 @@ const Layout: React.FC<LayoutProps> = ({
       });
 
       socket.on("chatAlert", (message: ChatMessage) => {
+        console.log(socket);
+        console.log(message.username);
+        console.log(localStorage.getItem("username"));
+
         if (message.username == localStorage.getItem("username")) {
+          console.log("alert received", message.message);
           setMessages((prev) => [...prev, message]);
         }
       });
@@ -371,9 +385,11 @@ const Layout: React.FC<LayoutProps> = ({
         }));
       });
 
-      socket.on("gameEnded", () => {
+      socket.on("gameEnded", async () => {
+        await delay(1500);
         console.log("Game ended – showing leaderboard");
         setShowLeaderboard(true);
+        stop("tick");
       });
     }
 
@@ -388,6 +404,9 @@ const Layout: React.FC<LayoutProps> = ({
         socket.off("connect_error");
         socket.off("word-selected"); // Unregister word-selected
         socket.off("disconnect");
+        socket.off("gameEnded");
+        socket.off("scoreUpdated");
+        socket.off("chatAlert");
       }
     };
     // Add updateLobbyState to dependencies
@@ -456,7 +475,6 @@ const Layout: React.FC<LayoutProps> = ({
         if (minimalOps <= maxOps) {
           setLastSendMessage(chatInput);
           socket.emit("chatAlert", {
-            lobbyId,
             message: "alert32909f32934982374_",
             username,
           });
@@ -536,6 +554,7 @@ const Layout: React.FC<LayoutProps> = ({
             const isCorrectGuess =
               msg.message === "alert24efjh2394fj324923212_";
             const isCloseGuess = msg.message === "alert32909f32934982374_";
+            const newPainter = msg.message === "alert3wd3orjfojedfwvkvie2_";
 
             return (
               <div
@@ -545,6 +564,8 @@ const Layout: React.FC<LayoutProps> = ({
                     ? "chat-message--success"
                     : isCloseGuess
                     ? "chat-message--close"
+                    : newPainter
+                    ? "chat-message--new-painter"
                     : ""
                 }`}
               >
@@ -555,6 +576,10 @@ const Layout: React.FC<LayoutProps> = ({
                 ) : isCloseGuess ? (
                   <span className="chat-text--close">
                     &quot;{lastSendMessage}&quot; is very close!
+                  </span>
+                ) : newPainter ? (
+                  <span className="chat-text--new-painter">
+                    {msg.username} is painting now!
                   </span>
                 ) : (
                   <>

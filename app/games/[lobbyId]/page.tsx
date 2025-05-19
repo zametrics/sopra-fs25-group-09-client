@@ -10,6 +10,7 @@ import io, { Socket } from "socket.io-client";
 import { useDraw } from "@/hooks/useDraw";
 import { drawLine } from "@/utils/drawLine";
 import Layout from "@/utils/layout";
+import { useSound } from "@/context/SoundProvider";
 
 interface LobbyData {
   id: number;
@@ -145,6 +146,9 @@ const LobbyPage: FC = ({}) => {
     {}
   );
 
+  const [isLastRound, setIsLastRound] = useState<boolean>(false);
+  const [lastLoading, setLastLoading] = useState<boolean>(false);
+
   const [usernameCache, setUsernameCache] = useState<{
     [playerId: string]: string;
   }>({});
@@ -206,10 +210,57 @@ const LobbyPage: FC = ({}) => {
   >(null);
 
   const isPainterRef = useRef(false);
+  const { play, stop } = useSound();
+
+  function delay(ms = 1000) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 
   useEffect(() => {
     isPainterRef.current = isCurrentUserPainter;
   }, [isCurrentUserPainter]);
+
+  useEffect(() => {
+    if (
+      //sound between rounds
+      !loadedSelectingWord &&
+      selectedWord === "default_word" &&
+      !showWordSelection &&
+      !isfirstRound
+    ) {
+      // we only care about the current user’s diff
+      const diff = diffScores[String(currentUserId)] ?? 0;
+
+      stop("tick"); // stop the countdown sound (if any)
+
+      if (diff !== 0) {
+        play("roundEnd"); // positive / got points
+      } else {
+        play("roundLost"); // no points this round
+      }
+    }
+
+    //sound guesser
+    else if (
+      !isCurrentUserPainter &&
+      selectedWord === "default_word" &&
+      showChoosingModal &&
+      loadedSelectingWord &&
+      !isLastRound
+    ) {
+      play("guess");
+
+      //sound painter
+    } else if (
+      isCurrentUserPainter &&
+      showWordSelection &&
+      selectedWord === "default_word"
+    ) {
+      play("guess");
+    }
+
+    //sound painter
+  }, [loadedSelectingWord, selectedWord, showWordSelection, isfirstRound]); // <- rerun whenever the diff object updates
 
   const triggerNextPainterSelection = async () => {
     console.log(
@@ -269,6 +320,7 @@ const LobbyPage: FC = ({}) => {
 
     if (!isCurrentUserPainter) {
       console.log("Skipping word fetch: User is not the current painter");
+
       return;
     }
     if (!lobby) {
@@ -297,6 +349,13 @@ const LobbyPage: FC = ({}) => {
         }
 
         setShowWordSelection(true);
+
+        //reset diffscore
+        setDiffScores(
+          Object.fromEntries(
+            lobbyData.playerIds.map((id) => [id.toString(), 0])
+          )
+        );
       } else {
         console.error("Invalid response format for word options:", response);
         if (socket) {
@@ -359,6 +418,15 @@ const LobbyPage: FC = ({}) => {
       console.log(`Emitting selected word "${word}" to other players`);
       setShowWordSelection(false);
       socket.emit("clear");
+
+      //Tell other clients you are drawing
+      const currentUserName = localStorage.getItem("username");
+      console.log(currentUserName);
+      socket.emit("chatMessage", {
+        lobbyId: lobbyId,
+        message: "alert3wd3orjfojedfwvkvie2_",
+        username: currentPainterUsername,
+      });
       //clear again locally cause of bugs
       const canvas = canvasElementRef.current;
       const ctx = canvas?.getContext("2d");
@@ -950,7 +1018,6 @@ const LobbyPage: FC = ({}) => {
       console.log("Undo blocked: User is not the current painter.");
       return;
     } //makes sure only painter can undo
-
     if (historyStack.length === 0 || !socket) return;
     const canvas = canvasElementRef.current;
     if (!canvas) return;
@@ -1120,6 +1187,9 @@ const LobbyPage: FC = ({}) => {
 
       socketIo.on("timerUpdate", (newTime: number) => {
         setTimer(newTime);
+        if (newTime == 15) {
+          play("tick");
+        }
       });
 
       socketIo.on("word-selected", (data) => {
@@ -1146,6 +1216,7 @@ const LobbyPage: FC = ({}) => {
         setShowWordSelection(false);
         setIsSelectingPainter(true); // NEW: Block navigation
         setLoadedSelectingWord(false);
+        stop("tick");
 
         const iWasPainter = isPainterRef.current; // ← value **before** resets
         setIsCurrentUserPainter(false); // local UI only
@@ -1163,6 +1234,17 @@ const LobbyPage: FC = ({}) => {
         } else {
           console.log("Non-painter waiting for painter selection");
         }
+      });
+
+      socketIo.on("gameEnded", async () => {
+        console.log("Round ended at:", new Date().toISOString());
+        setLastLoading(true);
+        setLoadedSelectingWord(false);
+        setSelectedWord("default_word");
+        setShowWordSelection(false);
+        await delay(1500);
+        setIsLastRound(true);
+        play("leaderboard");
       });
 
       socketIo.on("painter-selection-complete", async () => {
@@ -1203,6 +1285,7 @@ const LobbyPage: FC = ({}) => {
           setIsCurrentUserPainter(
             lobbyData.currentPainterToken === currentUserToken
           );
+
           setIsSelectingPainter(false); // NEW: Allow navigation
         } catch (err) {
           console.error("Failed to fetch lobby:", err);
@@ -1318,6 +1401,14 @@ const LobbyPage: FC = ({}) => {
       socketIo.on("selecting-word", () => {
         setLoadedSelectingWord(true);
         setisFirstRound(false);
+        const lobbyData = lobby;
+        if (lobbyData) {
+          setDiffScores(
+            Object.fromEntries(
+              lobbyData.playerIds.map((id) => [id.toString(), 0])
+            )
+          );
+        }
         console.log("SELECTING WORD RECEIVED LOG");
       });
 
@@ -1328,6 +1419,8 @@ const LobbyPage: FC = ({}) => {
         if (drawer) {
           drawerScoreRef.current = Number(score);
           console.log(`DrawerScore: ${drawerScoreRef.current}`);
+        } else {
+          play("correctGuess");
         }
 
         setScores((prevScores) => {
@@ -1856,7 +1949,8 @@ const LobbyPage: FC = ({}) => {
         {!isCurrentUserPainter &&
           selectedWord === "default_word" &&
           showChoosingModal &&
-          loadedSelectingWord && (
+          loadedSelectingWord &&
+          !isLastRound && (
             <div className="word-selection-overlay">
               <div className="word-selection-container">
                 <h2>
@@ -1873,7 +1967,8 @@ const LobbyPage: FC = ({}) => {
         {!loadedSelectingWord &&
           selectedWord === "default_word" &&
           !showWordSelection &&
-          !isfirstRound && (
+          !isfirstRound &&
+          !isLastRound && (
             <div className="loading-overlay word-selection-overlay">
               <div className="ready-container word-selection-container">
                 <h3 className="settings-subtitle">The correct word was:</h3>
@@ -1903,7 +1998,8 @@ const LobbyPage: FC = ({}) => {
                 </div>
 
                 <p className="loading-message-diff loading-message">
-                  Loading next round<span className="guessing-dots"></span>
+                  {lastLoading ? "Waiting for results" : "Loading next round"}
+                  <span className="guessing-dots"></span>
                 </p>
               </div>
             </div>
@@ -1912,7 +2008,8 @@ const LobbyPage: FC = ({}) => {
         {!loadedSelectingWord &&
           selectedWord === "default_word" &&
           !showWordSelection &&
-          isfirstRound && (
+          isfirstRound &&
+          !isLastRound && (
             <div className="loading-overlay word-selection-overlay">
               <div className="ready-container word-selection-container">
                 <div className="ready-title">Get Ready!</div>

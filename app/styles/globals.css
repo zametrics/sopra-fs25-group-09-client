@@ -879,7 +879,7 @@ a {
   align-items: center;
   justify-items: center;
   justify-content: center;
-  max-width: 94%;
+  max-width: 95%;
 }
 
 .chat-input {
@@ -901,10 +901,10 @@ a {
 }
 
 .chat-send-button {
-  height: 45px;
+  height: 34px !important;
   width: 40px;
   border-radius: 10px;
-  background-color: rgba(199, 199, 199, 0.233);
+  background-color: rgb(245, 241, 255) !important;
   border: 1px solid rgba(65, 65, 65, 0.575) !important;
   font-size: 1.3rem;
   cursor: pointer;
@@ -1106,7 +1106,7 @@ textarea {
   letter-spacing: 1px;
   -webkit-text-stroke: 0.6px rgb(0, 0, 0);
   margin-bottom: -13px;
-  margin-top: -30;
+  margin-top: -30px !important;
 }
 
 .roomcode-value {
@@ -2268,6 +2268,10 @@ textarea {
   color: #dfb11a;
 }
 
+.chat-text--new-painter {
+  color: #0026ff;
+}
+
 /* Optional: Smooth fade-in animation */
 @keyframes fadeInModal {
   from {
@@ -2319,7 +2323,6 @@ textarea {
 .quit-button:hover {
   background-color: #d9363e !important; /* Darker red */
 }
-
 
 .wordset-controls select {
   width: 100% !important;
