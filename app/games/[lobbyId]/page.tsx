@@ -1559,6 +1559,7 @@ const LobbyPage: FC = ({}) => {
         socketIo.off("selecting-word");
         socketIo.off("painter-selection-complete");
         socketIo.off("scoreUpdated");
+        socketIo.off("gameEnded");
         // NEW: Delay disconnection to allow event receipt
         setTimeout(() => {
           console.log("[Unmount] Disconnecting socket after delay...");
