@@ -125,7 +125,7 @@ const LobbyPage: React.FC = () => {
       return;
     }
 
-    //http://localhost:3001 --- "https://socket-server-826256454260.europe-west1.run.app/"
+    //http://localhost:3001 ---- "https://socket-server-826256454260.europe-west1.run.app/"
     console.log("[Socket] Setting up socket for lobby:", lobbyId);
     const socketIo = io(
       process.env.NEXT_PUBLIC_SOCKET_URL ||
