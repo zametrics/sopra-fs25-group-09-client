@@ -212,6 +212,11 @@ const LobbyPage: FC = ({}) => {
   const isPainterRef = useRef(false);
   const { play, stop } = useSound();
 
+  //letterRevealing
+  const [roundStartTime, setRoundStartTime] = useState<number | null>(null);
+  const [revealedIdx, setRevealedIdx] = useState<number[]>([]);
+  const [roundHash, setRoundHash] = useState<number | null>(null);
+
   function delay(ms = 1000) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
@@ -261,6 +266,70 @@ const LobbyPage: FC = ({}) => {
 
     //sound painter
   }, [loadedSelectingWord, selectedWord, showWordSelection, isfirstRound]); // <- rerun whenever the diff object updates
+
+  useEffect(() => {
+    if (timer === null) return;
+
+    // if round starts (timer reset)
+    if (roundStartTime === null || timer > roundStartTime) {
+      setRevealedIdx([]); // delete old indexes again
+      if (currentPainterUsername) {
+        setRoundHash(hashString(currentPainterUsername));
+      }
+    }
+  }, [timer, currentPainterUsername]);
+
+  //helper to make revealed letters not random for all players in lobby
+  function hashString(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) - hash + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash);
+  }
+
+  useEffect(() => {
+    //check if word is picked yet
+    if (
+      roundStartTime === null ||
+      timer === null ||
+      isCurrentUserPainter ||
+      selectedWord === "default_word" ||
+      selectedWord === "placeholder"
+    )
+      return;
+
+    //calculate maxReveal based on word length
+    const maxReveal = Math.max(
+      1,
+      Math.floor(selectedWord.replace(/ /g, "").length * 0.38)
+    );
+
+    //calculate interval time of reveal
+    const interval = roundStartTime / (maxReveal + 1);
+
+    //how many reveals already?
+    const revealsShouldHaveHappened = Math.floor(
+      (roundStartTime - timer) / interval
+    );
+
+    //less reveals then their should be?
+    if (revealsShouldHaveHappened > revealedIdx.length) {
+      // filter spaces for reveal
+      const candidates = selectedWord
+        .split("")
+        .map((c, i) => (c !== " " && !revealedIdx.includes(i) ? i : -1))
+        .filter((i) => i !== -1);
+
+      if (candidates.length) {
+        //set revealed indexes using hash to make it same for all clients
+        const next =
+          candidates[(roundHash! + revealedIdx.length) % candidates.length];
+        setRevealedIdx((prev) => [...prev, next]);
+      }
+    }
+  }, [timer]);
 
   const triggerNextPainterSelection = async () => {
     console.log(
@@ -824,6 +893,8 @@ const LobbyPage: FC = ({}) => {
           setLobby(lobbyData);
         }
 
+        setRoundStartTime(lobbyData?.drawTime);
+
         setIsCurrentUserPainter(
           lobbyData.currentPainterToken === currentUserToken
         );
@@ -1217,6 +1288,7 @@ const LobbyPage: FC = ({}) => {
         setIsSelectingPainter(true); // NEW: Block navigation
         setLoadedSelectingWord(false);
         stop("tick");
+        setRevealedIdx([]); // delete indexes
 
         const iWasPainter = isPainterRef.current; // ← value **before** resets
         setIsCurrentUserPainter(false); // local UI only
@@ -1716,24 +1788,24 @@ const LobbyPage: FC = ({}) => {
                       {"\u00A0"}
                     </span>
                   ))
-                : wordToGuess
+                : selectedWord
                     .toLowerCase()
                     .split("")
-                    .map((letter, index) => (
-                      <span
-                        key={index}
-                        className={`word-letter${
-                          letter === " " ? " space-letter" : ""
-                        }`}
-                      >
-                        {isCurrentUserPainter
-                          ? letter === " " // show the letter only for the painter
-                            ? "\u00A0"
-                            : letter
-                          : " "}{" "}
-                        {/* hide actual letters for guessers */}
-                      </span>
-                    ))}
+                    .map((char, idx) => {
+                      const isSpace = char === " ";
+                      const visible =
+                        isCurrentUserPainter || revealedIdx.includes(idx);
+                      return (
+                        <span
+                          key={idx}
+                          className={`word-letter${
+                            isSpace ? " space-letter" : ""
+                          }`}
+                        >
+                          {isSpace ? "\u00A0" : visible ? char : "\u00A0"}
+                        </span>
+                      );
+                    })}
             </span>
           </div>
           {/* Drawing Canvas */}
