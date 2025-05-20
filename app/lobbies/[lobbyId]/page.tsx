@@ -535,6 +535,12 @@ const LobbyPage: React.FC = () => {
               <option value="animals">Animals</option>
               <option value="food">Food</option>
               <option value="jobs">Jobs</option>
+              <option value="sports">Sports</option>
+              <option value="transportation">Transportation</option>
+              <option value="countries">Countries</option>
+              <option value="cartoon characters">Cartoon characters</option>
+              <option value="famous people">Famous people</option>
+              <option value="movies, TV shows">Movies/TV shows</option>
             </select>
           </div>
         </div>
