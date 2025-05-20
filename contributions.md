@@ -152,7 +152,7 @@ Note: If a team member fails to show continuous progress after using their Joker
 
 | **Student**        | **Date** | **Link to Commit** | **Description**                 | **Relevance**                       |
 | ------------------ | -------- | ------------------ | ------------------------------- | ----------------------------------- |
-| **[@githubUser1]** | [date]   | [Link to Commit 1] | [Brief description of the task] | [Why this contribution is relevant] |
+| **@Danino42** | [18.05.2025]   | https://github.com/zametrics/sopra-fs25-group-09-client/commit/9792a9a71b037af0557216b7bb3de500429cae30 | Making the lobby options look better... |It is more user friendly now. |
 |                    | [date]   | [Link to Commit 2] | [Brief description of the task] | [Why this contribution is relevant] |
 | **@ortakyakuza**   | [18.05.2025]   | [https://github.com/zametrics/sopra-fs25-group-09-client/commit/76ec2706889d2453bfd96d897d7059b79ca94b98]   | Added background music functionality to the lobby page, including a toggle button and volume slider.     | Improves user experience by adding customizable ambient audio, making the lobby more engaging and dynamic. |
 |                    | [18.05.2025]   | [https://github.com/zametrics/sopra-fs25-group-09-server/commit/87730a662642a0d51da28a629ce21e52683a1def]   | Added comprehensive unit tests for DTOMapper, GPTWordController, and UserService. Began working on ChatGPTServiceTest, which remains in progress due to complexity. | Improves code reliability and test coverage by verifying core functionalities and edge cases, helping detect regressions early and ensuring application stability. |
