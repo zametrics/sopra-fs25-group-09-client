@@ -15,8 +15,15 @@ const server = http.createServer(app);
 const io = new Server(server, {
   path: "/api/socket",
   cors: {
-    origin: "*", // Replace with your Vercel URL in production
+    origin: "*",
     methods: ["GET", "POST"],
+  },
+  // ➊ NEU: Connection-State-Recovery
+  connectionStateRecovery: {
+    // Wie lange Sessions + Pakete gepuffert werden (hier 2 Min.)
+    maxDisconnectionDuration: 2 * 60 * 1000,
+    // Middleware-Kette bei erfolgreicher Recovery überspringen
+    skipMiddlewares: true,
   },
 });
 
@@ -366,6 +373,63 @@ async function handleOwnerTransfer(lobbyId, disconnectedUserIdNum) {
 
 io.on("connection", (socket) => {
   console.log(`Connected: ${socket.id}`);
+  if (socket.recovered) {
+    // Der Client hat innerhalb maxDisconnectionDuration reconnected.
+    console.log(`[Recovery] ${socket.id} reconnected (state restored)`);
+
+    // 1) Welche Lobby/User-Kombi gehört zu diesem Socket?
+    const playerInfo = socketToLobby.get(socket.id);
+    if (!playerInfo) {
+      // Fall: Wir hatten den Socket noch gar nicht in einer Lobby verbucht
+      console.log("[Recovery] No playerInfo found – treat as fresh join.");
+    } else {
+      const { lobbyId, userId } = playerInfo; // IDs wie gespeichert
+      const lobbyIdStr = String(lobbyId);
+      const userIdStr = String(userId);
+
+      // 2) ► Ausstehenden 5-Sekunden-Leave-Timeout abbrechen
+      const lobbyTimeouts = pendingDisconnects.get(lobbyIdStr);
+      if (lobbyTimeouts && lobbyTimeouts.has(userIdStr)) {
+        clearTimeout(lobbyTimeouts.get(userIdStr));
+        lobbyTimeouts.delete(userIdStr);
+        if (lobbyTimeouts.size === 0) pendingDisconnects.delete(lobbyIdStr);
+        console.log(`[Recovery] Cleared pending disconnect for ${userIdStr}`);
+      }
+
+      // 3) Sicherstellen, dass der Socket im korrekten Raum ist
+      //    (bei Recovery *eigentlich* schon der Fall, kostet aber nichts)
+      socket.join(lobbyIdStr);
+
+      // 4) ► Client wieder auf Stand bringen
+      //    a) Restzeit des Timers
+      const t = timers.get(lobbyIdStr);
+      if (t) socket.emit("timerUpdate", t.time);
+
+      //    b) Aktuelle Lobby-Spieler & Owner
+      const lobbyData = lobbies.get(lobbyIdStr);
+      if (lobbyData) {
+        const players = Array.from(lobbyData.players.entries()).map(
+          ([id, data]) => ({
+            id: String(id),
+            username: data.username,
+            avatarUrl: data.avatarUrl,
+          })
+        );
+        socket.emit("lobbyState", {
+          players,
+          ownerId: lobbyData.ownerIdFromLastFetch,
+        });
+      }
+    }
+
+    // WICHTIG: Danach einfach mit deinen normalen Handlern weiter –
+    //          NICHT noch einmal joinLobby/joinGame auslösen!
+  } else {
+    // ───────────────────────────────────────────────────
+    //  Frische Verbindung – hier bleibt alles wie gehabt.
+    //  (Der Client schickt joinLobby / joinGame von selbst.)
+    // ───────────────────────────────────────────────────
+  }
 
   socket.on("painter-selection-complete", async ({ lobbyId }) => {
     try {
