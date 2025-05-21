@@ -1209,10 +1209,6 @@ const LobbyPage: FC = ({}) => {
       );
       setSocket(socketIo);
 
-      if (!isMounted) {
-        socketIo.disconnect();
-        return;
-      }
 
       // --- Join Logic ---
       try {
