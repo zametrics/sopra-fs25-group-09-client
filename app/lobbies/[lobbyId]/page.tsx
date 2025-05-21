@@ -219,7 +219,11 @@ const LobbyPage: React.FC = () => {
       socketIo.off("gameStarting");
       socketIo.off("disconnect");
       socketIo.off("connect_error");
-      socketIo.disconnect();
+      
+      setTimeout(() => {
+        console.log("[Unmount] Disconnecting socket after delay...");
+        socketIo?.disconnect();
+      }, 5000);
       setSocket(null); // Clear socket state on unmount
     };
     // Rerun effect if lobbyId or currentUserId changes (though usually they don't on this page)

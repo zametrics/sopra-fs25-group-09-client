@@ -1560,7 +1560,7 @@ const LobbyPage: FC = ({}) => {
         setTimeout(() => {
           console.log("[Unmount] Disconnecting socket after delay...");
           socketIo?.disconnect();
-        }, 1000); // 1-second delay
+        }, 5000); // 5-second delay
       }
       setSocket(null);
     };
