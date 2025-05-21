@@ -870,12 +870,6 @@ const LobbyPage: FC = ({}) => {
       console.log(score);
       setLoading(true);
       try {
-        // 1) Join
-        await apiService.put(
-          `/lobbies/${lobbyId}/join?playerId=${currentUserId}`,
-          {}
-        );
-
         // 2) Fetch
         const lobbyData = await apiService.get<LobbyData>(
           `/lobbies/${lobbyId}`
