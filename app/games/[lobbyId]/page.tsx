@@ -1209,7 +1209,6 @@ const LobbyPage: FC = ({}) => {
       );
       setSocket(socketIo);
 
-
       // --- Join Logic ---
       try {
         const userData = await apiService.get<{ id: number; username: string }>(
@@ -1564,14 +1563,7 @@ const LobbyPage: FC = ({}) => {
       }
       setSocket(null);
     };
-  }, [
-    lobbyId,
-    currentUserId,
-    currentUserToken,
-    isCanvasInitialized,
-    loadCanvasFromDataUrl,
-    saveCanvasState,
-  ]); // NEW: Stable dependencies
+  }, []);
 
   useEffect(() => {
     if (isSelectingPainter) {
