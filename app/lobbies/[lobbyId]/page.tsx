@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useApi } from "@/hooks/useApi";
 import { Button, message, Modal } from "antd";
@@ -44,6 +44,8 @@ const LobbyPage: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [isLeaveModalVisible, setIsLeaveModalVisible] =
     useState<boolean>(false);
+
+  const isRedirectingToGame = useRef(false);
 
   // Settings states
   const [maxPlayers, setMaxPlayers] = useState<number>(8);
@@ -187,6 +189,7 @@ const LobbyPage: React.FC = () => {
     socketIo.on("gameStarting", ({ lobbyId: receivedLobbyId }) => {
       if (receivedLobbyId === lobbyId) {
         console.log("[Socket] Received gameStarting event. Navigating...");
+        isRedirectingToGame.current = true;
         router.push(`/games/${lobbyId}`);
       }
     });
@@ -219,8 +222,10 @@ const LobbyPage: React.FC = () => {
       socketIo.off("gameStarting");
       socketIo.off("disconnect");
       socketIo.off("connect_error");
-      
 
+      if (!isRedirectingToGame.current) {
+        socketIo.disconnect();
+      }
     };
     // Rerun effect if lobbyId or currentUserId changes (though usually they don't on this page)
     // updateLocalLobbyState is stable due to useCallback
