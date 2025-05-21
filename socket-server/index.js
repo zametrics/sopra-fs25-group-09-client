@@ -1248,6 +1248,21 @@ io.on("connection", (socket) => {
     console.log("[selecting word] 2 " + userId);
     socket.to(lobbyId).emit("selecting-word");
   });
+
+  socket.on(
+    "lobby-settings",
+    ({ lobbyId, maxPlayers, drawTime, rounds, language, type }) => {
+      console.log(lobbyId);
+      socket.to(lobbyId).emit("lobby-settings", {
+        lobbyId,
+        maxPlayers,
+        drawTime,
+        rounds,
+        language,
+        type,
+      });
+    }
+  );
 });
 
 const PORT = process.env.PORT || 3001;

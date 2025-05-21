@@ -207,7 +207,7 @@ export default function HomeLayout({
 
   // For seamless animation we are pushing the user to a new page
   const handleEditProfile = () => {
-    router.push(`/home/${currentUserId}`);
+    //router.push(`/home/${currentUserId}`);
   };
 
   // "Deleting" an image will just replace the image with a default image

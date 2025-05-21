@@ -173,6 +173,18 @@ const LobbyPage: React.FC = () => {
       // Optionally update player list state here if needed, separate from Layout
     });
 
+    socketIo.on(
+      "lobby-settings",
+      ({ lobbyID, maxPlayers, drawTime, rounds, language, type }) => {
+        setMaxPlayers(maxPlayers);
+        setDrawTime(drawTime);
+        setRounds(rounds);
+        setLanguage(language);
+        setType(type);
+        console.log("set settigs for lobby: ", lobbyID);
+      }
+    );
+
     // Listen specifically for owner changes
     socketIo.on("lobbyOwnerChanged", (data: LobbyOwnerChangedData) => {
       console.log("[Socket] Received lobbyOwnerChanged:", data);
@@ -222,6 +234,7 @@ const LobbyPage: React.FC = () => {
       socketIo.off("gameStarting");
       socketIo.off("disconnect");
       socketIo.off("connect_error");
+      socketIo.off("lobby-settings");
 
       if (!isRedirectingToGame.current) {
         socketIo.disconnect();
@@ -247,7 +260,11 @@ const LobbyPage: React.FC = () => {
 
   const getSliderBackground = (value: number, min: number, max: number) => {
     const percentage = ((value - min) / (max - min)) * 100;
-    return `linear-gradient(to right, #007bff ${percentage}%, #ccc ${percentage}%)`;
+    if (isOwner) {
+      return `linear-gradient(to right, #007bff ${percentage}%, #ccc ${percentage}%)`;
+    } else {
+      return `linear-gradient(to right,rgb(119, 115, 115) ${percentage}%, #ccc ${percentage}%)`;
+    }
   };
 
   useEffect(() => {
@@ -255,6 +272,19 @@ const LobbyPage: React.FC = () => {
       `[Auth Check] Re-calculating isOwner: lobbyOwner=${lobby?.lobbyOwner}, currentUserIdNumber=${currentUserIdNumber}, Result=${isOwner}`
     );
   }, [lobby, currentUserIdNumber, isOwner]);
+
+  useEffect(() => {
+    if (isOwner && lobbyId) {
+      socket?.emit("lobby-settings", {
+        lobbyId,
+        maxPlayers,
+        drawTime,
+        rounds,
+        language,
+        type,
+      });
+    }
+  }, [maxPlayers, drawTime, rounds, language, type, lobby]);
 
   // --- Start Game Logic ---
   const startGame = async () => {
@@ -550,12 +580,20 @@ const LobbyPage: React.FC = () => {
 
         <div className="lobby-actions">
           <button
-            className="green-button"
+            className={!isOwner ? "lobby-button" : "green-button"}
             style={{ width: 300 }}
             onClick={startGame}
             disabled={!isOwner || loading}
           >
-            {loading ? "STARTING..." : "START"}
+            {!isOwner ? (
+              <p>
+                Waiting for Host<span className="guessing-dots"></span>
+              </p>
+            ) : loading ? (
+              "STARTING..."
+            ) : (
+              "START"
+            )}
           </button>
 
           <div className="roomcode-box">
