@@ -19,8 +19,15 @@ type SoundKey =
   | "roundLost"
   | "leaderboard"; // add more whenever
 
+type MusicKey = "lobby" | "game"; // extend as needed
+
 type SoundManifest = {
   [key in SoundKey]: string; // Key = SoundKey, Value = string (MP3 path)
+};
+
+const musicManifest: Record<MusicKey, string> = {
+  lobby: "/audio/good-night-lofi-cozy-chill-music-160166.mp3",
+  game: "/sounds/music-game.mp3",
 };
 
 const manifest: SoundManifest = {
@@ -37,9 +44,11 @@ const manifest: SoundManifest = {
 
 interface SoundContextType {
   play: (key: SoundKey) => void;
-  volume: number; // 0-100 slider
-  setVolume: (v: number) => void; // persists automatically
+  playMusic: (key: MusicKey, loop?: boolean) => void;
   stop: (key: SoundKey) => void;
+  stopMusic: () => void;
+  volume: number;
+  setVolume: (v: number) => void;
 }
 
 const SoundContext = createContext<SoundContextType | null>(null);
@@ -47,6 +56,8 @@ const SoundContext = createContext<SoundContextType | null>(null);
 export const SoundProvider: React.FC<React.PropsWithChildren> = ({
   children,
 }) => {
+  const currentMusicRef = useRef<HTMLAudioElement | null>(null);
+
   const activeSfxRef = useRef<Record<SoundKey, HTMLAudioElement | null>>({
     tick: null,
     wordSelect: null,
@@ -67,6 +78,22 @@ export const SoundProvider: React.FC<React.PropsWithChildren> = ({
     return stored ? Number(stored) : 50; // default 70 %
   });
 
+  const playMusic = (key: MusicKey, loop = true) => {
+    stopMusic(); // stop previous track first
+    const audio = new Audio(musicManifest[key]);
+    audio.loop = loop;
+    audio.volume = volume / 100;
+    audio.play().catch((err) => console.warn("Music play error:", err));
+    currentMusicRef.current = audio;
+  };
+
+  const stopMusic = () => {
+    if (currentMusicRef.current) {
+      currentMusicRef.current.pause();
+      currentMusicRef.current.currentTime = 0;
+      currentMusicRef.current = null;
+    }
+  };
   // Pre-load & pool Audio objects
   const audioPool = useRef<Record<SoundKey, HTMLAudioElement[]>>(
     Object.keys(manifest).reduce((acc, key) => {
@@ -75,17 +102,16 @@ export const SoundProvider: React.FC<React.PropsWithChildren> = ({
     }, {} as Record<SoundKey, HTMLAudioElement[]>)
   );
 
-  //THIS MIGHT BE USED IN THE FUTURE
-  // /** get a (possibly reused) HTMLAudioElement, already configured with current volume */
-  // const obtainAudio = (key: SoundKey) => {
-  //   const pool = audioPool.current[key];
-  //   // reuse finished <audio>s to avoid constructing many objects
-  //   const instance = pool.find((a) => a.paused) || new Audio(manifest[key]);
-  //   instance.volume = volume / 100;
-  //   // keep in pool for next time
-  //   if (!pool.includes(instance)) pool.push(instance);
-  //   return instance;
-  // };
+  ///** get a (possibly reused) HTMLAudioElement, already configured with current volume */
+  //const obtainAudio = (key: SoundKey) => {
+  //  const pool = audioPool.current[key];
+  //  // reuse finished <audio>s to avoid constructing many objects
+  //  const instance = pool.find((a) => a.paused) || new Audio(manifest[key]);
+  //  instance.volume = volume / 100;
+  //  // keep in pool for next time
+  //  if (!pool.includes(instance)) pool.push(instance);
+  //  return instance;
+  //};
 
   /** public method: play a sound */
   const play = (key: SoundKey) => {
@@ -131,7 +157,9 @@ export const SoundProvider: React.FC<React.PropsWithChildren> = ({
   }, [volume]);
 
   return (
-    <SoundContext.Provider value={{ play, stop, volume, setVolume }}>
+    <SoundContext.Provider
+      value={{ play, playMusic, stop, stopMusic, volume, setVolume }}
+    >
       {children}
     </SoundContext.Provider>
   );

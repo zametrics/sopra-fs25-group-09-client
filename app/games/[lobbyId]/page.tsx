@@ -797,7 +797,7 @@ const LobbyPage: FC = ({}) => {
         // Nur parsen, wenn es tatsächlich ein JSON-String ist
         cleanWord = JSON.parse(lobbyState.currentWord);
       } catch (err) {
-        console.error(err);
+        console.log(err);
       }
 
       setSelectedWord(cleanWord);
@@ -870,12 +870,6 @@ const LobbyPage: FC = ({}) => {
       console.log(score);
       setLoading(true);
       try {
-        // 1) Join
-        await apiService.put(
-          `/lobbies/${lobbyId}/join?playerId=${currentUserId}`,
-          {}
-        );
-
         // 2) Fetch
         const lobbyData = await apiService.get<LobbyData>(
           `/lobbies/${lobbyId}`
@@ -1203,47 +1197,65 @@ const LobbyPage: FC = ({}) => {
       // http://localhost:3001 https://socket-server-826256454260.europe-west1.run.app/
       socketIo = io(
         "https://socket-server-826256454260.europe-west1.run.app/",
-        {
-          path: "/api/socket",
-        }
+        { path: "/api/socket" }
       );
       setSocket(socketIo);
 
-      // --- Join Logic ---
-      try {
-        const userData = await apiService.get<{ id: number; username: string }>(
-          `/users/${currentUserId}`
+      // 👉  Jetzt erst auf das *connect*-Event warten …
+      socketIo.on("connect", async () => {
+        console.log(
+          "Socket connected:",
+          socketIo?.id,
+          "recovered?",
+          socketIo?.recovered
         );
-        socketIo.emit("joinLobby", {
-          lobbyId,
-          userId: currentUserId,
-          username: userData.username,
-        });
-        socketIo.emit("joinGame", {
-          lobbyId,
-          userId: currentUserId,
-          username: userData.username,
-        });
-        console.log("Emitted joinLobby");
-      } catch (error) {
-        console.error("Error fetching username for join:", error);
-        socketIo.emit("joinLobby", {
-          lobbyId,
-          userId: currentUserId,
-          username: "Guest",
-        });
-      }
 
-      // --- Request initial state ---
-      if (!isCanvasInitialized && isMounted) {
-        console.log("Requesting initial state...");
-        socketIo.emit("request-initial-state");
-      }
+        // Nur bei *nicht* – recovered Verbindungen erneut beitreten
+        if (!socketIo?.recovered) {
+          try {
+            const { username } = await apiService.get<{
+              id: number;
+              username: string;
+            }>(`/users/${currentUserId}`);
+            socketIo?.emit("joinLobby", {
+              lobbyId,
+              userId: currentUserId,
+              username,
+            });
+            socketIo?.emit("joinGame", {
+              lobbyId,
+              userId: currentUserId,
+              username,
+            });
+            console.log("Emitted fresh joinLobby/joinGame");
+          } catch (err) {
+            console.error("Username fetch failed:", err);
+            socketIo?.emit("joinLobby", {
+              lobbyId,
+              userId: currentUserId,
+              username: "Guest",
+            });
+            socketIo?.emit("joinGame", {
+              lobbyId,
+              userId: currentUserId,
+              username: "Guest",
+            });
+          }
+        } else {
+          console.log("Recovered session – skip joinLobby/joinGame");
+        }
+
+        /** 2️⃣  Canvas-Sync nur bei frischer Session anfordern */
+        if (!socketIo?.recovered && !isCanvasInitialized) {
+          socketIo?.emit("request-initial-state");
+        }
+      });
 
       // --- Socket Event Listeners ---
       socketIo.on("connect", () => {
         console.log("Socket connected:", socketIo?.id);
       });
+
       socketIo.on("disconnect", (reason) => {
         console.log("Socket disconnected:", reason);
         if (isMounted) {

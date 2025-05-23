@@ -352,7 +352,7 @@ export default function HomeLayout({
       }
 
       // If we successfully got the lobby ID, show a success message
-      message.success(`Lobby created successfully! ID: ${lobbyId}`);
+      message.success("Lobby created successfully!");
 
       // Navigate the user to the newly created lobby
       router.push(`/lobbies/${lobbyId}`);
