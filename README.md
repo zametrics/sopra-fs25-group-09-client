@@ -90,6 +90,7 @@ Facilitates real-time interaction using SocketIO:
 **Chat**: The players can put their guesses in the chat and can also communicate with each other there.  
 **Timer** (over the canvas on the left): Indicates time-left.  
 **Word-field** (over the canvas): As the timer ticks, letters of the world are getting revealed one by one as hints.  
+
 ![Ingame](readme_images/ingame.png)
 
 ---
@@ -138,15 +139,6 @@ At the **end of the game** the leaderboard gets displayed in the middle to concl
 <p align="center">
   <img src="readme_images/roadmap.png" />
 </p>
-
-Kick player option
-
-Save Your Drawing! If you really adore one of your arts you can save it and have max 3 such pictures visible on your profile. 
-
-Circle and Rectangle drawing option
-
-Option to make lobbies private so that foreign people can't join
-
 ---
 
 ## 🙌 Authors and Acknowledgment
