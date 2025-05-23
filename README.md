@@ -75,7 +75,7 @@ Facilitates real-time interaction using SocketIO:
 - Handles chat messages and word guessing logic
 - Syncs score and lobby events across clients
 
-- How to redploy socket server with DOCKER
+**How to redploy socket server with DOCKER**
 
 Tag the image explicitly (optional but best practice):
 
