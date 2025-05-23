@@ -263,7 +263,9 @@ At the **end of the game** the leaderboard gets displayed in the middle to concl
 <p align="center">
   <img src="readme_images/roadmap.png" width="60%"/>
 </p>
----
+
+
+
 
 ## 🙌 Authors and Acknowledgment
 
