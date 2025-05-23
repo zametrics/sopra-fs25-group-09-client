@@ -58,18 +58,6 @@ Systematically having the players together, preparing the lobbies for games, eac
 
 Now the game is running with the lobby settings. There is some rounds, in each round each player draws once.
 
-#### Major elements on the screen:  
-**Canvas**: Option to change color and brush size, to fill areas, undo last step and delete drawing completely.
-**Scoreboard** (on the left): List of the players who are in the game with their earned points.  
-**Chat**: The players can put their guesses in the chat and can also communicate with each other there.
-**Word-field** (over the canvas): As the timer ticks, letters of the world are getting revealed one by one as hints. 
-
-#### Other important game mechanics:  
-If all players guessed the word correctly, the timer gets reset and the next drawing session can start immediately.  
-If a player is close to the word (in terms of hamming distance), the chat indicates it. (maybe it was a typo)
-
-![Ingame](readme_images/ingame.png)
-
 
 Manages both **lobby** and **game** phases:
 - Lobby setup: player count, round count, draw time, language, word type
@@ -95,10 +83,61 @@ Facilitates real-time interaction using SocketIO:
 
 ---
 
-## 🖼️ Illustrations
-> done earlier
+## 🖼️ Functionalities with Illustrations
+#### Major elements on the screen:  
+**Canvas**: Option to change color and brush size, to fill areas, undo last step and delete drawing completely.  
+**Scoreboard** (on the left): List of the players who are in the game with their earned points.  
+**Chat**: The players can put their guesses in the chat and can also communicate with each other there.  
+**Timer** (over the canvas on the left): Indicates time-left.  
+**Word-field** (over the canvas): As the timer ticks, letters of the world are getting revealed one by one as hints.  
+![Ingame](readme_images/ingame.png)
+
+---
+
+If a player is close to the word (in terms of hamming distance), the chat says "**You're close**", maybe it was just a typo.  
+<p align="center">
+  <img src="readme_images/very_close.png" />
+</p>
+
+### Other important game mechanics:  
+**Word Picking**: The drawer can choose from 3 appearing words.  
+<p align="center">
+  <img src="readme_images/pickword.png" />
+</p>
+
+**Transition between rounds**
+<p align="center">
+  <img src="readme_images/transition.png" />
+</p>
+
+
+At the **end of the game** the leaderboard gets displayed in the middle to conclude the game.  
+
+**Lobby** with settings and chat
+<p align="center">
+  <img src="readme_images/lobby.png" />
+</p>
+
+---
+
+
+**Join-Lobby** either directly or with code
+<p align="center">
+  <img src="readme_images/joinlobby.png" />
+</p>
+
+**Home**, options to create a game, join one or press Quickplay and join the best lobby. Furthermore **Edit Profile** functionality, where the username and the avatar can be changed.
+<p align="center">
+  <img src="readme_images/home.png" />
+</p>
+
+**Furthermore** if all players guessed the word correctly, the timer gets reset and the next drawing session can start immediately.  
+
 ## 🗺️ Roadmap
-> Top 2-3 ideas for future features.
+
+<p align="center">
+  <img src="readme_images/roadmap.png" />
+</p>
 
 Kick player option
 
@@ -106,15 +145,23 @@ Save Your Drawing! If you really adore one of your arts you can save it and have
 
 Circle and Rectangle drawing option
 
+Option to make lobbies private so that foreign people can't join
 
 ---
 
 ## 🙌 Authors and Acknowledgment
 > Team members and any third-party tools or inspirations you want to mention.
 
+Daniel Toth [@Danino42](https://github.com/Danino42)  
+Ilias Woert [@iliasw15](https://github.com/iliasw15)  
+Nikola Petrovic [@ortakyakuza](https://github.com/ortakyakuza)  
+Richard Uk [@zametrics](https://github.com/zametrics)  
+
+Huge thank you to our TA Lucas Timothy Leo Bär
+
 ---
 
 ## 🛡️ License
-
+The project is under MIT License
 
 
