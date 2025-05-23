@@ -75,28 +75,90 @@ Facilitates real-time interaction using SocketIO:
 - Handles chat messages and word guessing logic
 - Syncs score and lobby events across clients
 
-**How to redploy socket server with DOCKER**
+# 🚀 Launch & Deployment
 
-Tag the image explicitly (optional but best practice):
+## Getting Started
 
+To get started with the project, a new developer should follow these steps:
+
+1. **Clone the Repositories**
+   Clone both the frontend and backend repositories to your local machine using:
+
+   ```bash
+   git clone https://github.com/zametrics/sopra-fs25-group-09-client
+   git clone https://github.com/zametrics/sopra-fs25-group-09-server
+   ```
+
+2. **Frontend Setup**
+   Navigate to the frontend directory and build the project:
+
+   ```bash
+   npm run build
+   ```
+
+   After building, the application will be available by default at [http://localhost:3000](http://localhost:3000).
+
+3. **Backend Setup**
+   Navigate to the backend directory and execute the following commands:
+
+   * To build the project:
+
+     ```bash
+     ./gradlew build
+     ```
+
+   * To run the application:
+
+     ```bash
+     ./gradlew bootRun
+     ```
+
+   * To execute tests:
+
+     ```bash
+     ./gradlew test
+     ```
+
+   The backend service will be available at [http://localhost:8080](http://localhost:8080).
+
+## Deployment & Releases
+
+### Docker Deployment to Google Cloud Run
+
+After making changes in your client or socket server repository, follow these steps:
+
+#### Rebuild the Docker Image
+
+```bash
+sudo docker build -t gcr.io/my-socket-server-456017/socket-server .
+```
+
+#### Push to Google Container Registry
+
+Tag the image explicitly (recommended for versioning):
+
+```bash
 TAG=v1.0.0  # or use: TAG=$(git rev-parse --short HEAD)
 docker build -t gcr.io/my-socket-server-456017/socket-server:$TAG .
+```
+
 Push with the tag:
 
+```bash
 docker push gcr.io/my-socket-server-456017/socket-server:$TAG
+```
+
 Deploy with the same tag:
 
+```bash
 gcloud run deploy socket-server \
   --image gcr.io/my-socket-server-456017/socket-server:$TAG \
   --platform managed \
   --region europe-west1 \
   --port 8080 \
-  --allow-unauthenticated 
+  --allow-unauthenticated
+```
 
----
-
-## 🚀 Launch & Deployment
-> Instructions for developers to build, run, and test the application locally.
 
 
 ---
