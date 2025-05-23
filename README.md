@@ -75,6 +75,24 @@ Facilitates real-time interaction using SocketIO:
 - Handles chat messages and word guessing logic
 - Syncs score and lobby events across clients
 
+- How to redploy socket server with DOCKER
+
+Tag the image explicitly (optional but best practice):
+
+TAG=v1.0.0  # or use: TAG=$(git rev-parse --short HEAD)
+docker build -t gcr.io/my-socket-server-456017/socket-server:$TAG .
+Push with the tag:
+
+docker push gcr.io/my-socket-server-456017/socket-server:$TAG
+Deploy with the same tag:
+
+gcloud run deploy socket-server \
+  --image gcr.io/my-socket-server-456017/socket-server:$TAG \
+  --platform managed \
+  --region europe-west1 \
+  --port 8080 \
+  --allow-unauthenticated 
+
 ---
 
 ## 🚀 Launch & Deployment
